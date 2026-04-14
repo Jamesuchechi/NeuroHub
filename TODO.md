@@ -31,28 +31,28 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Repository & Tooling
 
-- [ ] Init SvelteKit project with TypeScript (`npm create svelte@latest neurohub`)
-- [ ] Configure Tailwind CSS + `@tailwindcss/typography`
-- [ ] Setup ESLint + Prettier + Husky pre-commit hooks
-- [ ] Configure path aliases (`$lib`, `$stores`, `$components`, `$services`)
-- [ ] Setup Vitest for unit tests
-- [ ] Setup Playwright for E2E tests
-- [ ] Init GitHub repo, configure branch protection on `main`
-- [ ] Setup GitHub Actions CI pipeline (lint → test → build)
+- [x] Init SvelteKit project with TypeScript (`npm create svelte@latest neurohub`)
+- [x] Configure Tailwind CSS + `@tailwindcss/typography`
+- [x] Setup ESLint + Prettier + Husky pre-commit hooks
+- [x] Configure path aliases (`$lib`, `$stores`, `$components`, `$services`)
+- [x] Setup Vitest for unit tests
+- [x] Setup Playwright for E2E tests
+- [x] Init GitHub repo, configure branch protection on `main`
+- [x] Setup GitHub Actions CI pipeline (lint → test → build)
 
 ### Supabase Project Init
 
-- [ ] Create Supabase project (choose region closest to users)
-- [ ] Install Supabase CLI, link local project
-- [ ] Enable Supabase Auth (email/password + OAuth: GitHub, Google)
-- [ ] Run `supabase gen types typescript` and configure auto-generation in CI
-- [ ] Setup local Supabase dev environment with `supabase start`
+- [x] Create Supabase project (choose region closest to users)
+- [x] Install Supabase CLI, link local project
+- [x] Enable Supabase Auth (email/password + OAuth: GitHub, Google)
+- [x] Run `supabase gen types typescript` and configure auto-generation in CI
+- [x] Setup local Supabase dev environment with `supabase start`
 
 ### Environment & Config
 
-- [ ] Configure `.env.local` with all Supabase + AI API keys
-- [ ] Setup environment validation with `zod` on app startup
-- [ ] Create `src/lib/config.ts` for typed runtime config
+- [x] Configure `.env.local` with all Supabase + AI API keys
+- [x] Setup environment validation with `zod` on app startup
+- [x] Create `src/lib/config.ts` for typed runtime config
 
 ---
 
@@ -610,4 +610,4 @@ src/
 
 ---
 
-_Last updated: Phase 0 — Project not yet started_
+_Last updated: Phase 0 Complete — Project initialized_
