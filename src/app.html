@@ -7,6 +7,49 @@
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">
+		<div
+			id="splash-screen"
+			style="
+				position: fixed;
+				inset: 0;
+				background: #000;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				z-index: 9999;
+				transition:
+					opacity 0.4s ease-out,
+					visibility 0.4s;
+			"
+		>
+			<img
+				src="/logo.png"
+				alt="NeuroHub"
+				style="
+					height: 160px;
+					width: auto;
+					border-radius: 2.5rem;
+					animation: pulse 2s infinite ease-in-out;
+				"
+			/>
+			<style>
+				@keyframes pulse {
+					0%,
+					100% {
+						opacity: 0.8;
+						transform: scale(0.98);
+					}
+					50% {
+						opacity: 1;
+						transform: scale(1.02);
+					}
+				}
+				#splash-screen.fade-out {
+					opacity: 0;
+					visibility: hidden;
+				}
+			</style>
+		</div>
 		<div style="display: contents">%sveltekit.body%</div>
 	</body>
 </html>

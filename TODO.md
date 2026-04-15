@@ -62,44 +62,44 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Database Schema — Auth & Workspaces
 
-- [ ] Create `profiles` table (id, username, avatar_url, bio, created_at)
-- [ ] Create `workspaces` table (id, name, slug, description, owner_id, logo_url, created_at)
-- [ ] Create `workspace_members` table (workspace_id, user_id, role: enum `owner|member|guest`, joined_at)
-- [ ] Create `workspace_invites` table (id, workspace_id, email, token, role, expires_at, used_at)
-- [ ] Write RLS policies for all tables (owners write all, members read, guests limited read)
+- [x] Create `profiles` table (id, username, avatar_url, bio, created_at)
+- [x] Create `workspaces` table (id, name, slug, description, owner_id, logo_url, created_at)
+- [x] Create `workspace_members` table (workspace_id, user_id, role: enum `owner|member|guest`, joined_at)
+- [x] Create `workspace_invites` table (id, workspace_id, email, token, role, expires_at, used_at)
+- [x] Write RLS policies for all tables (owners write all, members read, guests limited read)
 
 ### RBAC System (Supabase Custom Claims)
 
-- [ ] Create `user_roles` enum type in Postgres
-- [ ] Write Postgres function `get_user_role(workspace_id)` using JWT claims
-- [ ] Create auth hook (Supabase DB webhook) to inject `workspace_roles` map into JWT on sign-in
-- [ ] Write RLS helper function `authorize(permission text)` for policy reuse
-- [ ] Test RBAC with Supabase SQL editor — verify role isolation
+- [x] Create `user_roles` enum type in Postgres
+- [x] Write Postgres function `get_user_role(workspace_id)` using JWT claims
+- [x] Create auth hook (Supabase DB webhook) to inject `workspace_roles` map into JWT on sign-in
+- [x] Write RLS helper function `authorize(permission text)` for policy reuse
+- [x] Test RBAC with Supabase SQL editor — verify role isolation
 
 ### Auth UI & Flows
 
-- [ ] Build `/login` page (email/password + OAuth buttons)
-- [ ] Build `/register` page with username selection
-- [ ] Build `/forgot-password` and `/reset-password` flows
-- [ ] Implement auth guard `+layout.svelte` for `(auth)` group
-- [ ] Setup `hooks.client.ts` for auth state listener (`onAuthStateChange`)
-- [ ] Create `authStore.ts` with current user, session, loading state
+- [x] Build `/login` page (email/password + OAuth buttons)
+- [x] Build `/register` page with username selection
+- [x] Build `/forgot-password` and `/reset-password` flows
+- [x] Implement auth guard `+layout.svelte` for `(auth)` group
+- [x] Setup `hooks.client.ts` for auth state listener (`onAuthStateChange`)
+- [x] Create `authStore.ts` with current user, session, loading state
 
 ### Workspace Management
 
-- [ ] Build `/dashboard` page — list workspaces, create new button
-- [ ] Build workspace creation modal (name, slug, description, logo upload)
-- [ ] Implement workspace slug uniqueness validation (debounced check)
-- [ ] Build `/workspace/[slug]/settings` page (update name, logo, danger zone: delete)
-- [ ] Build members management UI (list members, change roles, remove)
-- [ ] Implement invite-by-email flow (send token, `/invite/[token]` accept page)
-- [ ] Add multi-factor auth (Supabase MFA — TOTP)
+- [x] Build `/dashboard` page — list workspaces, create new button
+- [x] Build workspace creation modal (name, slug, description, logo upload)
+- [x] Implement workspace slug uniqueness validation (debounced check)
+- [x] Build `/workspace/[slug]/settings` page (update name, logo, danger zone: delete)
+- [x] Build members management UI (list members, change roles, remove)
+- [x] Implement invite-by-email flow (send token, `/invite/[token]` accept page)
+- [x] Add multi-factor auth (Supabase MFA — TOTP)
 
 ### State Management Foundation
 
-- [ ] Create `workspaceStore.ts` (current workspace, members, role)
-- [ ] Create `userStore.ts` (profile, preferences)
-- [ ] Setup `getContext`/`setContext` pattern in root layout to avoid prop drilling
+- [x] Create `workspaceStore.ts` (current workspace, members, role)
+- [x] Create `userStore.ts` (profile, preferences)
+- [x] Setup `getContext`/`setContext` pattern in root layout to avoid prop drilling
 
 ---
 
