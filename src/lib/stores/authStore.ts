@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 import { supabase } from '$lib/services/supabase';
 import type { Session, User } from '@supabase/supabase-js';
+import { profileStore } from './profileStore';
 
 interface AuthState {
 	user: User | null;
@@ -18,6 +19,12 @@ function createAuthStore() {
 	return {
 		subscribe,
 		setSession: (session: Session | null) => {
+			if (session) {
+				profileStore.fetchProfile(session.user.id);
+			} else {
+				profileStore.reset();
+			}
+
 			update((s) => ({
 				...s,
 				session,

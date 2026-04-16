@@ -1,23 +1,81 @@
 import { supabase } from './supabase';
-import type { Database } from '$lib/types/db';
+import type { AppDatabase } from '$lib/types/db';
 
-type Workspace = Database['public']['Tables']['workspaces']['Row'];
-type WorkspaceInsert = Database['public']['Tables']['workspaces']['Insert'];
+type Workspace = AppDatabase['public']['Tables']['workspaces']['Row'];
+type WorkspaceInsert = AppDatabase['public']['Tables']['workspaces']['Insert'];
+type MemberInsert = AppDatabase['public']['Tables']['workspace_members']['Insert'];
+type InviteInsert = AppDatabase['public']['Tables']['workspace_invites']['Insert'];
+type InviteUpdate = AppDatabase['public']['Tables']['workspace_invites']['Update'];
+
+type Invite = AppDatabase['public']['Tables']['workspace_invites']['Row'];
+
+/**
+ * Strict type bridge to resolve Supabase inference issues in the workspace service.
+ * This pattern provide a rock-solid flight-path for the compiler.
+ */
+interface WorkspaceServiceInternal {
+	from(table: 'workspaces'): {
+		insert(values: WorkspaceInsert): {
+			select(): {
+				single(): Promise<{ data: Workspace; error: unknown }>;
+			};
+		};
+	};
+	from(table: 'workspace_members'): {
+		select(columns: string): {
+			eq(
+				column: string,
+				value: string
+			): Promise<{ data: { workspace: Workspace }[] | null; error: unknown }>;
+		};
+		insert(values: MemberInsert): Promise<{ error: unknown }>;
+	};
+	from(table: 'workspace_invites'): {
+		insert(values: InviteInsert): {
+			select(): {
+				single(): Promise<{ data: Invite; error: unknown }>;
+			};
+		};
+		select(columns: string): {
+			eq(
+				column: string,
+				value: string
+			): {
+				single(): Promise<{ data: Invite & { workspace: Workspace }; error: unknown }>;
+			};
+		};
+		update(values: InviteUpdate): {
+			eq(column: string, value: string): Promise<{ error: unknown }>;
+		};
+	};
+	rpc(
+		fn: 'check_slug_unique',
+		args: { target_slug: string }
+	): Promise<{ data: boolean; error: unknown }>;
+	storage: {
+		from(bucket: 'images'): {
+			upload(path: string, file: File): Promise<{ error: unknown }>;
+			getPublicUrl(path: string): { data: { publicUrl: string } };
+		};
+	};
+}
+
+const db = supabase as unknown as WorkspaceServiceInternal;
 
 export const workspacesService = {
 	async getUserWorkspaces(userId: string) {
-		const { data, error } = await supabase
+		const { data, error } = await db
 			.from('workspace_members')
 			.select('*, workspace:workspaces(*)')
 			.eq('user_id', userId);
 
 		if (error) throw error;
-		return data.map((d) => d.workspace).filter((w): w is Workspace => w !== null);
+		return (data || []).map((d) => d.workspace).filter((w): w is Workspace => w !== null);
 	},
 
 	async createWorkspace(userId: string, workspace: WorkspaceInsert) {
 		// 1. Create workspace
-		const { data: ws, error: wsError } = await supabase
+		const { data: ws, error: wsError } = await db
 			.from('workspaces')
 			.insert(workspace)
 			.select()
@@ -26,7 +84,7 @@ export const workspacesService = {
 		if (wsError) throw wsError;
 
 		// 2. Add creator as owner
-		const { error: memError } = await supabase.from('workspace_members').insert({
+		const { error: memError } = await db.from('workspace_members').insert({
 			workspace_id: ws.id,
 			user_id: userId,
 			role: 'owner'
@@ -42,25 +100,29 @@ export const workspacesService = {
 		const fileName = `${workspaceId}-${Math.random()}.${fileExt}`;
 		const filePath = `logos/${fileName}`;
 
-		const { error: uploadError } = await supabase.storage.from('images').upload(filePath, file);
+		const { error: uploadError } = await db.storage.from('images').upload(filePath, file);
 
 		if (uploadError) throw uploadError;
 
 		const {
 			data: { publicUrl }
-		} = supabase.storage.from('images').getPublicUrl(filePath);
+		} = db.storage.from('images').getPublicUrl(filePath);
 		return publicUrl;
 	},
 
 	async checkSlugUnique(slug: string): Promise<{ unique: boolean; error?: string }> {
 		try {
-			const { data, error } = await supabase.rpc('check_slug_unique', {
+			const { data, error } = await db.rpc('check_slug_unique', {
 				target_slug: slug
 			});
 
 			if (error) {
 				console.error('[workspacesService] Slug check error:', error);
-				return { unique: false, error: error.message };
+				const message =
+					typeof error === 'object' && error !== null && 'message' in error
+						? (error as { message: string }).message
+						: 'Validation failed';
+				return { unique: false, error: message };
 			}
 
 			// The RPC returns a boolean (true if unique, false if taken)
@@ -80,7 +142,7 @@ export const workspacesService = {
 		const expiresAt = new Date();
 		expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
 
-		const { data, error } = await supabase
+		const { data, error } = await db
 			.from('workspace_invites')
 			.insert({
 				workspace_id: workspaceId,
@@ -97,14 +159,14 @@ export const workspacesService = {
 	},
 
 	async getInvite(token: string) {
-		const { data, error } = await supabase
+		const { data, error } = await db
 			.from('workspace_invites')
 			.select('*, workspace:workspaces(*)')
 			.eq('token', token)
 			.single();
 
 		if (error) throw error;
-		return data as Database['public']['Tables']['workspace_invites']['Row'] & {
+		return data as AppDatabase['public']['Tables']['workspace_invites']['Row'] & {
 			workspace: Workspace;
 		};
 	},
@@ -118,7 +180,7 @@ export const workspacesService = {
 		}
 
 		// 2. Add member
-		const { error: memError } = await supabase.from('workspace_members').insert({
+		const { error: memError } = await db.from('workspace_members').insert({
 			workspace_id: invite.workspace_id,
 			user_id: userId,
 			role: invite.role
@@ -127,10 +189,12 @@ export const workspacesService = {
 		if (memError) throw memError;
 
 		// 3. Mark invite as used
-		await supabase
+		const { error: updateError } = await db
 			.from('workspace_invites')
 			.update({ used_at: new Date().toISOString() })
 			.eq('id', invite.id);
+
+		if (updateError) throw updateError;
 
 		return invite.workspace;
 	}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, type Snippet } from 'svelte';
+	import { onMount, type Snippet, untrack } from 'svelte';
 
 	interface Props {
 		type?: 'horizontal' | 'vertical';
@@ -25,7 +25,7 @@
 
 	let container: HTMLDivElement;
 	let isResizing = $state(false);
-	let currentSize = $state(initialSize);
+	let currentSize = $state(untrack(() => initialSize));
 
 	// Synchronize with prop changes from parent (e.g. workspace view resets)
 	$effect(() => {

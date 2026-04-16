@@ -24,6 +24,7 @@
 		onclick?: MouseEventHandler<HTMLButtonElement>;
 		disabled?: boolean;
 		class?: string;
+		width?: 'full' | 'auto';
 	}
 
 	let {
@@ -34,7 +35,8 @@
 		loading = false,
 		onclick = () => {},
 		disabled = false,
-		class: className = ''
+		class: className = '',
+		width = 'full'
 	}: Props = $props();
 </script>
 
@@ -42,7 +44,9 @@
 	{type}
 	{onclick}
 	disabled={disabled || loading}
-	class="w-full cursor-pointer font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 {variants[
+	class="{width === 'full'
+		? 'w-full'
+		: 'w-auto'} cursor-pointer font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 {variants[
 		variant
 	]} {sizes[size]} {className}"
 >

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { userStore } from '$lib/stores/userStore';
+	import { profileStore } from '$lib/stores/profileStore';
 	import { authStore } from '$lib/stores/authStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { workspacesService } from '$lib/services/workspaces';
@@ -13,11 +13,11 @@
 	import ThemeToggle from './ThemeToggle.svelte';
 	import { onMount } from 'svelte';
 
-	import type { Database } from '$lib/types/db';
+	import type { AppDatabase } from '$lib/types/db';
 
-	type Workspace = Database['public']['Tables']['workspaces']['Row'];
+	type Workspace = AppDatabase['public']['Tables']['workspaces']['Row'];
 
-	const profile = $derived($userStore.profile);
+	const profile = $derived($profileStore.profile);
 	const user = $derived($authStore.user);
 	const currentWorkspace = $derived($workspaceStore.currentWorkspace);
 
@@ -26,13 +26,17 @@
 	let channelsExpanded = $state(true);
 	let chatsExpanded = $state(true);
 
-	// Mock channels - will be replaced by Phase 3 database logic
-	const mockChannels = [
-		{ id: 'general', name: 'general', type: 'public' },
-		{ id: 'development', name: 'development', type: 'public' },
-		{ id: 'design', name: 'design', type: 'public' },
-		{ id: 'announcements', name: 'announcements', type: 'announcement' }
-	];
+	interface SidebarChannel {
+		id: string;
+		name: string;
+		is_private: boolean;
+	}
+
+	/**
+	 * Workspace Channels (Reactive)
+	 * Future Phase 4: Will fetch real-time channel list here.
+	 */
+	let channels = $state<SidebarChannel[]>([]);
 
 	interface NavLink {
 		name: string;
@@ -375,47 +379,33 @@
 					fill="none"
 					stroke="currentColor"
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M9 5l7 7-7 7"
-					/>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 				</svg>
 			</button>
 
 			{#if channelsExpanded}
 				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
 					{#if currentWorkspace}
-						{#each mockChannels as channel (channel.id)}
-							<a
-								href={resolve(
-									`/workspace/${currentWorkspace.slug}/chat/${channel.id}` as unknown as '/'
-								)}
-								class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all hover:bg-zinc-900/40 hover:text-white"
-							>
-								<span
-									class="font-mono text-xs text-zinc-600 transition-colors group-hover:text-brand-orange"
-									>#</span
+						{#if channels.length > 0}
+							{#each channels as channel (channel.id)}
+								<a
+									href={resolve(
+										`/workspace/${currentWorkspace.slug}/chat/${channel.id}` as unknown as '/'
+									)}
+									class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all hover:bg-zinc-900/40 hover:text-white"
 								>
-								<span class="truncate font-medium">{channel.name}</span>
-								{#if channel.type === 'announcement'}
-									<svg
-										class="ml-auto h-3 w-3 text-zinc-700"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
+									<span
+										class="font-mono text-xs text-zinc-600 transition-colors group-hover:text-brand-orange"
+										>#</span
 									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-										/>
-									</svg>
-								{/if}
-							</a>
-						{/each}
+									<span class="truncate font-medium">{channel.name}</span>
+								</a>
+							{/each}
+						{:else}
+							<div class="px-3 py-1.5">
+								<p class="text-[10px] text-zinc-500 italic">Phase 4: Channels loading...</p>
+							</div>
+						{/if}
 					{:else}
 						<div class="px-3 py-2 text-left">
 							<p class="text-[10px] text-zinc-500 italic">Select workspace to view channels</p>
@@ -449,31 +439,16 @@
 					fill="none"
 					stroke="currentColor"
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M9 5l7 7-7 7"
-					/>
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 				</svg>
 			</button>
 
 			{#if chatsExpanded}
 				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
 					{#if currentWorkspace}
-						<!-- Mock Direct Message -->
-						<a
-							href={resolve(`/workspace/${currentWorkspace.slug}/chat/dm-alex` as unknown as '/')}
-							class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all hover:bg-zinc-900/40 hover:text-white"
-						>
-							<div class="relative">
-								<Avatar name="Alex Chen" size="xs" />
-								<div
-									class="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border border-black bg-brand-green"
-								></div>
-							</div>
-							<span class="truncate font-medium">Alex Chen</span>
-						</a>
+						<div class="px-3 py-1.5">
+							<p class="text-[10px] text-zinc-500 italic">Phase 4: Recent chats will appear here</p>
+						</div>
 					{:else}
 						<div class="px-3 py-2 text-left">
 							<p class="text-[10px] text-zinc-500 italic">Select workspace to view chats</p>
@@ -553,7 +528,10 @@
 		<ThemeToggle />
 
 		<!-- User Profile Section -->
-		<div class="flex items-center gap-3 rounded-xl border border-stroke bg-surface-dim/20 p-2.5">
+		<a
+			href={resolve('/profile' as unknown as '/')}
+			class="group/profile flex items-center gap-3 rounded-xl border border-stroke bg-surface-dim/20 p-2.5 transition-all hover:border-brand-orange/30 hover:bg-surface-dim/40"
+		>
 			<div class="relative">
 				<Avatar name={profile?.username || 'User'} size="sm" src={profile?.avatar_url} />
 				<!-- Presence Indicator -->
@@ -564,10 +542,14 @@
 			</div>
 
 			<div class="flex-1 overflow-hidden">
-				<p class="truncate text-xs font-bold text-content">{profile?.username || 'Developer'}</p>
+				<p
+					class="truncate text-xs font-bold text-content transition-colors group-hover/profile:text-brand-orange"
+				>
+					{profile?.username || 'Developer'}
+				</p>
 				<p class="truncate text-[10px] text-zinc-500 lowercase">Free Plan</p>
 			</div>
-		</div>
+		</a>
 
 		<!-- Action Rail (Separated) -->
 		<div

@@ -6,6 +6,8 @@
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { fade } from 'svelte/transition';
 
+	import AppShell from '$lib/components/layout/AppShell.svelte';
+
 	let { children } = $props();
 
 	const session = $derived($authStore.session);
@@ -29,7 +31,7 @@
 </script>
 
 {#if $workspaceStore.loading && !$workspaceStore.currentWorkspace}
-	<div class="flex h-full w-full items-center justify-center bg-black">
+	<div class="fixed inset-0 z-50 flex h-full w-full items-center justify-center bg-black">
 		<div class="flex flex-col items-center gap-4">
 			<div
 				class="h-10 w-10 animate-spin rounded-full border-4 border-orange-500 border-t-transparent"
@@ -38,7 +40,9 @@
 		</div>
 	</div>
 {:else if $workspaceStore.error}
-	<div class="flex h-full w-full items-center justify-center bg-black p-8 text-center">
+	<div
+		class="fixed inset-0 z-50 flex h-full w-full items-center justify-center bg-black p-8 text-center"
+	>
 		<div class="max-w-md space-y-4">
 			<div
 				class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10 text-red-500"
@@ -63,7 +67,9 @@
 		</div>
 	</div>
 {:else}
-	<div in:fade={{ duration: 400 }} class="h-full">
-		{@render children()}
-	</div>
+	<AppShell>
+		<div in:fade={{ duration: 400 }} class="h-full">
+			{@render children()}
+		</div>
+	</AppShell>
 {/if}

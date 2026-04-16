@@ -1,16 +1,20 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { fly } from 'svelte/transition';
 	import { supabase } from '$lib/services/supabase';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
+	import { toast } from '$lib/stores/toastStore';
+	import { profileStore } from '$lib/stores/profileStore';
 
 	let loading = $state(true);
 	let factorId = $state('');
 	let qrCode = $state('');
 	let verifyCode = $state('');
-	let step = $state<'initial' | 'verify'>('initial');
+	let step = $state<'initial' | 'verify' | 'recovery'>('initial');
 	let error = $state('');
 	let enrolled = $state(false);
+	let recoveryCodes = $state<string[]>([]);
 
 	async function checkMFAStatus() {
 		const { data, error: err } = await supabase.auth.mfa.listFactors();
@@ -32,12 +36,21 @@
 
 		if (err) {
 			error = err.message;
+			toast.show(err.message, 'error');
 			return;
 		}
 
 		factorId = data.id;
 		qrCode = data.totp.qr_code;
 		step = 'verify';
+	}
+
+	function generateRecoveryCodes(): string[] {
+		const codes = [];
+		for (let i = 0; i < 8; i++) {
+			codes.push(crypto.randomUUID().split('-')[0].toUpperCase());
+		}
+		return codes;
 	}
 
 	async function verify() {
@@ -49,12 +62,21 @@
 
 		if (err) {
 			error = err.message;
+			toast.show(err.message, 'error');
 			return;
 		}
 
+		// Save recovery codes to profile
+		const codes = generateRecoveryCodes();
+		const { data: userData } = await supabase.auth.getUser();
+		if (userData.user) {
+			await profileStore.updateMfaRecoveryCodes(userData.user.id, codes);
+		}
+
+		recoveryCodes = codes;
 		enrolled = true;
-		step = 'initial';
-		alert('MFA enrolled successfully!');
+		step = 'recovery';
+		toast.show('MFA enrolled successfully!', 'success');
 	}
 
 	async function unenroll() {
@@ -75,9 +97,10 @@
 				}
 			}
 			enrolled = false;
-			alert('MFA disabled successfully.');
+			toast.show('MFA disabled successfully.', 'info');
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Failed to disable MFA';
+			toast.show(error, 'error');
 		} finally {
 			loading = false;
 		}
@@ -147,6 +170,30 @@
 							<Button variant="secondary" onclick={() => (step = 'initial')}>Cancel</Button>
 							<Button onclick={verify}>Verify and Enable</Button>
 						</div>
+					</div>
+				</div>
+			{:else if step === 'recovery'}
+				<div class="space-y-8" in:fly={{ y: 20, duration: 400 }}>
+					<div class="rounded-xl border border-green-500/20 bg-green-500/5 p-6 text-center">
+						<h3 class="mb-2 text-lg font-bold text-green-500">Recovery Codes Generated</h3>
+						<p class="text-xs text-zinc-400">
+							Store these codes in a safe place. They are required if you lose access to your
+							authenticator app.
+						</p>
+					</div>
+
+					<div class="grid grid-cols-2 gap-3">
+						{#each recoveryCodes as code (code)}
+							<div
+								class="rounded-lg bg-zinc-900 px-4 py-3 text-center font-mono text-sm tracking-widest"
+							>
+								{code}
+							</div>
+						{/each}
+					</div>
+
+					<div class="pt-4">
+						<Button onclick={() => (step = 'initial')}>I've saved these codes</Button>
 					</div>
 				</div>
 			{/if}

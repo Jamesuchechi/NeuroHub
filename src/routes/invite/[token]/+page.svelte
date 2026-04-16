@@ -7,10 +7,10 @@
 	import { goto } from '$app/navigation';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
-	import type { Database } from '$lib/types/db';
+	import type { AppDatabase } from '$lib/types/db';
 
-	type InviteData = Database['public']['Tables']['workspace_invites']['Row'] & {
-		workspace: Database['public']['Tables']['workspaces']['Row'];
+	type InviteData = AppDatabase['public']['Tables']['workspace_invites']['Row'] & {
+		workspace: AppDatabase['public']['Tables']['workspaces']['Row'];
 	};
 
 	let invite = $state<InviteData | null>(null);

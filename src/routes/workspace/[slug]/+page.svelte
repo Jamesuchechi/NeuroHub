@@ -4,49 +4,69 @@
 	import { cubicOut } from 'svelte/easing';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import StoriesBar from '$lib/components/social/StoriesBar.svelte';
+	import PostComposer from '$lib/components/social/PostComposer.svelte';
+	import ActivityItem from '$lib/components/dashboard/ActivityItem.svelte';
+	import { activityService } from '$lib/services/activity';
+	import { onMount } from 'svelte';
 
 	const workspace = $derived($workspaceStore.currentWorkspace);
 	const members = $derived($workspaceStore.members);
 	const userRole = $derived($workspaceStore.userRole);
 
-	// Mock stats for demonstration
-	const stats = [
-		{ name: 'Channels', value: '12', icon: 'chat' },
-		{ name: 'Documents', value: '45', icon: 'book' },
-		{ name: 'Snippets', value: '28', icon: 'code' },
-		{ name: 'Active Members', value: '8', icon: 'users' }
-	];
+	// Contextual stats
+	const stats = $derived([
+		{ name: 'Channels', value: '0', icon: 'chat' },
+		{ name: 'Documents', value: '0', icon: 'book' },
+		{ name: 'Snippets', value: '0', icon: 'code' },
+		{ name: 'Team Size', value: members.length.toString(), icon: 'users' }
+	]);
+
+	const activities = $derived($activityService);
+
+	onMount(() => {
+		if (workspace?.id) {
+			const cleanup = activityService.fetchActivities(workspace.id);
+			return () => {
+				cleanup.then((fn) => {
+					if (typeof fn === 'function') fn();
+				});
+			};
+		}
+	});
 </script>
 
-<div class="p-8 md:p-12">
+<div class="p-6 md:p-8 lg:p-10">
 	{#if workspace}
 		<div
 			in:fly={{ y: 20, duration: 800, easing: cubicOut }}
-			class="mb-12 flex flex-col gap-8 md:flex-row md:items-center md:justify-between"
+			class="mb-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between"
 		>
 			<div class="flex items-center gap-6">
 				<div
-					class="h-20 w-20 overflow-hidden rounded-3xl bg-linear-to-br from-orange-500 to-blue-600 shadow-2xl ring-4 ring-zinc-900/50"
+					class="h-16 w-16 overflow-hidden rounded-2xl bg-linear-to-br from-brand-orange to-brand-blue shadow-2xl ring-1 ring-stroke"
 				>
 					{#if workspace.logo_url}
 						<img src={workspace.logo_url} alt={workspace.name} class="h-full w-full object-cover" />
 					{:else}
 						<div
-							class="flex h-full w-full items-center justify-center text-3xl font-black text-white"
+							class="flex h-full w-full items-center justify-center text-2xl font-black text-white"
 						>
 							{workspace.name[0]}
 						</div>
 					{/if}
 				</div>
 				<div>
-					<h1 class="mb-2 text-4xl font-black tracking-tight text-white">{workspace.name}</h1>
-					<div class="flex items-center gap-2">
+					<h1 class="mb-1 text-3xl font-black tracking-tight text-content">{workspace.name}</h1>
+					<div class="flex items-center gap-3">
 						<span
-							class="rounded-full bg-zinc-900 px-3 py-1 text-[10px] font-bold tracking-wider text-orange-500 uppercase ring-1 ring-zinc-800"
+							class="rounded-md bg-surface-dim px-2.5 py-1 text-[9px] font-bold tracking-wider text-brand-orange uppercase ring-1 ring-stroke"
 						>
 							{userRole}
 						</span>
-						<span class="text-sm font-medium text-zinc-500">neurohub.io/{workspace.slug}</span>
+						<span class="text-xs font-medium text-content-dim"
+							>neurohub.io/workspace/{workspace.slug}</span
+						>
 					</div>
 				</div>
 			</div>
@@ -78,20 +98,28 @@
 			</div>
 		</div>
 
+		<!-- Workspace Stories -->
+		<div
+			in:fly={{ y: 20, duration: 800, easing: cubicOut, delay: 100 }}
+			class="mb-12 border-y border-stroke py-6"
+		>
+			<StoriesBar workspaceId={workspace.id} />
+		</div>
+
 		<!-- Stats Grid -->
 		<div
 			in:fly={{ y: 30, duration: 1000, easing: cubicOut, delay: 200 }}
-			class="mb-12 grid grid-cols-2 gap-6 lg:grid-cols-4"
+			class="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4"
 		>
 			{#each stats as stat (stat.name)}
 				<div
-					class="group relative rounded-3xl border border-zinc-900 bg-zinc-950/50 p-6 transition-all hover:border-zinc-800 hover:bg-zinc-900/50"
+					class="group relative rounded-2xl border border-stroke bg-surface-dim/30 p-6 transition-all hover:bg-surface-dim/60"
 				>
 					<div
-						class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 transition-colors group-hover:bg-orange-500/10 group-hover:text-orange-500"
+						class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-surface transition-colors group-hover:text-brand-orange"
 					>
 						{#if stat.icon === 'chat'}
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path
 									stroke-linecap="round"
 									stroke-linejoin="round"
@@ -100,7 +128,7 @@
 								/>
 							</svg>
 						{:else if stat.icon === 'book'}
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path
 									stroke-linecap="round"
 									stroke-linejoin="round"
@@ -109,7 +137,7 @@
 								/>
 							</svg>
 						{:else if stat.icon === 'code'}
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path
 									stroke-linecap="round"
 									stroke-linejoin="round"
@@ -118,7 +146,7 @@
 								/>
 							</svg>
 						{:else if stat.icon === 'users'}
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 								<path
 									stroke-linecap="round"
 									stroke-linejoin="round"
@@ -128,8 +156,10 @@
 							</svg>
 						{/if}
 					</div>
-					<p class="text-3xl font-black text-white">{stat.value}</p>
-					<p class="text-xs font-bold tracking-widest text-zinc-500 uppercase">{stat.name}</p>
+					<p class="text-2xl font-black text-content">{stat.value}</p>
+					<p class="text-[10px] font-bold tracking-widest text-content-dim uppercase">
+						{stat.name}
+					</p>
 				</div>
 			{/each}
 		</div>
@@ -138,35 +168,39 @@
 			<!-- Recent Activity -->
 			<div
 				in:fly={{ y: 40, duration: 1200, easing: cubicOut, delay: 400 }}
-				class="rounded-3xl border border-zinc-900 bg-zinc-950/50 p-8 lg:col-span-2"
+				class="rounded-3xl border border-stroke bg-surface-dim/20 p-8 lg:col-span-2"
 			>
-				<h3 class="mb-8 text-xl font-black text-white">Recent Activity</h3>
+				<h3 class="mb-8 text-xl font-black text-content">Recent Activity</h3>
+
+				<!-- Team Post Composer -->
+				<div class="mb-10">
+					<PostComposer
+						workspaceId={workspace.id}
+						onPostCreated={() => activityService.fetchActivities(workspace.id)}
+					/>
+				</div>
+
 				<div class="space-y-6">
-					{#each Array.from({ length: 4 }) as _, i (i)}
-						<div class="flex gap-4 border-l-2 border-zinc-900 pb-6 pl-6 last:pb-0">
-							<div class="h-10 w-10 shrink-0 rounded-full bg-zinc-900"></div>
-							<div>
-								<p class="text-sm font-bold text-white">
-									James Uchechi <span class="font-normal text-zinc-500">updated the</span> Deployment
-									Guide
-								</p>
-								<p class="text-[11px] font-medium tracking-tight text-zinc-600 uppercase">
-									Today at 2:45 PM • in Knowledge Base
-								</p>
-							</div>
-						</div>
-					{/each}
+					{#if activities.length === 0}
+						<p class="py-12 text-center text-xs text-content-dim italic">
+							No team activity yet. Start the conversation!
+						</p>
+					{:else}
+						{#each activities as activity (activity.id)}
+							<ActivityItem {activity} />
+						{/each}
+					{/if}
 				</div>
 			</div>
 
 			<!-- Team Members -->
 			<div
 				in:fly={{ y: 40, duration: 1200, easing: cubicOut, delay: 600 }}
-				class="rounded-3xl border border-zinc-900 bg-zinc-950/50 p-8"
+				class="rounded-3xl border border-stroke bg-surface-dim/20 p-8"
 			>
 				<div class="mb-8 flex items-center justify-between">
-					<h3 class="text-xl font-black text-white">Team</h3>
-					<span class="text-xs font-bold text-zinc-500">{members.length} Online</span>
+					<h3 class="text-xl font-black text-content">Team</h3>
+					<span class="text-xs font-bold text-content-dim">{members.length} Online</span>
 				</div>
 				<div class="space-y-4">
 					{#each members as member (member.user_id)}
@@ -178,11 +212,11 @@
 									size="sm"
 								/>
 								<div>
-									<p class="text-sm font-bold text-white">{member.profile.username}</p>
-									<p class="text-[10px] font-bold text-zinc-600 uppercase">{member.role}</p>
+									<p class="text-sm font-bold text-content">{member.profile.username}</p>
+									<p class="text-[10px] font-bold text-content-dim uppercase">{member.role}</p>
 								</div>
 							</div>
-							<div class="h-1.5 w-1.5 rounded-full bg-green-500"></div>
+							<div class="h-1.5 w-1.5 rounded-full bg-brand-green"></div>
 						</div>
 					{/each}
 				</div>

@@ -15,7 +15,9 @@
 
 <div class="field-group mb-4.5">
 	{#if label}
-		<label for={id} class="mb-2 block text-[10px] font-bold tracking-[1px] text-content-dim uppercase"
+		<label
+			for={id}
+			class="mb-2 block text-[10px] font-bold tracking-[1px] text-content-dim uppercase"
 			>{label}</label
 		>
 	{/if}

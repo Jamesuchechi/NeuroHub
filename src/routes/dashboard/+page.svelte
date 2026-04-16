@@ -1,18 +1,22 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { Database } from '$lib/types/db';
+	import type { AppDatabase } from '$lib/types/db';
 	import { authStore } from '$lib/stores/authStore';
-	import { userStore } from '$lib/stores/userStore';
+	import { profileStore } from '$lib/stores/profileStore';
 	import { workspacesService } from '$lib/services/workspaces';
 	import { slugify } from '$lib/utils/slugify';
 	import WorkspaceCard from '$lib/components/ui/WorkspaceCard.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import ActivityItem from '$lib/components/dashboard/ActivityItem.svelte';
+	import { activityService } from '$lib/services/activity';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import StoriesBar from '$lib/components/social/StoriesBar.svelte';
+	import PostComposer from '$lib/components/social/PostComposer.svelte';
 
-	type Workspace = Database['public']['Tables']['workspaces']['Row'];
+	type Workspace = AppDatabase['public']['Tables']['workspaces']['Row'];
 
 	let workspaces = $state<Workspace[]>([]);
 	let loading = $state(true);
@@ -30,11 +34,13 @@
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
 	const { user } = $derived($authStore);
-	const { profile } = $derived($userStore);
+	const { profile } = $derived($profileStore);
 
 	const displayName = $derived(
 		profile?.username || (user?.email ? user.email.split('@')[0] : 'Developer')
 	);
+
+	const activities = $derived($activityService);
 
 	async function loadWorkspaces() {
 		if (!user) return;
@@ -102,8 +108,15 @@
 
 	onMount(() => {
 		if (user) {
-			userStore.fetchProfile(user.id);
+			profileStore.fetchProfile(user.id);
 			loadWorkspaces();
+
+			const cleanupPromise = activityService.fetchActivities(null, user.id);
+			return () => {
+				cleanupPromise.then((cleanupFn) => {
+					if (typeof cleanupFn === 'function') cleanupFn();
+				});
+			};
 		}
 	});
 </script>
@@ -138,6 +151,14 @@
 			</div>
 		</div>
 
+		<!-- Global Stories -->
+		<div
+			in:fly={{ y: 20, duration: 800, easing: cubicOut, delay: 100 }}
+			class="mb-12 border-y border-stroke py-6"
+		>
+			<StoriesBar />
+		</div>
+
 		<!-- Summary Grid -->
 		<div
 			in:fly={{ y: 40, duration: 1200, easing: cubicOut, delay: 200 }}
@@ -154,42 +175,27 @@
 					>
 				</div>
 
+				<!-- Broadcast Section -->
+				<div class="mb-10">
+					<PostComposer onPostCreated={() => activityService.fetchActivities(null, user?.id)} />
+				</div>
+
 				<div class="space-y-8">
-					{#each Array.from({ length: 3 }) as _, i (i)}
-						<div class="group flex cursor-pointer gap-6">
-							<div
-								class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface-dim transition-all group-hover:bg-orange-500 group-hover:text-black"
-							>
-								<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="1.5"
-										d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-									/>
-								</svg>
-							</div>
-							<div class="flex-1 border-b border-zinc-900 pb-8 last:border-0">
-								<p class="mb-1 text-sm font-bold text-content">
-									Document Updated <span class="font-medium text-content-dim">in</span> Project Phoenix
-								</p>
-								<p class="mb-2 line-clamp-1 text-xs text-content-dim italic">
-									"We have finalized the core architecture and moved into Phase 2..."
-								</p>
-								<p class="text-[10px] font-black text-content-dim/80 uppercase">
-									2 hours ago • By Alex Chen
-								</p>
-							</div>
-						</div>
-					{/each}
+					{#if activities.length === 0}
+						<p class="py-8 text-center text-xs text-content-dim italic">
+							No recent activity found.
+						</p>
+					{:else}
+						{#each activities as activity (activity.id)}
+							<ActivityItem {activity} />
+						{/each}
+					{/if}
 				</div>
 			</div>
 
 			<!-- Quick Stats / User Profile -->
 			<div class="space-y-8">
-				<div
-					class="rounded-3xl border border-stroke bg-surface-dim p-8 shadow-2xl"
-				>
+				<div class="rounded-3xl border border-stroke bg-surface-dim p-8 shadow-2xl">
 					<p class="mb-6 text-[10px] font-black tracking-[2px] text-content-dim uppercase">
 						Your Profile
 					</p>

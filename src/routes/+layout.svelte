@@ -2,10 +2,11 @@
 	import { onMount, setContext } from 'svelte';
 	import './layout.css';
 	import { authStore } from '$lib/stores/authStore';
-	import { userStore } from '$lib/stores/userStore';
+	import { profileStore } from '$lib/stores/profileStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { uiStore } from '$lib/stores/uiStore';
 	import ShortcutsModal from '$lib/components/layout/ShortcutsModal.svelte';
+	import ToastContainer from '$lib/components/ui/ToastContainer.svelte';
 
 	let { children } = $props();
 
@@ -14,7 +15,7 @@
 
 	// Provide stores to the entire application to avoid prop drilling
 	setContext('auth', authStore);
-	setContext('user', userStore);
+	setContext('user', profileStore);
 	setContext('workspace', workspaceStore);
 
 	onMount(() => {
@@ -75,4 +76,5 @@
 	{@render children()}
 {/if}
 
+<ToastContainer />
 <ShortcutsModal isOpen={shortcutsOpen} onClose={() => (shortcutsOpen = false)} />
