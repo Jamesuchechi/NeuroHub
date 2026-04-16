@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-
 	import { userStore } from '$lib/stores/userStore';
 	import { authStore } from '$lib/stores/authStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
@@ -11,6 +10,7 @@
 	import { fly, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import Avatar from '../ui/Avatar.svelte';
+	import ThemeToggle from './ThemeToggle.svelte';
 	import { onMount } from 'svelte';
 
 	import type { Database } from '$lib/types/db';
@@ -23,55 +23,62 @@
 
 	let workspaces = $state<Workspace[]>([]);
 	let showSwitcher = $state(false);
+	let channelsExpanded = $state(true);
+	let chatsExpanded = $state(true);
+
+	// Mock channels - will be replaced by Phase 3 database logic
+	const mockChannels = [
+		{ id: 'general', name: 'general', type: 'public' },
+		{ id: 'development', name: 'development', type: 'public' },
+		{ id: 'design', name: 'design', type: 'public' },
+		{ id: 'announcements', name: 'announcements', type: 'announcement' }
+	];
 
 	interface NavLink {
 		name: string;
 		href: string;
 		icon: string;
-		isWorkspace?: boolean;
 	}
 
-	// Dynamic links based on current workspace
-	const workspaceLinks = $derived<NavLink[]>(
+	const workspaceLinks = $derived<NavLink[]>([
+		{
+			name: 'Dashboard',
+			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}` : '/dashboard',
+			icon: 'dashboard'
+		},
+		{
+			name: 'Notes',
+			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/notes` : '#',
+			icon: 'book'
+		},
+		{
+			name: 'Snippets',
+			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/snippets` : '#',
+			icon: 'code'
+		}
+	]);
+
+	const adminLinks = $derived<NavLink[]>(
 		currentWorkspace
 			? [
-					{ name: 'Dashboard', href: `/workspace/${currentWorkspace.slug}`, icon: 'dashboard' },
-					{ name: 'Channels', href: `/workspace/${currentWorkspace.slug}/chat`, icon: 'chat' },
-					{
-						name: 'Knowledge Base',
-						href: `/workspace/${currentWorkspace.slug}/notes`,
-						icon: 'book'
-					},
-					{
-						name: 'Code Snippets',
-						href: `/workspace/${currentWorkspace.slug}/snippets`,
-						icon: 'code'
-					},
 					{
 						name: 'Team Members',
 						href: `/workspace/${currentWorkspace.slug}/settings`,
 						icon: 'users'
+					},
+					{
+						name: 'Workspace Settings',
+						href: `/workspace/${currentWorkspace.slug}/settings`,
+						icon: 'settings'
 					}
 				]
 			: []
 	);
 
-	const dashboardLinks: NavLink[] = [
-		{ name: 'Activity Hub', href: '/dashboard', icon: 'pulse' },
-		{ name: 'My Workspaces', href: '/dashboard', icon: 'grid' }
+	const globalLinks: NavLink[] = [
+		{ name: 'Activity Feed', href: '/dashboard', icon: 'pulse' },
+		{ name: 'Workspaces', href: '/dashboard', icon: 'grid' }
 	];
-
-	const bottomLinks = $derived<NavLink[]>(
-		currentWorkspace
-			? [
-					{
-						name: 'Settings',
-						href: `/workspace/${currentWorkspace.slug}/settings`,
-						icon: 'settings'
-					}
-				]
-			: [{ name: 'Settings', href: '/dashboard/settings', icon: 'settings' }]
-	);
 
 	async function loadWorkspaces() {
 		if (!user) return;
@@ -105,18 +112,18 @@
 
 <aside
 	in:fly={{ x: -280, duration: 800, easing: cubicOut }}
-	class="flex h-screen w-72 flex-col border-r border-zinc-900 bg-black text-zinc-400 transition-all"
+	class="flex h-screen w-full flex-col border-r border-stroke bg-surface text-content-dim"
 >
 	<!-- Workspace Switcher -->
-	<div class="relative p-6">
+	<div class="relative p-5">
 		<button
 			onclick={() => (showSwitcher = !showSwitcher)}
-			class="flex w-full items-center gap-3 rounded-xl border border-zinc-900 bg-zinc-950/50 p-3 text-left transition-all hover:border-zinc-800 hover:bg-zinc-900/50 {showSwitcher
-				? 'border-orange-500/50 bg-zinc-900'
+			class="group flex w-full items-center gap-3 rounded-xl border border-stroke bg-surface-dim/50 p-2.5 text-left transition-all hover:border-stroke hover:bg-surface-dim/50 {showSwitcher
+				? 'border-brand-orange/50 bg-surface-dim'
 				: ''}"
 		>
 			<div
-				class="flex h-10 w-10 items-center justify-center rounded-lg bg-linear-to-br from-orange-500 to-blue-600 p-2 shadow-lg"
+				class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-brand-orange to-brand-blue p-2 shadow-lg transition-transform group-hover:scale-105"
 			>
 				{#if currentWorkspace?.logo_url}
 					<img src={currentWorkspace.logo_url} alt="Logo" class="h-full w-full object-contain" />
@@ -127,15 +134,11 @@
 				{/if}
 			</div>
 			<div class="flex-1 overflow-hidden">
-				<p class="truncate text-sm font-bold whitespace-nowrap text-white">
+				<p class="truncate text-sm font-bold whitespace-nowrap text-content">
 					{currentWorkspace?.name || 'Select Workspace'}
 				</p>
 				<p class="truncate text-[10px] tracking-tight text-zinc-500 uppercase">
-					{currentWorkspace
-						? currentWorkspace.slug.includes('personal')
-							? 'Personal'
-							: 'Team Workspace'
-						: 'Quick Switcher'}
+					{currentWorkspace ? 'Active Workspace' : 'NeuroHub Hub'}
 				</p>
 			</div>
 			<svg
@@ -153,7 +156,7 @@
 		{#if showSwitcher}
 			<div
 				transition:slide={{ duration: 300, easing: cubicOut }}
-				class="absolute top-[calc(100%-8px)] right-6 left-6 z-50 mt-2 space-y-1 rounded-xl border border-zinc-800 bg-zinc-950 p-2 shadow-2xl backdrop-blur-xl"
+				class="absolute top-[calc(100%-8px)] right-5 left-5 z-50 mt-2 space-y-1 rounded-xl border border-stroke bg-surface-dim p-2 shadow-2xl backdrop-blur-xl"
 			>
 				<div class="mb-1 px-2 py-1.5">
 					<p class="text-[10px] font-bold tracking-wider text-zinc-600 uppercase">
@@ -163,29 +166,27 @@
 				{#each workspaces as ws (ws.id)}
 					<button
 						onclick={() => switchWorkspace(ws.slug)}
-						class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-all hover:bg-zinc-900 {currentWorkspace?.id ===
+						class="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-all hover:bg-surface-dim {currentWorkspace?.id ===
 						ws.id
-							? 'bg-zinc-900/50'
+							? 'bg-surface-dim/50'
 							: ''}"
 					>
 						<div
-							class="flex h-8 w-8 items-center justify-center rounded bg-zinc-900 text-xs font-bold text-zinc-400"
+							class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-surface-dim text-xs font-bold text-content-dim"
 						>
 							{ws.name[0]}
 						</div>
 						<div class="flex-1 overflow-hidden">
-							<p class="truncate text-xs font-bold text-white">{ws.name}</p>
-							<p class="truncate text-[9px] text-zinc-500">neurohub.io/{ws.slug}</p>
+							<p class="truncate text-xs font-bold text-content">{ws.name}</p>
+							<p class="truncate text-[9px] text-content-dim">neurohub.io/{ws.slug}</p>
 						</div>
 						{#if currentWorkspace?.id === ws.id}
-							<div
-								class="h-1.5 w-1.5 rounded-full bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"
-							></div>
+							<div class="h-1.5 w-1.5 rounded-full bg-brand-orange shadow-neon-orange"></div>
 						{/if}
 					</button>
 				{/each}
 
-				<div class="my-2 border-t border-zinc-900 pt-2">
+				<div class="my-2 border-t border-zinc-900 pt-2 text-left">
 					<button
 						onclick={() => {
 							showSwitcher = false;
@@ -205,82 +206,115 @@
 		{/if}
 	</div>
 
-	<!-- Search Trigger -->
-	<div class="mb-6 px-6">
-		<button
-			class="flex w-full items-center gap-3 rounded-xl border border-zinc-900 bg-zinc-950 px-4 py-2.5 text-zinc-500 transition-all hover:border-zinc-800 hover:bg-zinc-950"
-		>
-			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-				/>
-			</svg>
-			<span class="text-xs font-medium">Search...</span>
-			<span class="ml-auto rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600"
-				>⌘K</span
+	<!-- Main Navigation Scroll Area -->
+	<div class="scrollbar-none flex-1 overflow-y-auto px-5">
+		<!-- Search Shortcut -->
+		<div class="mb-6">
+			<button
+				class="flex w-full items-center gap-3 rounded-xl border border-stroke bg-surface-dim/50 px-4 py-2.5 text-content-dim transition-all hover:border-stroke hover:bg-surface-dim"
 			>
-		</button>
-	</div>
-
-	<!-- Global Hub Navigation -->
-	<div class="mb-4 px-6">
-		<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">Global Hub</p>
-		<nav class="space-y-1">
-			{#each dashboardLinks as link (link.name)}
-				<a
-					href={resolve(link.href as unknown as '/')}
-					class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {page
-						.url.pathname === link.href
-						? 'bg-zinc-900 text-white'
-						: 'hover:bg-zinc-950 hover:text-white'}"
+				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+					/>
+				</svg>
+				<span class="text-xs font-medium">Search...</span>
+				<span class="ml-auto rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600"
+					>⌘K</span
 				>
-					<div class="flex h-5 w-5 items-center justify-center">
-						{#if link.icon === 'pulse'}
-							<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M13 10V3L4 14h7v7l9-11h-7z"
-								/>
-							</svg>
-						{:else if link.icon === 'grid'}
-							<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="1.5"
-									d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-								/>
-							</svg>
-						{/if}
-					</div>
-					{link.name}
-				</a>
-			{/each}
-		</nav>
-	</div>
+			</button>
+		</div>
 
-	<!-- Workspace Navigation -->
-	{#if currentWorkspace}
-		<div class="flex-1 overflow-y-auto px-6">
-			<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">
-				Workspace
-			</p>
+		<!-- Global Hub Block / Hub Toggle -->
+		<div class="mb-6">
+			{#if currentWorkspace}
+				<a
+					href={resolve('/dashboard' as unknown as '/')}
+					class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-content-dim transition-all hover:bg-surface-dim hover:text-content"
+				>
+					<div
+						class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+					>
+						<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+							/>
+						</svg>
+					</div>
+					<span>Back to Hub</span>
+				</a>
+			{:else}
+				<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">
+					Global Hub
+				</p>
+				<nav class="space-y-1">
+					{#each globalLinks as link (link.name)}
+						<a
+							href={resolve(link.href as unknown as '/')}
+							class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {page
+								.url.pathname === link.href
+								? 'bg-surface-dim text-content'
+								: 'hover:bg-surface-dim/40 hover:text-content'}"
+						>
+							<div
+								class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+							>
+								{#if link.icon === 'pulse'}
+									<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="1.5"
+											d="M13 10V3L4 14h7v7l9-11h-7z"
+										/>
+									</svg>
+								{:else if link.icon === 'grid'}
+									<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="1.5"
+											d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+										/>
+									</svg>
+								{/if}
+							</div>
+							{link.name}
+						</a>
+					{/each}
+				</nav>
+			{/if}
+		</div>
+
+		<!-- Tools Section (Always Visible) -->
+		<div class="mb-6">
+			<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">Tools</p>
 			<nav class="space-y-1">
 				{#each workspaceLinks as link (link.name)}
 					<a
-						href={resolve(link.href as unknown as '/')}
-						class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {page.url.pathname.startsWith(
-							link.href
-						)
-							? 'bg-zinc-900 text-white'
-							: 'hover:bg-zinc-950 hover:text-white'}"
+						href={link.href !== '#' ? resolve(link.href as unknown as '/') : '#'}
+						class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {!currentWorkspace &&
+						link.href === '#'
+							? 'cursor-not-allowed opacity-40'
+							: page.url.pathname.startsWith(link.href) && link.href !== '/dashboard'
+								? 'bg-surface-dim text-content'
+								: 'hover:bg-surface-dim/40 hover:text-content'}"
+						onclick={(e) => {
+							if (link.href === '#') {
+								e.preventDefault();
+								showSwitcher = true;
+							}
+						}}
 					>
-						<div class="flex h-5 w-5 items-center justify-center">
+						<div
+							class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+						>
 							{#if link.icon === 'dashboard'}
 								<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path
@@ -288,15 +322,6 @@
 										stroke-linejoin="round"
 										stroke-width="1.5"
 										d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"
-									/>
-								</svg>
-							{:else if link.icon === 'chat'}
-								<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="1.5"
-										d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
 									/>
 								</svg>
 							{:else if link.icon === 'book'}
@@ -317,65 +342,278 @@
 										d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
 									/>
 								</svg>
-							{:else if link.icon === 'users'}
-								<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="1.5"
-										d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-									/>
-								</svg>
 							{/if}
 						</div>
 						{link.name}
+						{#if link.name === 'Notes'}
+							<button
+								class="ml-auto flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800 text-zinc-600 transition-colors hover:border-brand-orange hover:text-brand-orange"
+								title="New Note"
+								onclick={(e) => {
+									e.stopPropagation();
+									if (!currentWorkspace) showSwitcher = true;
+								}}
+							>
+								+
+							</button>
+						{/if}
 					</a>
 				{/each}
 			</nav>
 		</div>
-	{/if}
 
-	<!-- Footer Links -->
-	<div class="space-y-1 border-t border-zinc-900 p-4">
-		{#each bottomLinks as link (link.href)}
-			<a
-				href={resolve(link.href as unknown as '/')}
-				class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {page
-					.url.pathname === link.href
-					? 'text-white'
-					: 'hover:text-white'}"
+		<!-- Channels Section (Always Visible) -->
+		<div class="mb-6">
+			<button
+				onclick={() => (channelsExpanded = !channelsExpanded)}
+				class="group mb-1 flex w-full items-center justify-between px-3 py-1 text-[10px] font-bold tracking-[2px] text-content-dim uppercase hover:text-content"
 			>
-				<div class="flex h-5 w-5 items-center justify-center">
-					{#if link.icon === 'settings'}
-						<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1.5"
-								d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-							/>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="1.5"
-								d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-							/>
-						</svg>
-					{/if}
-				</div>
-				{link.name}
-			</a>
-		{/each}
+				<span>Channels</span>
+				<svg
+					class="h-3 w-3 transition-transform duration-200 {channelsExpanded ? 'rotate-90' : ''}"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9 5l7 7-7 7"
+					/>
+				</svg>
+			</button>
 
-		<div class="mt-4 flex items-center gap-3 border-t border-zinc-900 px-3 py-4">
-			<Avatar name={profile?.username || 'User'} size="sm" src={profile?.avatar_url} />
-			<div class="flex-1 overflow-hidden text-left">
-				<p class="truncate text-xs font-bold text-white">{profile?.username || 'Developer'}</p>
+			{#if channelsExpanded}
+				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
+					{#if currentWorkspace}
+						{#each mockChannels as channel (channel.id)}
+							<a
+								href={resolve(
+									`/workspace/${currentWorkspace.slug}/chat/${channel.id}` as unknown as '/'
+								)}
+								class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all hover:bg-zinc-900/40 hover:text-white"
+							>
+								<span
+									class="font-mono text-xs text-zinc-600 transition-colors group-hover:text-brand-orange"
+									>#</span
+								>
+								<span class="truncate font-medium">{channel.name}</span>
+								{#if channel.type === 'announcement'}
+									<svg
+										class="ml-auto h-3 w-3 text-zinc-700"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+										/>
+									</svg>
+								{/if}
+							</a>
+						{/each}
+					{:else}
+						<div class="px-3 py-2 text-left">
+							<p class="text-[10px] text-zinc-500 italic">Select workspace to view channels</p>
+						</div>
+					{/if}
+
+					<button
+						onclick={() => (!currentWorkspace ? (showSwitcher = true) : null)}
+						class="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-xs text-zinc-600 transition-all hover:text-zinc-400"
+					>
+						<span
+							class="flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800"
+							>+</span
+						>
+						<span>Add Channel</span>
+					</button>
+				</nav>
+			{/if}
+		</div>
+
+		<!-- Chats Section (Always Visible) -->
+		<div class="mb-6">
+			<button
+				onclick={() => (chatsExpanded = !chatsExpanded)}
+				class="group mb-1 flex w-full items-center justify-between px-3 py-1 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase hover:text-zinc-400"
+			>
+				<span>Chats</span>
+				<svg
+					class="h-3 w-3 transition-transform duration-200 {chatsExpanded ? 'rotate-90' : ''}"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M9 5l7 7-7 7"
+					/>
+				</svg>
+			</button>
+
+			{#if chatsExpanded}
+				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
+					{#if currentWorkspace}
+						<!-- Mock Direct Message -->
+						<a
+							href={resolve(`/workspace/${currentWorkspace.slug}/chat/dm-alex` as unknown as '/')}
+							class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all hover:bg-zinc-900/40 hover:text-white"
+						>
+							<div class="relative">
+								<Avatar name="Alex Chen" size="xs" />
+								<div
+									class="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border border-black bg-brand-green"
+								></div>
+							</div>
+							<span class="truncate font-medium">Alex Chen</span>
+						</a>
+					{:else}
+						<div class="px-3 py-2 text-left">
+							<p class="text-[10px] text-zinc-500 italic">Select workspace to view chats</p>
+						</div>
+					{/if}
+
+					<button
+						onclick={() => (!currentWorkspace ? (showSwitcher = true) : null)}
+						class="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-xs text-zinc-600 transition-all hover:text-zinc-400"
+					>
+						<span
+							class="flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800"
+							>+</span
+						>
+						<span>New Message</span>
+					</button>
+				</nav>
+			{/if}
+		</div>
+
+		{#if currentWorkspace}
+			<!-- Administration Section -->
+			<div class="mb-6">
+				<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">
+					Administration
+				</p>
+				<nav class="space-y-1">
+					{#each adminLinks as link (link.name)}
+						<a
+							href={resolve(link.href as unknown as '/')}
+							class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {page.url.pathname.startsWith(
+								link.href
+							)
+								? 'bg-zinc-900 text-white'
+								: 'hover:bg-zinc-900/40 hover:text-white'}"
+						>
+							<div
+								class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+							>
+								{#if link.icon === 'users'}
+									<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="1.5"
+											d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+										/>
+									</svg>
+								{:else if link.icon === 'settings'}
+									<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="1.5"
+											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="1.5"
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+									</svg>
+								{/if}
+							</div>
+							{link.name}
+						</a>
+					{/each}
+				</nav>
+			</div>
+		{/if}
+	</div>
+
+	<!-- Sidebar Footer -->
+	<div class="mt-auto space-y-4 border-t border-stroke p-5">
+		<!-- Theme Toggle Integrated -->
+		<ThemeToggle />
+
+		<!-- User Profile Section -->
+		<div class="flex items-center gap-3 rounded-xl border border-stroke bg-surface-dim/20 p-2.5">
+			<div class="relative">
+				<Avatar name={profile?.username || 'User'} size="sm" src={profile?.avatar_url} />
+				<!-- Presence Indicator -->
+				<div
+					class="absolute -right-0.5 -bottom-0.5 h-3 w-3 rounded-full border-2 border-black bg-brand-green shadow-[0_0_8px_rgba(34,197,94,0.5)]"
+					title="Online"
+				></div>
+			</div>
+
+			<div class="flex-1 overflow-hidden">
+				<p class="truncate text-xs font-bold text-content">{profile?.username || 'Developer'}</p>
 				<p class="truncate text-[10px] text-zinc-500 lowercase">Free Plan</p>
 			</div>
+		</div>
+
+		<!-- Action Rail (Separated) -->
+		<div
+			class="flex items-center justify-between rounded-xl border border-stroke bg-surface-dim/50 p-1.5"
+		>
+			<div class="flex items-center gap-0.5">
+				<button
+					class="rounded-lg p-2 text-zinc-600 transition-all hover:bg-zinc-900 hover:text-white"
+					aria-label="Settings"
+					title="Settings"
+				>
+					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+						/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+						/>
+					</svg>
+				</button>
+
+				<button
+					class="rounded-lg p-2 text-zinc-600 transition-all hover:bg-zinc-900 hover:text-white"
+					aria-label="Notifications"
+					title="Notifications"
+				>
+					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+						/>
+					</svg>
+				</button>
+			</div>
+
 			<button
 				onclick={handleLogout}
-				class="text-zinc-600 transition-colors hover:text-white"
+				class="rounded-lg p-2 text-zinc-600 transition-all hover:bg-zinc-900 hover:text-red-500"
 				aria-label="Log out"
 				title="Log out"
 			>
@@ -391,3 +629,13 @@
 		</div>
 	</div>
 </aside>
+
+<style>
+	.scrollbar-none::-webkit-scrollbar {
+		display: none;
+	}
+	.scrollbar-none {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+</style>

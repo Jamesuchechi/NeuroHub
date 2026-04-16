@@ -2,9 +2,12 @@
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import Button from '../ui/Button.svelte';
+	import ThemeToggle from '../ui/ThemeToggle.svelte';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
+	import { uiStore } from '$lib/stores/uiStore';
 
 	const currentWorkspace = $derived($workspaceStore.currentWorkspace);
+	const { contextPanelCollapsed } = $derived($uiStore);
 
 	// Generate breadcrumbs from path with workspace name support
 	const pathSegments = $derived(
@@ -26,11 +29,11 @@
 </script>
 
 <header
-	class="flex h-16 w-full items-center justify-between border-b border-zinc-900 bg-black/50 px-8 backdrop-blur-md"
+	class="flex h-16 w-full items-center justify-between border-b border-stroke bg-surface/50 px-8 backdrop-blur-md"
 >
 	<!-- Left: Breadcrumbs -->
 	<div class="flex items-center gap-2 overflow-hidden">
-		<svg class="h-4 w-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		<svg class="h-4 w-4 text-content-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path
 				stroke-linecap="round"
 				stroke-linejoin="round"
@@ -38,17 +41,17 @@
 				d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
 			/>
 		</svg>
-		<span class="text-zinc-700">/</span>
+		<span class="text-content-dim/30">/</span>
 		{#each pathSegments as segment, i (segment.href)}
 			{#if i > 0}
-				<span class="text-zinc-700">/</span>
+				<span class="text-content-dim/30">/</span>
 			{/if}
 			<a
 				href={resolve(segment.href as unknown as '/')}
 				class="truncate text-xs font-semibold tracking-tight transition-colors {i ===
 				pathSegments.length - 1
-					? 'text-white'
-					: 'text-zinc-500 hover:text-zinc-300'}"
+					? 'text-content'
+					: 'text-content-dim hover:text-content'}"
 			>
 				{segment.name}
 			</a>
@@ -58,7 +61,7 @@
 	<!-- Right: Actions -->
 	<div class="flex items-center gap-4">
 		<button
-			class="relative rounded-full p-2 text-zinc-400 transition-all hover:bg-zinc-900 hover:text-white"
+			class="relative rounded-full p-2 text-content-dim transition-all hover:bg-surface-dim hover:text-content"
 			aria-label="Notifications"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -77,8 +80,32 @@
 			</span>
 		</button>
 
-		<div class="h-4 w-px bg-zinc-800"></div>
+		<ThemeToggle />
 
-		<Button variant="primary" size="sm" class="px-4! py-2! text-[11px]! font-bold!">Invite</Button>
+		<button
+			onclick={() => uiStore.setContextPanelCollapsed(!contextPanelCollapsed)}
+			class="rounded-lg p-2 text-content-dim transition-all hover:bg-surface-dim hover:text-content"
+			class:text-orange-500={!contextPanelCollapsed}
+			class:bg-surface-dim={!contextPanelCollapsed}
+			title={contextPanelCollapsed ? 'Show Context Panel' : 'Hide Context Panel'}
+		>
+			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1.5"
+					d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+				/>
+			</svg>
+		</button>
+
+		<div class="h-4 w-px bg-stroke"></div>
+
+		<Button
+			variant="primary"
+			size="sm"
+			class="px-4! py-2! text-[11px]! font-bold!"
+			onclick={() => uiStore.setInviteModalOpen(true)}>Invite</Button
+		>
 	</div>
 </header>

@@ -25,13 +25,13 @@
 </script>
 
 <div
-	class="relative flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-800 bg-zinc-900 {sizes[
+	class="relative flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-stroke bg-surface-dim {sizes[
 		size
 	]} {className}"
 >
 	{#if src}
 		<img {src} alt={name} class="h-full w-full object-cover" />
 	{:else}
-		<span class="font-bold text-zinc-500">{initials || '?'}</span>
+		<span class="font-bold text-content-dim">{initials || '?'}</span>
 	{/if}
 </div>

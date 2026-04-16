@@ -1,2 +1,75 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+@theme {
+	--color-brand-orange: #f97316;
+	--color-brand-blue: #2563eb;
+	--color-brand-green: #22c55e;
+
+	/* Semantic Surface Colors */
+	--color-surface: var(--bg-primary);
+	--color-surface-dim: var(--bg-secondary);
+
+	/* Semantic Content Colors */
+	--color-content: var(--text-primary);
+	--color-content-dim: var(--text-secondary);
+
+	/* Semantic Stroke Colors */
+	--color-stroke: var(--border-primary);
+
+	--font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+	--shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+	--shadow-neon-orange: 0 0 15px rgba(249, 115, 22, 0.4);
+}
+
+@layer base {
+	:root {
+		--bg-primary: #ffffff;
+		--bg-secondary: #f4f4f5;
+		--border-primary: #e4e4e7;
+		--text-primary: #09090b;
+		--text-secondary: #71717a;
+	}
+
+	.dark {
+		--bg-primary: #000000;
+		--bg-secondary: #09090b;
+		--border-primary: #18181b;
+		--text-primary: #ffffff;
+		--text-secondary: #a1a1aa;
+	}
+
+	html,
+	body {
+		@apply h-full overflow-hidden bg-surface text-content antialiased;
+	}
+
+	* {
+		@apply border-stroke;
+	}
+
+	::selection {
+		@apply bg-brand-orange/30 text-content;
+	}
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+	width: 6px;
+	height: 6px;
+}
+
+::-webkit-scrollbar-track {
+	@apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+	@apply rounded-full bg-stroke hover:bg-zinc-700 dark:bg-zinc-800;
+}
+
+/* Glassmorphism utility */
+.glass {
+	@apply border border-stroke/10 shadow-glass backdrop-blur-xl;
+	@apply bg-white/60 dark:bg-black/60;
+}

@@ -105,46 +105,46 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ## Phase 2 — Core Layout & Navigation
 
-**Target: Week 1–2**
+**Status: Completed ✅**
 
 ### App Shell
 
-- [ ] Build root `+layout.svelte` with three-panel layout:
+- [x] Build root `+layout.svelte` with three-panel layout:
   - Left: Fixed sidebar (workspace switcher, nav icons)
   - Center: Main content area
   - Right: Context panel (collapsible)
-- [ ] Implement `SplitPane.svelte` resizable panels with drag handle
-- [ ] Build collapsible sidebar with smooth CSS transitions
-- [ ] Implement keyboard shortcuts system (`cmd+K` command palette, `cmd+/` shortcuts modal)
+- [x] Implement `SplitPane.svelte` resizable panels with drag handle
+- [x] Build collapsible sidebar with smooth CSS transitions
+- [x] Implement keyboard shortcuts system (`cmd+K` command palette, `cmd+/` shortcuts modal)
 
 ### Sidebar Navigation
 
-- [ ] Workspace switcher dropdown (recent workspaces, add workspace)
-- [ ] Channel list section with collapse/expand
-- [ ] Notes section shortcut
-- [ ] Snippets section shortcut
-- [ ] Settings gear icon at bottom
-- [ ] User avatar + presence indicator at bottom
+- [x] Workspace switcher dropdown (recent workspaces, add workspace)
+- [x] Channel list section with collapse/expand
+- [x] Notes section shortcut
+- [x] Snippets section shortcut
+- [x] Settings gear icon at bottom
+- [x] User avatar + presence indicator at bottom
 
 ### Command Palette (`cmd+K`)
 
-- [ ] Build `CommandPalette.svelte` modal with fuzzy search
-- [ ] Commands: navigate to channel, open note, search snippets, invite member
-- [ ] Keyboard navigation (arrows, enter, escape)
-- [ ] Recent items history
+- [x] Build `CommandPalette.svelte` modal with fuzzy search
+- [x] Commands: navigate to channel, open note, search snippets, invite member
+- [x] Keyboard navigation (arrows, enter, escape)
+- [x] Recent items history
 
 ### Theming
 
-- [ ] Setup Tailwind dark mode (class strategy)
-- [ ] Build theme toggle (light/dark/system) stored in `localStorage`
-- [ ] Define CSS custom properties for brand colors
-- [ ] Create design token file `src/lib/tokens.ts`
+- [x] Setup Tailwind dark mode (class strategy)
+- [x] Build theme toggle (light/dark/system) stored in `localStorage`
+- [x] Define CSS custom properties for brand colors
+- [x] Create design token file `src/lib/tokens.ts`
 
 ### Empty States & Loading
 
-- [ ] Design empty state components (no channels, no notes, no snippets)
-- [ ] Build skeleton loader components (ChatSkeleton, NoteSkeleton, SnippetSkeleton)
-- [ ] Build global error boundary in root layout
+- [x] Design empty state components (no channels, no notes, no snippets)
+- [x] Build skeleton loader components (ChatSkeleton, NoteSkeleton, SnippetSkeleton)
+- [x] Build global error boundary in root layout
 
 ---
 

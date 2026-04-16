@@ -108,7 +108,7 @@
 	});
 </script>
 
-<div class="min-h-screen bg-black p-8 text-white md:p-12">
+<div class="min-h-full bg-surface p-8 text-content md:p-12">
 	<div class="mx-auto max-w-6xl">
 		<!-- Hub Header -->
 		<div
@@ -122,14 +122,14 @@
 						>Activity Hub</span
 					>
 				</h1>
-				<p class="text-lg leading-relaxed font-medium text-zinc-500">
+				<p class="text-lg leading-relaxed font-medium text-content-dim">
 					Welcome back, {displayName}. Here's what's happening across your collaborative network.
 				</p>
 			</div>
 
 			<div class="flex items-center gap-4">
 				<div class="hidden text-right md:block">
-					<p class="mb-1 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">Status</p>
+					<p class="mb-1 text-[10px] font-bold tracking-[2px] text-content-dim uppercase">Status</p>
 					<p class="flex items-center justify-end gap-1.5 text-xs font-bold text-green-500">
 						<span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
 						Systems Online
@@ -145,11 +145,11 @@
 		>
 			<!-- Activity Feed Card -->
 			<div
-				class="rounded-3xl border border-zinc-900 bg-zinc-950/50 p-8 shadow-2xl backdrop-blur-sm md:col-span-2"
+				class="rounded-3xl border border-stroke bg-surface-dim/50 p-8 shadow-2xl backdrop-blur-sm md:col-span-2"
 			>
 				<div class="mb-8 flex items-center justify-between">
 					<h3 class="text-xl font-black">Recent Activity</h3>
-					<button class="text-xs font-bold text-zinc-500 transition-colors hover:text-orange-500"
+					<button class="text-xs font-bold text-content-dim transition-colors hover:text-orange-500"
 						>See Detailed Feed →</button
 					>
 				</div>
@@ -158,7 +158,7 @@
 					{#each Array.from({ length: 3 }) as _, i (i)}
 						<div class="group flex cursor-pointer gap-6">
 							<div
-								class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 transition-all group-hover:bg-orange-500 group-hover:text-black"
+								class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface-dim transition-all group-hover:bg-orange-500 group-hover:text-black"
 							>
 								<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path
@@ -170,13 +170,13 @@
 								</svg>
 							</div>
 							<div class="flex-1 border-b border-zinc-900 pb-8 last:border-0">
-								<p class="mb-1 text-sm font-bold text-white">
-									Document Updated <span class="font-medium text-zinc-500">in</span> Project Phoenix
+								<p class="mb-1 text-sm font-bold text-content">
+									Document Updated <span class="font-medium text-content-dim">in</span> Project Phoenix
 								</p>
-								<p class="mb-2 line-clamp-1 text-xs text-zinc-500 italic">
+								<p class="mb-2 line-clamp-1 text-xs text-content-dim italic">
 									"We have finalized the core architecture and moved into Phase 2..."
 								</p>
-								<p class="text-[10px] font-black text-zinc-700 uppercase">
+								<p class="text-[10px] font-black text-content-dim/80 uppercase">
 									2 hours ago • By Alex Chen
 								</p>
 							</div>
@@ -188,9 +188,9 @@
 			<!-- Quick Stats / User Profile -->
 			<div class="space-y-8">
 				<div
-					class="rounded-3xl border border-zinc-900 bg-linear-to-br from-zinc-950 to-black p-8 shadow-2xl"
+					class="rounded-3xl border border-stroke bg-surface-dim p-8 shadow-2xl"
 				>
-					<p class="mb-6 text-[10px] font-black tracking-[2px] text-zinc-600 uppercase">
+					<p class="mb-6 text-[10px] font-black tracking-[2px] text-content-dim uppercase">
 						Your Profile
 					</p>
 					<div class="mb-8 flex items-center gap-4">
@@ -200,28 +200,28 @@
 							{displayName[0]}
 						</div>
 						<div>
-							<p class="text-xl font-black text-white">{displayName}</p>
-							<p class="text-xs text-zinc-500">Senior Developer</p>
+							<p class="text-xl font-black text-content">{displayName}</p>
+							<p class="text-xs text-content-dim">Senior Developer</p>
 						</div>
 					</div>
 					<div class="grid grid-cols-2 gap-4">
-						<div class="rounded-2xl bg-zinc-900 p-4">
-							<p class="mb-1 text-[10px] font-bold text-zinc-600 uppercase">Commits</p>
-							<p class="text-xl font-black text-white">124</p>
+						<div class="rounded-2xl bg-surface p-4">
+							<p class="mb-1 text-[10px] font-bold text-content-dim uppercase">Commits</p>
+							<p class="text-xl font-black text-content">124</p>
 						</div>
-						<div class="rounded-2xl bg-zinc-900 p-4">
-							<p class="mb-1 text-[10px] font-bold text-zinc-600 uppercase">Messages</p>
-							<p class="text-xl font-black text-white">8.2k</p>
+						<div class="rounded-2xl bg-surface p-4">
+							<p class="mb-1 text-[10px] font-bold text-content-dim uppercase">Messages</p>
+							<p class="text-xl font-black text-content">8.2k</p>
 						</div>
 					</div>
 				</div>
 
-				<div class="rounded-3xl border border-zinc-900 bg-zinc-950/50 p-8">
-					<h4 class="mb-4 text-sm font-bold text-white">Account Storage</h4>
-					<div class="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-zinc-900">
+				<div class="rounded-3xl border border-stroke bg-surface-dim/50 p-8">
+					<h4 class="mb-4 text-sm font-bold text-content">Account Storage</h4>
+					<div class="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-surface">
 						<div class="h-full w-1/3 bg-linear-to-r from-orange-500 to-orange-300"></div>
 					</div>
-					<p class="text-[10px] font-bold text-zinc-500 uppercase">3.2 GB of 10 GB used</p>
+					<p class="text-[10px] font-bold text-content-dim uppercase">3.2 GB of 10 GB used</p>
 				</div>
 			</div>
 		</div>
@@ -230,8 +230,8 @@
 		<div in:fly={{ y: 40, duration: 1200, easing: cubicOut, delay: 400 }}>
 			<div class="mb-8 flex items-center justify-between">
 				<div>
-					<h2 class="mb-1 text-2xl font-black tracking-tight text-white">Your Workspaces</h2>
-					<p class="text-sm font-medium text-zinc-500">Jump back into your active projects.</p>
+					<h2 class="mb-1 text-2xl font-black tracking-tight text-content">Your Workspaces</h2>
+					<p class="text-sm font-medium text-content-dim">Jump back into your active projects.</p>
 				</div>
 				<Button variant="primary" size="sm" onclick={() => (showCreateModal = true)}>
 					<div class="flex items-center gap-2">
@@ -257,9 +257,9 @@
 			{:else if workspaces.length === 0}
 				<!-- Empty State (keeping previous logic) -->
 				<div
-					class="flex flex-col items-center justify-center rounded-3xl border border-zinc-900 bg-zinc-950/50 py-24 text-center"
+					class="flex flex-col items-center justify-center rounded-3xl border border-stroke bg-surface-dim/50 py-24 text-center"
 				>
-					<h2 class="mb-3 text-2xl font-black tracking-tight text-white">No workspaces found</h2>
+					<h2 class="mb-3 text-2xl font-black tracking-tight text-content">No workspaces found</h2>
 					<Button variant="primary" onclick={() => (showCreateModal = true)}
 						>Create Entry Point</Button
 					>
@@ -298,9 +298,9 @@
 					oninput={onSlugInput}
 					placeholder="acme-corp"
 					required
-					class="w-full rounded-xl border bg-zinc-950 px-4 py-3.5 text-sm text-white transition-all outline-none placeholder:text-zinc-700 {slugError
+					class="w-full rounded-xl border bg-surface px-4 py-3.5 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 {slugError
 						? 'border-red-500'
-						: 'border-zinc-900 focus:border-orange-500'}"
+						: 'border-stroke focus:border-brand-orange'}"
 				/>
 				{#if slugValidating}
 					<div class="absolute top-1/2 right-4 -translate-y-1/2">
@@ -313,7 +313,7 @@
 			{#if slugError}
 				<p class="text-xs text-red-500">{slugError}</p>
 			{:else}
-				<p class="text-[11px] text-zinc-600">neurohub.io/workspace/{slug || '...'}</p>
+				<p class="text-[11px] text-content-dim">neurohub.io/workspace/{slug || '...'}</p>
 			{/if}
 		</div>
 
@@ -327,7 +327,7 @@
 				id="create-description"
 				bind:value={description}
 				placeholder="Engineering team's shared brain."
-				class="h-24 w-full resize-none rounded-xl border border-zinc-900 bg-zinc-950 px-4 py-3 text-sm text-white transition-all outline-none placeholder:text-zinc-700 focus:border-orange-500"
+				class="h-24 w-full resize-none rounded-xl border border-stroke bg-surface px-4 py-3 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 focus:border-brand-orange"
 			></textarea>
 		</div>
 

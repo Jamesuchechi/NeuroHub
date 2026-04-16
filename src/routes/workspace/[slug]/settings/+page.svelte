@@ -4,7 +4,9 @@
 	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/authStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
+	import { uiStore } from '$lib/stores/uiStore';
 	import { goto } from '$app/navigation';
+	import { workspacesService } from '$lib/services/workspaces';
 	import { slugify } from '$lib/utils/slugify';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -42,6 +44,22 @@
 			goto(resolve('/dashboard'));
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function handleLogoUpload(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (!file || !currentWorkspace) return;
+
+		saving = true;
+		try {
+			const logoUrl = await workspacesService.uploadLogo(currentWorkspace.id, file);
+			await workspaceStore.updateWorkspace({ logo_url: logoUrl });
+		} catch (err) {
+			console.error(err);
+		} finally {
+			saving = false;
 		}
 	}
 
@@ -160,6 +178,31 @@
 				<section class="max-w-xl">
 					<h3 class="mb-6 text-lg font-bold">Workspace Details</h3>
 					<form onsubmit={handleUpdateGeneral} class="space-y-6">
+						<div class="flex items-center gap-6 pb-6">
+							<Avatar
+								name={currentWorkspace?.name}
+								src={currentWorkspace?.logo_url}
+								size="xl"
+								class="rounded-2xl"
+							/>
+							<div class="space-y-2">
+								<p class="text-xs font-bold tracking-wider text-white uppercase">Workspace Logo</p>
+								<label
+									class="inline-block cursor-pointer rounded-lg bg-zinc-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-zinc-800"
+								>
+									{saving ? 'Uploading...' : 'Upload New Logo'}
+									<input
+										type="file"
+										class="hidden"
+										accept="image/*"
+										onchange={handleLogoUpload}
+										disabled={saving}
+									/>
+								</label>
+								<p class="text-[10px] text-zinc-500">JPG, PNG or SVG. Max 2MB.</p>
+							</div>
+						</div>
+
 						<Input label="Workspace Name" bind:value={name} required />
 						<Input label="Workspace Slug" bind:value={slug} required />
 						<div class="space-y-2">
@@ -194,7 +237,9 @@
 			<div class="space-y-6">
 				<div class="mb-4 flex items-center justify-between">
 					<h3 class="text-lg font-bold">Manage Members</h3>
-					<Button variant="primary" size="sm">Invite Member</Button>
+					<Button variant="primary" size="sm" onclick={() => uiStore.setInviteModalOpen(true)}
+						>Invite Member</Button
+					>
 				</div>
 
 				<div class="overflow-hidden rounded-2xl border border-zinc-900">

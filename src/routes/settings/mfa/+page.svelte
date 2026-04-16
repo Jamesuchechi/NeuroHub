@@ -60,11 +60,27 @@
 	async function unenroll() {
 		if (!confirm('Are you sure you want to disable MFA?')) return;
 
-		const { data: factors } = await supabase.auth.mfa.listFactors();
-		for (const factor of factors.all) {
-			await supabase.auth.mfa.unenroll({ factorId: factor.id });
+		loading = true;
+		error = '';
+		try {
+			const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+			if (listError) throw listError;
+
+			if (factors?.all) {
+				for (const factor of factors.all) {
+					const { error: unenrollError } = await supabase.auth.mfa.unenroll({
+						factorId: factor.id
+					});
+					if (unenrollError) throw unenrollError;
+				}
+			}
+			enrolled = false;
+			alert('MFA disabled successfully.');
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to disable MFA';
+		} finally {
+			loading = false;
 		}
-		enrolled = false;
 	}
 
 	onMount(checkMFAStatus);

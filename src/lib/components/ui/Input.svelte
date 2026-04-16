@@ -15,7 +15,7 @@
 
 <div class="field-group mb-4.5">
 	{#if label}
-		<label for={id} class="mb-2 block text-[10px] font-bold tracking-[1px] text-zinc-500 uppercase"
+		<label for={id} class="mb-2 block text-[10px] font-bold tracking-[1px] text-content-dim uppercase"
 			>{label}</label
 		>
 	{/if}
@@ -26,7 +26,7 @@
 		{placeholder}
 		{required}
 		{oninput}
-		class="w-full rounded-xl border border-zinc-900 bg-zinc-950 px-4 py-3.5 text-sm text-white transition-all outline-none placeholder:text-zinc-700 focus:border-orange-500"
+		class="w-full rounded-xl border border-stroke bg-surface-dim px-4 py-3.5 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 focus:border-brand-orange"
 	/>
 	{#if error}
 		<p class="mt-1.5 text-xs text-red-500">{error}</p>
