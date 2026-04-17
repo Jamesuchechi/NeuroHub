@@ -7,7 +7,15 @@
 	}>();
 
 	const { user } = $derived($authStore);
-	const totalVotes = $derived(poll.options.reduce((sum: number, opt: import('$lib/types/db').AppDatabase['public']['Tables']['poll_options']['Row']) => sum + opt.votes_count, 0));
+	const totalVotes = $derived(
+		poll.options.reduce(
+			(
+				sum: number,
+				opt: import('$lib/types/db').AppDatabase['public']['Tables']['poll_options']['Row']
+			) => sum + opt.votes_count,
+			0
+		)
+	);
 	const isExpired = $derived(new Date(poll.expires_at) < new Date());
 	const hasVoted = $derived(!!poll.user_vote);
 	const showResults = $derived(hasVoted || isExpired);
@@ -33,7 +41,9 @@
 	<div class="space-y-2">
 		{#each poll.options as option (option.id)}
 			{#if showResults}
-				<div class="relative h-10 w-full overflow-hidden rounded-xl bg-surface border border-stroke/50">
+				<div
+					class="relative h-10 w-full overflow-hidden rounded-xl border border-stroke/50 bg-surface"
+				>
 					<!-- Progress Bar -->
 					<div
 						class="absolute inset-y-0 left-0 bg-brand-orange/10 transition-all duration-1000"
@@ -42,12 +52,20 @@
 
 					<div class="relative flex h-full items-center justify-between px-4 text-sm">
 						<div class="flex items-center gap-2">
-							<span class="font-medium {poll.user_vote === option.id ? 'text-brand-orange' : 'text-content'}">
+							<span
+								class="font-medium {poll.user_vote === option.id
+									? 'text-brand-orange'
+									: 'text-content'}"
+							>
 								{option.text}
 							</span>
 							{#if poll.user_vote === option.id}
 								<svg class="h-4 w-4 text-brand-orange" viewBox="0 0 20 20" fill="currentColor">
-									<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+									<path
+										fill-rule="evenodd"
+										d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+										clip-rule="evenodd"
+									/>
 								</svg>
 							{/if}
 						</div>
@@ -66,7 +84,9 @@
 		{/each}
 	</div>
 
-	<div class="flex items-center justify-between pt-1 text-[10px] font-bold tracking-wider text-content-dim uppercase">
+	<div
+		class="flex items-center justify-between pt-1 text-[10px] font-bold tracking-wider text-content-dim uppercase"
+	>
 		<span>{totalVotes} votes</span>
 		<span>
 			{#if isExpired}

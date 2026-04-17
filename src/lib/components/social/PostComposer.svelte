@@ -7,7 +7,13 @@
 	import { fly, fade, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 
-	let { workspaceId = null, onPostCreated, placeholder = '', options = { parentId: null }, showActions = true } = $props<{
+	let {
+		workspaceId = null,
+		onPostCreated,
+		placeholder = '',
+		options = { parentId: null },
+		showActions = true
+	} = $props<{
 		workspaceId?: string | null;
 		onPostCreated?: () => void;
 		placeholder?: string;
@@ -85,8 +91,11 @@
 				url: res.secure_url,
 				thumbnail: res.secure_url.replace('/upload/', '/upload/w_200,c_fill/')
 			};
-			
-			posts[activeUploadIndex].attachments = [...posts[activeUploadIndex].attachments, newAttachment];
+
+			posts[activeUploadIndex].attachments = [
+				...posts[activeUploadIndex].attachments,
+				newAttachment
+			];
 		} catch (err) {
 			console.error('[PostComposer] Upload failed:', err);
 		} finally {
@@ -96,7 +105,9 @@
 	}
 
 	async function handleSubmit() {
-		const hasContent = posts.some(p => p.content.trim() || p.attachments.length > 0 || p.showPollCreator);
+		const hasContent = posts.some(
+			(p) => p.content.trim() || p.attachments.length > 0 || p.showPollCreator
+		);
 		if (!hasContent || !profile) return;
 
 		isSubmitting = true;
@@ -104,15 +115,18 @@
 			let lastParentId = options.parentId;
 
 			for (const block of posts) {
-				if (!block.content.trim() && block.attachments.length === 0 && !block.showPollCreator) continue;
+				if (!block.content.trim() && block.attachments.length === 0 && !block.showPollCreator)
+					continue;
 
 				const detected = detectLinks(block.content);
 				const allAttachments = [...block.attachments, ...detected];
 
-				const pollData = block.showPollCreator ? {
-					question: block.pollQuestion || block.content || 'Poll',
-					options: block.pollOptions.filter(o => o.trim().length > 0)
-				} : undefined;
+				const pollData = block.showPollCreator
+					? {
+							question: block.pollQuestion || block.content || 'Poll',
+							options: block.pollOptions.filter((o) => o.trim().length > 0)
+						}
+					: undefined;
 
 				const res = await activityService.createPost(profile.id, block.content, {
 					workspaceId,
@@ -173,31 +187,39 @@
 							: ''}"
 					/>
 					{#if i < posts.length - 1}
-						<div class="w-0.5 flex-1 bg-stroke/30 my-1"></div>
+						<div class="my-1 w-0.5 flex-1 bg-stroke/30"></div>
 					{/if}
 				</div>
 
-				<div class="flex-1 min-w-0">
+				<div class="min-w-0 flex-1">
 					<div class="flex items-start justify-between gap-4">
 						<textarea
 							bind:value={post.content}
 							onfocus={() => (isFocused = true)}
-							placeholder={i === 0 
-								? (placeholder || (workspaceId ? 'Update the project...' : 'Share your latest breakthrough...'))
+							placeholder={i === 0
+								? placeholder ||
+									(workspaceId ? 'Update the project...' : 'Share your latest breakthrough...')
 								: 'Add another post...'}
-							class="w-full resize-none bg-transparent py-2 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 {isFocused || post.content.length > 0 || post.attachments.length > 0
+							class="w-full resize-none bg-transparent py-2 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 {isFocused ||
+							post.content.length > 0 ||
+							post.attachments.length > 0
 								? 'min-h-[80px]'
 								: 'min-h-[40px]'}"
 						></textarea>
 
 						{#if posts.length > 1}
-							<button 
+							<button
 								onclick={() => removePostBlock(i)}
-								class="text-content-dim/40 hover:text-red-500 transition-colors p-1"
+								class="p-1 text-content-dim/40 transition-colors hover:text-red-500"
 								title="Remove post"
 							>
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M6 18L18 6M6 6l12 12"
+									/>
 								</svg>
 							</button>
 						{/if}
@@ -205,20 +227,22 @@
 
 					<!-- Poll Creator -->
 					{#if post.showPollCreator}
-						<div 
+						<div
 							transition:slide={{ duration: 300 }}
 							class="mt-4 space-y-3 rounded-2xl border border-stroke bg-surface p-4 shadow-inner"
 						>
 							<div class="flex items-center justify-between">
-								<span class="text-[10px] font-black tracking-widest text-zinc-500 uppercase">Poll Options</span>
-								<button 
+								<span class="text-[10px] font-black tracking-widest text-zinc-500 uppercase"
+									>Poll Options</span
+								>
+								<button
 									onclick={() => (post.showPollCreator = false)}
-									class="text-[10px] font-black text-red-500 hover:text-red-400 uppercase"
+									class="text-[10px] font-black text-red-500 uppercase hover:text-red-400"
 								>
 									Remove Poll
 								</button>
 							</div>
-							
+
 							<div class="space-y-2">
 								{#each post.pollOptions as _opt, oi (oi)}
 									<div class="flex gap-2">
@@ -226,17 +250,22 @@
 											type="text"
 											bind:value={post.pollOptions[oi]}
 											placeholder="Option {oi + 1}"
-											class="flex-1 rounded-xl border border-stroke bg-surface-dim px-4 py-2 text-xs text-content outline-none focus:border-brand-orange/50 transition-all"
+											class="flex-1 rounded-xl border border-stroke bg-surface-dim px-4 py-2 text-xs text-content transition-all outline-none focus:border-brand-orange/50"
 										/>
 										{#if post.pollOptions.length > 2}
-											<button 
+											<button
 												onclick={() => removePollOption(i, oi)}
-												class="text-content-dim hover:text-red-500 transition-colors"
+												class="text-content-dim transition-colors hover:text-red-500"
 												title="Remove option"
 												aria-label="Remove poll option"
 											>
 												<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M6 18L18 6M6 6l12 12"
+													/>
 												</svg>
 											</button>
 										{/if}
@@ -245,9 +274,9 @@
 							</div>
 
 							{#if post.pollOptions.length < 4}
-								<button 
+								<button
 									onclick={() => addPollOption(i)}
-									class="w-full border-t border-stroke pt-2 text-center text-[10px] font-bold text-brand-orange hover:text-brand-orange/80 transition-colors"
+									class="w-full border-t border-stroke pt-2 text-center text-[10px] font-bold text-brand-orange transition-colors hover:text-brand-orange/80"
 								>
 									+ Add Option
 								</button>
@@ -266,7 +295,11 @@
 										<img src={att.url} alt="Attachment" class="h-full w-full object-cover" />
 									{:else}
 										<div class="flex h-full w-full items-center justify-center bg-zinc-800">
-											<svg class="h-6 w-6 text-brand-orange" fill="currentColor" viewBox="0 0 20 20">
+											<svg
+												class="h-6 w-6 text-brand-orange"
+												fill="currentColor"
+												viewBox="0 0 20 20"
+											>
 												<path
 													d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"
 												/>
@@ -305,7 +338,10 @@
 										class="flex h-7 w-7 items-center justify-center rounded-full text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
 										title="Add Media"
 										aria-label="Add media attachment"
-										onclick={() => { activeUploadIndex = i; fileInput.click(); }}
+										onclick={() => {
+											activeUploadIndex = i;
+											fileInput.click();
+										}}
 										disabled={isUploading || post.showPollCreator}
 									>
 										{#if isUploading && activeUploadIndex === i}
@@ -313,7 +349,12 @@
 												class="h-3 w-3 animate-spin rounded-full border-2 border-brand-orange border-t-transparent"
 											></div>
 										{:else}
-											<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<svg
+												class="h-3.5 w-3.5"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
 												<path
 													stroke-linecap="round"
 													stroke-linejoin="round"
@@ -324,14 +365,21 @@
 										{/if}
 									</button>
 									<button
-										class="flex h-7 w-7 items-center justify-center rounded-full text-content-dim transition-colors hover:bg-surface hover:text-brand-orange {post.showPollCreator ? 'text-brand-orange bg-surface' : ''}"
+										class="flex h-7 w-7 items-center justify-center rounded-full text-content-dim transition-colors hover:bg-surface hover:text-brand-orange {post.showPollCreator
+											? 'bg-surface text-brand-orange'
+											: ''}"
 										title="Create Poll"
 										aria-label="Toggle poll creator"
 										onclick={() => (post.showPollCreator = !post.showPollCreator)}
 										disabled={post.attachments.length > 0}
 									>
 										<svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+											/>
 										</svg>
 									</button>
 								</div>
@@ -346,13 +394,18 @@
 									</span>
 								{/if}
 								{#if i === posts.length - 1}
-									<button 
+									<button
 										onclick={addPostBlock}
-										class="flex h-7 w-7 items-center justify-center rounded-full border border-stroke bg-surface shadow-sm text-brand-orange hover:bg-brand-orange hover:text-white transition-all transform hover:scale-110"
+										class="flex h-7 w-7 transform items-center justify-center rounded-full border border-stroke bg-surface text-brand-orange shadow-sm transition-all hover:scale-110 hover:bg-brand-orange hover:text-white"
 										title="Add to thread"
 									>
 										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M12 4v16m8-8H4"
+											/>
 										</svg>
 									</button>
 								{/if}
@@ -365,7 +418,7 @@
 	</div>
 
 	<!-- Global Submit -->
-	{#if isFocused || posts.some(p => p.content.length > 0)}
+	{#if isFocused || posts.some((p) => p.content.length > 0)}
 		<div
 			in:fly={{ y: 20, duration: 400 }}
 			class="mt-6 flex items-center justify-end border-t border-stroke pt-4"
@@ -384,7 +437,9 @@
 					variant="primary"
 					size="sm"
 					width="auto"
-					disabled={!posts.some(p => p.content.trim() || p.attachments.length > 0) || isUploading || !profile}
+					disabled={!posts.some((p) => p.content.trim() || p.attachments.length > 0) ||
+						isUploading ||
+						!profile}
 					loading={isSubmitting}
 					onclick={handleSubmit}
 				>
@@ -410,4 +465,3 @@
 		></div>
 	{/if}
 </div>
-

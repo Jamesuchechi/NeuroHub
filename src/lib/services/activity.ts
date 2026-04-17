@@ -13,10 +13,12 @@ export type Activity = AppDatabase['public']['Tables']['activities']['Row'] & {
 	user_liked: boolean;
 	user_reposted: boolean;
 	original_post?: Activity | null;
-	poll?: (AppDatabase['public']['Tables']['polls']['Row'] & {
-		options: AppDatabase['public']['Tables']['poll_options']['Row'][];
-		user_vote?: string | null;
-	}) | null;
+	poll?:
+		| (AppDatabase['public']['Tables']['polls']['Row'] & {
+				options: AppDatabase['public']['Tables']['poll_options']['Row'][];
+				user_vote?: string | null;
+		  })
+		| null;
 };
 
 export interface PostPayload {
@@ -78,7 +80,11 @@ interface TypedSupabase {
 			};
 			single(): Promise<{ data: unknown; error: unknown }>;
 		};
-		insert(values: AppDatabase['public']['Tables'][T]['Insert'] | AppDatabase['public']['Tables'][T]['Insert'][]): Promise<{
+		insert(
+			values:
+				| AppDatabase['public']['Tables'][T]['Insert']
+				| AppDatabase['public']['Tables'][T]['Insert'][]
+		): Promise<{
 			data: unknown;
 			error: unknown;
 		}> & {
@@ -107,7 +113,11 @@ const ACTIVITY_SELECT = `
 	)
 `;
 
-function transformActivity(item: RawActivityResponse, userLiked: boolean = false, userVote: string | null = null): Activity {
+function transformActivity(
+	item: RawActivityResponse,
+	userLiked: boolean = false,
+	userVote: string | null = null
+): Activity {
 	const rawPoll = item.polls?.[0];
 	return {
 		...item,
@@ -116,11 +126,13 @@ function transformActivity(item: RawActivityResponse, userLiked: boolean = false
 		reposts_count: item.reposts?.[0]?.count || 0,
 		user_liked: userLiked,
 		user_reposted: false,
-		poll: rawPoll ? {
-			...rawPoll,
-			options: rawPoll.poll_options,
-			user_vote: userVote || null
-		} : null
+		poll: rawPoll
+			? {
+					...rawPoll,
+					options: rawPoll.poll_options,
+					user_vote: userVote || null
+				}
+			: null
 	} as Activity;
 }
 
@@ -166,7 +178,7 @@ function createActivityService() {
 						.eq('user_id', userId)
 						.in('poll_id', pollIds);
 					if (votesData) {
-						(votesData as { poll_id: string; option_id: string }[]).forEach(v => {
+						(votesData as { poll_id: string; option_id: string }[]).forEach((v) => {
 							userVotes[v.poll_id] = v.option_id;
 						});
 					}
@@ -179,33 +191,42 @@ function createActivityService() {
 				.eq('activity_id', parentId)
 				.order('created_at', { ascending: true });
 
-			const legacyComments: Activity[] = legacyData ? (legacyData as unknown as Comment[]).map(c => ({
-				id: c.id,
-				user_id: c.user_id,
-				workspace_id: null,
-				type: 'comment',
-				payload: { content: c.content } as Json,
-				attachments: [] as unknown as Json,
-				is_public: true,
-				repost_id: null,
-				parent_id: parentId,
-				created_at: c.created_at,
-				profiles: c.profiles,
-				likes_count: 0,
-				comments_count: 0,
-				reposts_count: 0,
-				user_liked: false,
-				user_reposted: false,
-				poll: null
-			} as Activity)) : [];
+			const legacyComments: Activity[] = legacyData
+				? (legacyData as unknown as Comment[]).map(
+						(c) =>
+							({
+								id: c.id,
+								user_id: c.user_id,
+								workspace_id: null,
+								type: 'comment',
+								payload: { content: c.content } as Json,
+								attachments: [] as unknown as Json,
+								is_public: true,
+								repost_id: null,
+								parent_id: parentId,
+								created_at: c.created_at,
+								profiles: c.profiles,
+								likes_count: 0,
+								comments_count: 0,
+								reposts_count: 0,
+								user_liked: false,
+								user_reposted: false,
+								poll: null
+							}) as Activity
+					)
+				: [];
 
 			const replies = activitiesData.map((item) => {
 				const pollId = item.polls?.[0]?.id;
-				return transformActivity(item, userLikes.includes(item.id), pollId ? userVotes[pollId] : null);
+				return transformActivity(
+					item,
+					userLikes.includes(item.id),
+					pollId ? userVotes[pollId] : null
+				);
 			});
 
-			return [...replies, ...legacyComments].sort((a, b) => 
-				new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+			return [...replies, ...legacyComments].sort(
+				(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
 			);
 		},
 
@@ -219,34 +240,37 @@ function createActivityService() {
 
 			if (parentId) {
 				query = query.eq('parent_id', parentId);
-				
+
 				// Fetch legacy comments in parallel
 				const { data: commentsData } = await supabase
 					.from('activity_comments')
 					.select('*, profiles(username, avatar_url)')
 					.eq('activity_id', parentId)
 					.order('created_at', { ascending: true });
-				
+
 				if (commentsData) {
-					legacyComments = (commentsData as unknown as Comment[]).map(c => ({
-						id: c.id,
-						user_id: c.user_id,
-						workspace_id: null,
-						type: 'comment',
-						payload: { content: c.content } as Json,
-						attachments: [] as unknown as Json,
-						is_public: true,
-						repost_id: null,
-						parent_id: parentId,
-						created_at: c.created_at,
-						profiles: c.profiles,
-						likes_count: 0,
-						comments_count: 0,
-						reposts_count: 0,
-						user_liked: false,
-						user_reposted: false,
-						poll: null
-					} as Activity));
+					legacyComments = (commentsData as unknown as Comment[]).map(
+						(c) =>
+							({
+								id: c.id,
+								user_id: c.user_id,
+								workspace_id: null,
+								type: 'comment',
+								payload: { content: c.content } as Json,
+								attachments: [] as unknown as Json,
+								is_public: true,
+								repost_id: null,
+								parent_id: parentId,
+								created_at: c.created_at,
+								profiles: c.profiles,
+								likes_count: 0,
+								comments_count: 0,
+								reposts_count: 0,
+								user_liked: false,
+								user_reposted: false,
+								poll: null
+							}) as Activity
+					);
 				}
 			} else if (workspaceId) {
 				query = query.eq('workspace_id', workspaceId).is('parent_id', null);
@@ -285,7 +309,7 @@ function createActivityService() {
 						.eq('user_id', _currentUserId)
 						.in('poll_id', pollIds);
 					if (votesData) {
-						(votesData as { poll_id: string; option_id: string }[]).forEach(v => {
+						(votesData as { poll_id: string; option_id: string }[]).forEach((v) => {
 							userVotes[v.poll_id] = v.option_id;
 						});
 					}
@@ -294,12 +318,16 @@ function createActivityService() {
 
 			const transformed: Activity[] = activitiesData.map((item) => {
 				const pollId = item.polls?.[0]?.id;
-				return transformActivity(item, userLikes.includes(item.id), pollId ? userVotes[pollId] : null);
+				return transformActivity(
+					item,
+					userLikes.includes(item.id),
+					pollId ? userVotes[pollId] : null
+				);
 			});
 
 			// Merge and sort
-			const final = [...transformed, ...legacyComments].sort((a, b) => 
-				new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+			const final = [...transformed, ...legacyComments].sort(
+				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
 			);
 
 			set(final);
@@ -309,18 +337,26 @@ function createActivityService() {
 		 * Subscribes to realtime updates for activities.
 		 * Returns a cleanup function.
 		 */
-		subscribeToActivities: (workspaceId: string | null = null, parentId: string | null = null, onUpdate?: () => void) => {
+		subscribeToActivities: (
+			workspaceId: string | null = null,
+			parentId: string | null = null,
+			onUpdate?: () => void
+		) => {
 			const channelId = `activities_${workspaceId || 'global'}_${parentId || 'root'}_${Math.random().toString(36).slice(2, 9)}`;
-			
+
 			const channel = supabase
 				.channel(channelId)
-				.on('postgres_changes', { 
-					event: '*', 
-					schema: 'public', 
-					table: 'activities'
-				}, async () => {
-					if (onUpdate) onUpdate();
-				})
+				.on(
+					'postgres_changes',
+					{
+						event: '*',
+						schema: 'public',
+						table: 'activities'
+					},
+					async () => {
+						if (onUpdate) onUpdate();
+					}
+				)
 				.subscribe();
 
 			return () => {
@@ -374,21 +410,23 @@ function createActivityService() {
 			if (error) throw error as Error;
 
 			// Update store optimistically
-			update(activities => activities.map(a => {
-				if (a.poll?.id === pollId) {
-					return {
-						...a,
-						poll: {
-							...a.poll,
-							user_vote: optionId,
-							options: a.poll.options.map(o => 
-								o.id === optionId ? { ...o, votes_count: o.votes_count + 1 } : o
-							)
-						}
-					};
-				}
-				return a;
-			}));
+			update((activities) =>
+				activities.map((a) => {
+					if (a.poll?.id === pollId) {
+						return {
+							...a,
+							poll: {
+								...a.poll,
+								user_vote: optionId,
+								options: a.poll.options.map((o) =>
+									o.id === optionId ? { ...o, votes_count: o.votes_count + 1 } : o
+								)
+							}
+						};
+					}
+					return a;
+				})
+			);
 		},
 
 		/**
@@ -426,17 +464,21 @@ function createActivityService() {
 
 			// Create Poll if requested
 			if (options?.poll) {
-				const { data: pollData, error: pollError } = await db.from('polls').insert({
-					activity_id: activity.id,
-					question: options.poll.question,
-					expires_at: new Date(Date.now() + 86400000).toISOString() // 24h default
-				} as AppDatabase['public']['Tables']['polls']['Insert']).select().single();
+				const { data: pollData, error: pollError } = await db
+					.from('polls')
+					.insert({
+						activity_id: activity.id,
+						question: options.poll.question,
+						expires_at: new Date(Date.now() + 86400000).toISOString() // 24h default
+					} as AppDatabase['public']['Tables']['polls']['Insert'])
+					.select()
+					.single();
 
 				if (pollError) throw pollError as Error;
 				const poll = pollData as AppDatabase['public']['Tables']['polls']['Row'];
 
 				// Create options
-				const optionInserts = options.poll.options.map(text => ({
+				const optionInserts = options.poll.options.map((text) => ({
 					poll_id: poll.id,
 					text
 				}));

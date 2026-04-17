@@ -31,7 +31,7 @@
 		if (user) {
 			profileStore.fetchProfile(user.id);
 		}
-		
+
 		if (workspace?.id) {
 			activityService.fetchActivities(workspace.id);
 			return activityService.subscribeToActivities(workspace.id);

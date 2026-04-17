@@ -358,7 +358,8 @@
 		<div class="space-y-4">
 			<label
 				for="logo-upload"
-				class="block text-[10px] font-bold tracking-[1px] text-zinc-500 uppercase">Workspace Logo</label
+				class="block text-[10px] font-bold tracking-[1px] text-zinc-500 uppercase"
+				>Workspace Logo</label
 			>
 			<div class="flex items-center gap-4">
 				{#if logoPreview}

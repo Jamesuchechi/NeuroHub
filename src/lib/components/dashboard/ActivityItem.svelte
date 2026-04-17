@@ -93,7 +93,7 @@
 				workspaceId: activity.workspace_id,
 				isPublic: activity.is_public
 			});
-			
+
 			if (reply) {
 				// We need to fetch the full reply with profile for display
 				// Or we can optimistically build it
@@ -174,8 +174,10 @@
 				{/if}
 
 				{#if activity.type === 'post' && activity.payload.content}
-					<a href={resolve(`/dashboard/post/${activity.id}`)} class="block group/text">
-						<p class="whitespace-pre-wrap text-[15px] leading-relaxed text-content transition-colors group-hover/text:text-content/80">
+					<a href={resolve(`/dashboard/post/${activity.id}`)} class="group/text block">
+						<p
+							class="text-[15px] leading-relaxed whitespace-pre-wrap text-content transition-colors group-hover/text:text-content/80"
+						>
 							{activity.payload.content}
 						</p>
 					</a>
@@ -424,12 +426,29 @@
 									{(comment.payload as unknown as PostPayload)?.content || ''}
 								</p>
 								<div class="mt-2 flex items-center gap-4">
-									<button 
-										onclick={() => activityService.toggleLike($authStore.user?.id || '', comment.id, comment.user_liked)}
-										class="flex items-center gap-1.5 text-[10px] font-bold {comment.user_liked ? 'text-red-500' : 'text-content-dim hover:text-red-500'} transition-colors"
+									<button
+										onclick={() =>
+											activityService.toggleLike(
+												$authStore.user?.id || '',
+												comment.id,
+												comment.user_liked
+											)}
+										class="flex items-center gap-1.5 text-[10px] font-bold {comment.user_liked
+											? 'text-red-500'
+											: 'text-content-dim hover:text-red-500'} transition-colors"
 									>
-										<svg class="h-3 w-3" fill={comment.user_liked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+										<svg
+											class="h-3 w-3"
+											fill={comment.user_liked ? 'currentColor' : 'none'}
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+											/>
 										</svg>
 										{comment.likes_count || 0}
 									</button>
