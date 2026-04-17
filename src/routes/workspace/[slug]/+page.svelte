@@ -9,10 +9,13 @@
 	import ActivityItem from '$lib/components/dashboard/ActivityItem.svelte';
 	import { activityService } from '$lib/services/activity';
 	import { onMount } from 'svelte';
+	import { authStore } from '$lib/stores/authStore';
+	import { profileStore } from '$lib/stores/profileStore';
 
 	const workspace = $derived($workspaceStore.currentWorkspace);
 	const members = $derived($workspaceStore.members);
 	const userRole = $derived($workspaceStore.userRole);
+	const { user } = $derived($authStore);
 
 	// Contextual stats
 	const stats = $derived([
@@ -25,13 +28,13 @@
 	const activities = $derived($activityService);
 
 	onMount(() => {
+		if (user) {
+			profileStore.fetchProfile(user.id);
+		}
+		
 		if (workspace?.id) {
-			const cleanup = activityService.fetchActivities(workspace.id);
-			return () => {
-				cleanup.then((fn) => {
-					if (typeof fn === 'function') fn();
-				});
-			};
+			activityService.fetchActivities(workspace.id);
+			return activityService.subscribeToActivities(workspace.id);
 		}
 	});
 </script>

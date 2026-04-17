@@ -5,27 +5,56 @@
 	import { storyService, type StoryWithProfile } from '$lib/services/storyService';
 	import { onMount } from 'svelte';
 
-	interface StoryItem {
-		id: string;
+	interface UserStories {
+		userId: string;
 		username: string;
-		avatarUrl?: string;
+		avatarUrl: string | null;
+		stories: StoryWithProfile[];
 		hasUnread: boolean;
 	}
 
-	let { workspaceId = null, onStoryClick } = $props<{
+	let { workspaceId = null } = $props<{
 		workspaceId?: string | null;
-		onStoryClick?: (id: string) => void;
 	}>();
 
 	let realStories = $state<StoryWithProfile[]>([]);
 	let showCreateModal = $state(false);
 	let showViewer = $state(false);
-	let activeStoryIndex = $state(0);
+	let activeUserIndex = $state(0);
 
-	function openStory(index: number) {
-		activeStoryIndex = index;
+	import { SvelteMap } from 'svelte/reactivity';
+
+	/**
+	 * Groups stories by user_id for the single-ring per user behavior.
+	 */
+	const groupedStories = $derived.by((): UserStories[] => {
+		const groups = new SvelteMap<string, UserStories>();
+
+		realStories.forEach((s) => {
+			const userId = s.user_id;
+			if (!groups.has(userId)) {
+				groups.set(userId, {
+					userId,
+					username: s.profiles?.username || 'unknown',
+					avatarUrl: s.profiles?.avatar_url || null,
+					stories: [],
+					hasUnread: true // Future: track viewed status
+				});
+			}
+			groups.get(userId)!.stories.push(s);
+		});
+
+		// Sort users by their most recent story
+		return Array.from(groups.values()).sort((a, b) => {
+			const aTime = new Date(a.stories[0].created_at).getTime();
+			const bTime = new Date(b.stories[0].created_at).getTime();
+			return bTime - aTime;
+		});
+	});
+
+	function openUserStories(index: number) {
+		activeUserIndex = index;
 		showViewer = true;
-		if (onStoryClick) onStoryClick(displayStories[index].id);
 	}
 
 	async function loadStories() {
@@ -38,41 +67,6 @@
 
 	onMount(() => {
 		loadStories();
-	});
-
-	interface ExtendedStoryItem extends StoryItem {
-		raw?: StoryWithProfile;
-	}
-
-	// combine props stories with real stories, prioritize props if provided
-	const displayStories = $derived.by((): ExtendedStoryItem[] => {
-		if (realStories.length === 0) return [];
-
-		return (realStories as StoryWithProfile[]).map((s) => ({
-			id: s.id,
-			username: s.profiles?.username || 'unknown',
-			avatarUrl: s.profiles?.avatar_url || undefined,
-			hasUnread: true,
-			raw: s
-		}));
-	});
-
-	// Convert displayStories back to StoryWithProfile if they are mocks
-	const storiesForViewer = $derived.by(() => {
-		return displayStories.map((s, _i) => {
-			if ('raw' in s) return s.raw as StoryWithProfile;
-			// Mock fallback for viewer
-			return {
-				id: s.id,
-				user_id: 'mock',
-				media_url: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80',
-				media_type: 'image',
-				content: 'Mock story content for preview.',
-				expires_at: new Date(Date.now() + 86400000).toISOString(),
-				created_at: new Date().toISOString(),
-				profiles: { username: s.username, avatar_url: s.avatarUrl || null }
-			} as StoryWithProfile;
-		});
 	});
 </script>
 
@@ -92,33 +86,32 @@
 		<span class="text-[10px] font-bold text-content-dim uppercase">Your Story</span>
 	</button>
 
-	{#each displayStories as story, i (story.id)}
+	{#each groupedStories as userGroup, i (userGroup.userId)}
 		<button
 			class="group flex flex-col items-center gap-1.5 transition-transform hover:scale-105 active:scale-95"
-			onclick={() => openStory(i)}
+			onclick={() => openUserStories(i)}
 		>
 			<div
-				class="relative rounded-full p-[3px] {story.hasUnread
+				class="relative rounded-full p-[3px] {userGroup.hasUnread
 					? 'bg-linear-to-tr from-brand-orange via-yellow-500 to-brand-blue'
 					: 'bg-stroke'}"
 			>
 				<div class="rounded-full bg-surface p-[2px]">
-					<Avatar name={story.username} src={story.avatarUrl} size="lg" />
+					<Avatar name={userGroup.username} src={userGroup.avatarUrl} size="lg" />
 				</div>
 			</div>
 			<span
 				class="max-w-[64px] truncate text-[10px] font-bold text-content-dim group-hover:text-content"
 			>
-				{story.username}
+				{userGroup.username}
 			</span>
 		</button>
 	{/each}
 </div>
 
-{#if showViewer}
+{#if showViewer && groupedStories[activeUserIndex]}
 	<StoryViewer
-		stories={storiesForViewer}
-		initialIndex={activeStoryIndex}
+		stories={groupedStories[activeUserIndex].stories}
 		onClose={() => (showViewer = false)}
 	/>
 {/if}

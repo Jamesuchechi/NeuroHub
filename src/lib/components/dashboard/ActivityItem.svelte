@@ -1,9 +1,10 @@
 <script lang="ts">
-	import type { Activity, Attachment, Comment } from '$lib/services/activity';
+	import type { Activity, Attachment, PostPayload } from '$lib/services/activity';
 	import { activityService } from '$lib/services/activity';
 	import { authStore } from '$lib/stores/authStore';
 	import { resolve } from '$app/paths';
 	import Avatar from '../ui/Avatar.svelte';
+	import Poll from '../social/Poll.svelte';
 	import { slide, fade } from 'svelte/transition';
 
 	let { activity } = $props<{ activity: Activity }>();
@@ -39,7 +40,7 @@
 
 	// Interaction States
 	let showComments = $state(false);
-	let comments = $state<Comment[]>([]);
+	let comments = $state<Activity[]>([]);
 	let newComment = $state('');
 	let isSubmittingComment = $state(false);
 	let isLiking = $state(false);
@@ -78,19 +79,32 @@
 	async function toggleComments() {
 		showComments = !showComments;
 		if (showComments && comments.length === 0) {
-			comments = await activityService.fetchComments(activity.id);
+			comments = await activityService.fetchReplies(activity.id, $authStore.user?.id || null);
 		}
 	}
 
 	async function submitComment() {
-		if (!$authStore.user || !newComment.trim() || isSubmittingComment) return;
+		const user = $authStore.user;
+		if (!user || !newComment.trim() || isSubmittingComment) return;
 		isSubmittingComment = true;
 		try {
-			const comment = await activityService.addComment($authStore.user.id, activity.id, newComment);
-			if (comment) {
-				comments = [...comments, comment];
-				newComment = '';
+			const reply = await activityService.createPost(user.id, newComment, {
+				parentId: activity.id,
+				workspaceId: activity.workspace_id,
+				isPublic: activity.is_public
+			});
+			
+			if (reply) {
+				// We need to fetch the full reply with profile for display
+				// Or we can optimistically build it
+				const fullReply = await activityService.fetchActivityById(reply.id, user.id);
+				if (fullReply) {
+					comments = [...comments, fullReply];
+					newComment = '';
+				}
 			}
+		} catch (err) {
+			console.error('Failed to submit threaded reply:', err);
 		} finally {
 			isSubmittingComment = false;
 		}
@@ -160,7 +174,11 @@
 				{/if}
 
 				{#if activity.type === 'post' && activity.payload.content}
-					{activity.payload.content}
+					<a href={resolve(`/dashboard/post/${activity.id}`)} class="block group/text">
+						<p class="whitespace-pre-wrap text-[15px] leading-relaxed text-content transition-colors group-hover/text:text-content/80">
+							{activity.payload.content}
+						</p>
+					</a>
 				{:else if activity.type !== 'post'}
 					<div
 						class="mt-2 flex items-center gap-3 rounded-2xl border border-stroke bg-surface-dim/50 p-3"
@@ -183,6 +201,12 @@
 							</svg>
 						</div>
 						<div class="text-xs font-bold text-content-dim">Activity logged in the Hub</div>
+					</div>
+				{/if}
+
+				{#if activity.poll}
+					<div class="mt-3">
+						<Poll poll={activity.poll} />
 					</div>
 				{/if}
 			</div>
@@ -385,7 +409,7 @@
 					</div>
 
 					{#each comments as comment (comment.id)}
-						<div transition:fade class="flex gap-3 py-2">
+						<div transition:fade class="group/reply flex gap-3 py-3">
 							<Avatar
 								name={comment.profiles?.username || 'User'}
 								src={comment.profiles?.avatar_url}
@@ -396,7 +420,20 @@
 									<span class="text-xs font-bold text-content">{comment.profiles?.username}</span>
 									<span class="text-[10px] text-content-dim">{formatTime(comment.created_at)}</span>
 								</div>
-								<p class="mt-1 text-sm text-content/80">{comment.content}</p>
+								<p class="mt-1 text-sm text-content/80">
+									{(comment.payload as unknown as PostPayload)?.content || ''}
+								</p>
+								<div class="mt-2 flex items-center gap-4">
+									<button 
+										onclick={() => activityService.toggleLike($authStore.user?.id || '', comment.id, comment.user_liked)}
+										class="flex items-center gap-1.5 text-[10px] font-bold {comment.user_liked ? 'text-red-500' : 'text-content-dim hover:text-red-500'} transition-colors"
+									>
+										<svg class="h-3 w-3" fill={comment.user_liked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+										</svg>
+										{comment.likes_count || 0}
+									</button>
+								</div>
 							</div>
 						</div>
 					{:else}

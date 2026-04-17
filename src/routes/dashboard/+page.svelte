@@ -9,6 +9,7 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import ActivityItem from '$lib/components/dashboard/ActivityItem.svelte';
 	import { activityService } from '$lib/services/activity';
 	import { fly } from 'svelte/transition';
@@ -31,6 +32,8 @@
 	let createError = $state('');
 	let slugValidating = $state(false);
 	let isSlugDirty = $state(false);
+	let logoFile = $state<File | null>(null);
+	let logoPreview = $state('');
 	let debounceTimer: ReturnType<typeof setTimeout>;
 
 	const { user } = $derived($authStore);
@@ -88,16 +91,30 @@
 		if (!user || slugError || slugValidating) return;
 		creating = true;
 		try {
+			let logo_url = null;
+
+			// 1. Upload logo if selected
+			if (logoFile) {
+				// Temporary UUID for logo path before WS is created
+				const tempId = crypto.randomUUID();
+				logo_url = await workspacesService.uploadLogo(tempId, logoFile);
+			}
+
+			// 2. Create workspace
 			await workspacesService.createWorkspace(user.id, {
 				name,
 				slug,
 				description,
+				logo_url,
 				owner_id: user.id
 			});
+
 			showCreateModal = false;
 			name = '';
 			slug = '';
 			description = '';
+			logoFile = null;
+			logoPreview = '';
 			await loadWorkspaces();
 		} catch (err) {
 			createError = err instanceof Error ? err.message : 'Failed to create workspace.';
@@ -106,17 +123,22 @@
 		}
 	}
 
+	function handleLogoChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (file) {
+			logoFile = file;
+			logoPreview = URL.createObjectURL(file);
+		}
+	}
+
 	onMount(() => {
 		if (user) {
 			profileStore.fetchProfile(user.id);
 			loadWorkspaces();
 
-			const cleanupPromise = activityService.fetchActivities(null, user.id);
-			return () => {
-				cleanupPromise.then((cleanupFn) => {
-					if (typeof cleanupFn === 'function') cleanupFn();
-				});
-			};
+			activityService.fetchActivities(null, user.id);
+			return activityService.subscribeToActivities(null);
 		}
 	});
 </script>
@@ -200,14 +222,10 @@
 						Your Profile
 					</p>
 					<div class="mb-8 flex items-center gap-4">
-						<div
-							class="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500 text-3xl font-black text-black"
-						>
-							{displayName[0]}
-						</div>
+						<Avatar name={displayName} src={profile?.avatar_url} size="lg" class="rounded-2xl" />
 						<div>
 							<p class="text-xl font-black text-content">{displayName}</p>
-							<p class="text-xs text-content-dim">Senior Developer</p>
+							<p class="text-xs text-content-dim">Individual Hub</p>
 						</div>
 					</div>
 					<div class="grid grid-cols-2 gap-4">
@@ -335,6 +353,39 @@
 				placeholder="Engineering team's shared brain."
 				class="h-24 w-full resize-none rounded-xl border border-stroke bg-surface px-4 py-3 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 focus:border-brand-orange"
 			></textarea>
+		</div>
+
+		<div class="space-y-4">
+			<label
+				for="logo-upload"
+				class="block text-[10px] font-bold tracking-[1px] text-zinc-500 uppercase">Workspace Logo</label
+			>
+			<div class="flex items-center gap-4">
+				{#if logoPreview}
+					<div class="h-16 w-16 overflow-hidden rounded-xl border border-stroke bg-surface">
+						<img src={logoPreview} alt="Preview" class="h-full w-full object-cover" />
+					</div>
+				{:else}
+					<div
+						class="flex h-16 w-16 items-center justify-center rounded-xl border-2 border-dashed border-stroke bg-surface text-xs font-bold text-zinc-600"
+					>
+						No Logo
+					</div>
+				{/if}
+				<input
+					type="file"
+					id="logo-upload"
+					accept="image/*"
+					class="hidden"
+					onchange={handleLogoChange}
+				/>
+				<label
+					for="logo-upload"
+					class="cursor-pointer rounded-lg border border-stroke bg-surface-dim px-4 py-2 text-xs font-bold text-content transition-all hover:border-brand-orange/50 hover:bg-surface"
+				>
+					{logoFile ? 'Change Logo' : 'Upload Image'}
+				</label>
+			</div>
 		</div>
 
 		{#if createError}

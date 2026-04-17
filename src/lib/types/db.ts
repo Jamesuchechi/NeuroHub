@@ -68,6 +68,7 @@ export type AppDatabase = {
 					attachments: Json;
 					is_public: boolean;
 					repost_id: string | null;
+					parent_id: string | null;
 					created_at: string;
 				};
 				Insert: {
@@ -79,6 +80,7 @@ export type AppDatabase = {
 					attachments?: Json;
 					is_public?: boolean;
 					repost_id?: string | null;
+					parent_id?: string | null;
 					created_at?: string;
 				};
 				Update: {
@@ -90,6 +92,7 @@ export type AppDatabase = {
 					attachments?: Json;
 					is_public?: boolean;
 					repost_id?: string | null;
+					parent_id?: string | null;
 					created_at?: string;
 				};
 			};
@@ -255,6 +258,75 @@ export type AppDatabase = {
 					role?: 'owner' | 'member' | 'guest';
 					expires_at?: string;
 					used_at?: string | null;
+					created_at?: string;
+				};
+			};
+			polls: {
+				Row: {
+					id: string;
+					activity_id: string;
+					question: string;
+					expires_at: string;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					activity_id: string;
+					question: string;
+					expires_at: string;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					activity_id?: string;
+					question?: string;
+					expires_at?: string;
+					created_at?: string;
+				};
+			};
+			poll_options: {
+				Row: {
+					id: string;
+					poll_id: string;
+					text: string;
+					votes_count: number;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					poll_id: string;
+					text: string;
+					votes_count?: number;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					poll_id?: string;
+					text?: string;
+					votes_count?: number;
+					created_at?: string;
+				};
+			};
+			poll_votes: {
+				Row: {
+					id: string;
+					poll_id: string;
+					option_id: string;
+					user_id: string;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					poll_id: string;
+					option_id: string;
+					user_id: string;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					poll_id?: string;
+					option_id?: string;
+					user_id?: string;
 					created_at?: string;
 				};
 			};

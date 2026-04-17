@@ -176,9 +176,13 @@
 							: ''}"
 					>
 						<div
-							class="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-surface-dim text-xs font-bold text-content-dim"
+							class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-surface-dim text-xs font-bold text-content-dim"
 						>
-							{ws.name[0]}
+							{#if ws.logo_url}
+								<img src={ws.logo_url} alt={ws.name} class="h-full w-full object-cover" />
+							{:else}
+								{ws.name[0]}
+							{/if}
 						</div>
 						<div class="flex-1 overflow-hidden">
 							<p class="truncate text-xs font-bold text-content">{ws.name}</p>

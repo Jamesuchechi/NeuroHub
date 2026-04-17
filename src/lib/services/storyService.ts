@@ -102,14 +102,14 @@ export const storyService = {
 			.gt('expires_at', new Date().toISOString());
 
 		if (workspaceId) {
-			// Specific workspace stories
-			const { data, error } = await query
-				.eq('workspace_id', workspaceId)
-				.order('created_at', { ascending: false });
+			// Specific workspace stories OR global stories
+			// Using filter() on raw data instead of complex Supabase .or() for better type safety with our bridge
+			const { data, error } = await query.order('created_at', { ascending: false });
 			if (error) throw error as Error;
-			return data || [];
+
+			return (data || []).filter((s) => s.workspace_id === workspaceId || !s.workspace_id);
 		} else {
-			// Hub stories (global, no workspace)
+			// Hub stories (global only)
 			const { data, error } = await query
 				.is('workspace_id', null)
 				.order('created_at', { ascending: false });
