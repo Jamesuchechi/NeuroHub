@@ -167,56 +167,56 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ## Phase 4 — Realtime Chat
 
-**Target: Week 2–3**
+**Status: Completed ✅**
 
 ### Database Schema — Channels & Messages
 
-- [ ] Create `channels` table (id, workspace_id, name, description, type: `text|announcement|private`, created_by, created_at)
-- [ ] Create `messages` table (id, channel_id, user_id, content, parent_id [threads], edited_at, deleted_at, created_at)
-- [ ] Create `message_reactions` table (message_id, user_id, emoji, created_at)
-- [ ] Create `user_status` table (user_id, workspace_id, status: `online|away|offline`, last_seen)
-- [ ] Create `typing_indicators` table (channel_id, user_id, updated_at) — short-lived rows
-- [ ] Write RLS policies (members INSERT messages, moderators soft-delete, guests read-only)
+- [x] Create `channels` table (id, workspace_id, name, description, type: `text|announcement|private`, created_by, created_at)
+- [x] Create `messages` table (id, channel_id, user_id, content, parent_id [threads], edited_at, deleted_at, created_at)
+- [x] Create `message_reactions` table (message_id, user_id, emoji, created_at)
+- [x] Create `user_status` table (user_id, workspace_id, status: `online|away|offline`, last_seen)
+- [x] Create `typing_indicators` table (channel_id, user_id, updated_at) — short-lived rows
+- [x] Write RLS policies (members INSERT messages, moderators soft-delete, guests read-only)
 
 ### Realtime Subscriptions
 
-- [ ] Setup `chatStore.ts` with Supabase Realtime subscription on `messages` (INSERT/UPDATE/DELETE)
-- [ ] Setup presence subscription via `user_status` table changes
-- [ ] Setup typing indicators subscription (poll `typing_indicators` every 1s, cleanup rows > 3s old)
-- [ ] Implement subscription lifecycle (subscribe on channel mount, unsubscribe on destroy)
-- [ ] Handle reconnection / offline state gracefully
+- [x] Setup `chatStore.ts` with Supabase Realtime subscription on `messages` (INSERT/UPDATE/DELETE)
+- [x] Setup presence subscription via `user_status` table changes
+- [x] Setup typing indicators subscription (poll `typing_indicators` every 1s, cleanup rows > 3s old)
+- [x] Implement subscription lifecycle (subscribe on channel mount, unsubscribe on destroy)
+- [x] Handle reconnection / offline state gracefully
 
 ### Chat UI
 
-- [ ] Build `ChannelView.svelte` as main chat container
-- [ ] Build `ChatMessage.svelte` component (avatar, name, timestamp, content, reactions)
-- [ ] Implement infinite scroll / cursor pagination (load older messages on scroll up)
-- [ ] Build `MessageInput.svelte` (rich text, `@mention` autocomplete, emoji picker, file attach)
-- [ ] Implement optimistic UI: insert message locally before server confirm, rollback on error
-- [ ] Build message hover actions toolbar (react, reply, edit, delete)
-- [ ] Implement message editing (inline edit with cancel/save)
-- [ ] Implement soft delete (show "message deleted" placeholder)
+- [x] Build `ChannelView.svelte` as main chat container
+- [x] Build `ChatMessage.svelte` component (avatar, name, timestamp, content, reactions)
+- [x] Implement infinite scroll / cursor pagination (load older messages on scroll up)
+- [x] Build `MessageInput.svelte` (rich text, `@mention` autocomplete, emoji picker, file attach)
+- [x] Implement optimistic UI: insert message locally before server confirm, rollback on error
+- [x] Build message hover actions toolbar (react, reply, edit, delete)
+- [x] Implement message editing (inline edit with cancel/save)
+- [x] Implement soft delete (show "message deleted" placeholder)
 
 ### Threads
 
-- [ ] Build thread sidebar panel (open on reply click)
-- [ ] Thread message count badge on parent messages
-- [ ] Thread participants avatars
-- [ ] Subscribe to thread messages separately
+- [x] Build thread sidebar panel (open on reply click)
+- [x] Thread message count badge on parent messages
+- [x] Thread participants avatars
+- [x] Subscribe to thread messages separately
 
 ### Reactions & Presence
 
-- [ ] Build emoji picker component (use `emoji-mart` or custom)
-- [ ] Reaction row under messages with count + toggle
-- [ ] Online presence indicator dots on user avatars
-- [ ] Typing indicator component ("Alice and Bob are typing...")
+- [x] Build emoji picker component (use `emoji-mart` or custom)
+- [x] Reaction row under messages with count + toggle
+- [x] Online presence indicator dots on user avatars
+- [x] Typing indicator component ("Alice and Bob are typing...")
 
 ### Channel Management
 
-- [ ] Create channel modal (name, description, type: public/private)
-- [ ] Archive / delete channel (owner only)
-- [ ] Channel settings panel (name, description, member management for private)
-- [ ] Announcements channel type (only owners can post)
+- [x] Create channel modal (name, description, type: public/private)
+- [x] Archive / delete channel (owner only)
+- [x] Channel settings panel (name, description, member management for private)
+- [x] Announcements channel type (only owners can post)
 
 ---
 

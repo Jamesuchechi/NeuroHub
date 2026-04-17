@@ -27,6 +27,7 @@
 		width?: 'full' | 'auto';
 	}
 
+	import type { SvelteHTMLElements } from 'svelte/elements';
 	let {
 		children,
 		type = 'button',
@@ -36,13 +37,15 @@
 		onclick = () => {},
 		disabled = false,
 		class: className = '',
-		width = 'full'
-	}: Props = $props();
+		width = 'full',
+		...rest
+	}: Props & SvelteHTMLElements['button'] = $props();
 </script>
 
 <button
 	{type}
 	{onclick}
+	{...rest}
 	disabled={disabled || loading}
 	class="{width === 'full'
 		? 'w-full'

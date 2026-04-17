@@ -4,18 +4,20 @@
 	import { profileStore } from '$lib/stores/profileStore';
 	import { authStore } from '$lib/stores/authStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
+	import { uiStore } from '$lib/stores/uiStore';
 	import { workspacesService } from '$lib/services/workspaces';
 	import { supabase } from '$lib/services/supabase';
 	import { goto } from '$app/navigation';
-	import { fly, slide } from 'svelte/transition';
+	import { fly, slide, fade } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import Avatar from '../ui/Avatar.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 	import { onMount } from 'svelte';
+	import { chatStore } from '$lib/stores/chatStore.svelte';
 
-	import type { AppDatabase } from '$lib/types/db';
+	import type { Database } from '$lib/types/db';
 
-	type Workspace = AppDatabase['public']['Tables']['workspaces']['Row'];
+	type Workspace = Database['public']['Tables']['workspaces']['Row'];
 
 	const profile = $derived($profileStore.profile);
 	const user = $derived($authStore.user);
@@ -26,17 +28,10 @@
 	let channelsExpanded = $state(true);
 	let chatsExpanded = $state(true);
 
-	interface SidebarChannel {
-		id: string;
-		name: string;
-		is_private: boolean;
-	}
-
 	/**
 	 * Workspace Channels (Reactive)
-	 * Future Phase 4: Will fetch real-time channel list here.
 	 */
-	let channels = $state<SidebarChannel[]>([]);
+	const channels = $derived(chatStore.channels);
 
 	interface NavLink {
 		name: string;
@@ -111,6 +106,12 @@
 
 	onMount(() => {
 		loadWorkspaces();
+	});
+
+	$effect(() => {
+		if (currentWorkspace) {
+			chatStore.init(currentWorkspace.id);
+		}
 	});
 </script>
 
@@ -396,19 +397,38 @@
 									href={resolve(
 										`/workspace/${currentWorkspace.slug}/chat/${channel.id}` as unknown as '/'
 									)}
-									class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all hover:bg-zinc-900/40 hover:text-white"
+									class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all {chatStore.activeChannelId ===
+									channel.id
+										? 'bg-brand-orange/10 text-brand-orange'
+										: 'hover:bg-zinc-900/40 hover:text-white'}"
 								>
 									<span
-										class="font-mono text-xs text-zinc-600 transition-colors group-hover:text-brand-orange"
-										>#</span
+										class="font-mono text-xs transition-colors {chatStore.activeChannelId ===
+										channel.id
+											? 'text-brand-orange'
+											: 'text-zinc-600 group-hover:text-brand-orange'}">#</span
 									>
 									<span class="truncate font-medium">{channel.name}</span>
+									{#if chatStore.channelHasUnread(channel.id)}
+										<div
+											class="ml-auto h-2 w-2 rounded-full bg-brand-orange shadow-neon-orange"
+											in:fade
+										></div>
+									{/if}
 								</a>
 							{/each}
 						{:else}
-							<div class="px-3 py-1.5">
-								<p class="text-[10px] text-zinc-500 italic">Phase 4: Channels loading...</p>
-							</div>
+							<button
+								onclick={() => uiStore.setCreateChannelModalOpen(true)}
+								class="mx-3 my-2 flex flex-col items-center justify-center rounded-xl border border-dashed border-stroke p-4 text-center transition-all hover:bg-surface-dim/40"
+							>
+								<p class="text-[10px] font-bold text-content-dim uppercase">No channels yet</p>
+								<p class="mt-1 text-[9px] text-zinc-600">Create your first discussion space</p>
+								<span
+									class="mt-3 rounded-lg bg-zinc-900 px-2 py-1 text-[9px] font-bold text-brand-orange"
+									>Create Channel</span
+								>
+							</button>
 						{/if}
 					{:else}
 						<div class="px-3 py-2 text-left">
@@ -417,7 +437,8 @@
 					{/if}
 
 					<button
-						onclick={() => (!currentWorkspace ? (showSwitcher = true) : null)}
+						onclick={() =>
+							!currentWorkspace ? (showSwitcher = true) : uiStore.setCreateChannelModalOpen(true)}
 						class="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-xs text-zinc-600 transition-all hover:text-zinc-400"
 					>
 						<span
@@ -450,8 +471,8 @@
 			{#if chatsExpanded}
 				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
 					{#if currentWorkspace}
-						<div class="px-3 py-1.5">
-							<p class="text-[10px] text-zinc-500 italic">Phase 4: Recent chats will appear here</p>
+						<div class="px-3 py-2 text-left">
+							<p class="text-[10px] text-zinc-500 italic">No recent chats found</p>
 						</div>
 					{:else}
 						<div class="px-3 py-2 text-left">
@@ -460,7 +481,8 @@
 					{/if}
 
 					<button
-						onclick={() => (!currentWorkspace ? (showSwitcher = true) : null)}
+						onclick={() =>
+							!currentWorkspace ? (showSwitcher = true) : uiStore.setStartChatModalOpen(true)}
 						class="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-xs text-zinc-600 transition-all hover:text-zinc-400"
 					>
 						<span

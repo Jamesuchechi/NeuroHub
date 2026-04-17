@@ -1,7 +1,7 @@
 import { error, type Load } from '@sveltejs/kit';
 import { supabase } from '$lib/services/supabase';
 import { profileService } from '$lib/services/profileService';
-import type { AppDatabase, ProfilesTable } from '$lib/types/db';
+import type { Database, ProfilesTable } from '$lib/types/db';
 
 export const load: Load = async ({ params }) => {
 	const username = params.username;
@@ -12,7 +12,7 @@ export const load: Load = async ({ params }) => {
 
 	// Use a strictly-typed bridge to resolve the 'never' issue without using 'any'
 	const { data: profile, error: profileError } = await (
-		supabase.from('profiles' as keyof AppDatabase['public']['Tables']) as unknown as {
+		supabase.from('profiles' as keyof Database['public']['Tables']) as unknown as {
 			select(q: string): {
 				eq(
 					k: string,

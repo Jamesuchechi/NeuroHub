@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { AppDatabase } from '$lib/types/db';
+	import type { Database } from '$lib/types/db';
 	import { authStore } from '$lib/stores/authStore';
 	import { profileStore } from '$lib/stores/profileStore';
 	import { workspacesService } from '$lib/services/workspaces';
@@ -17,7 +17,7 @@
 	import StoriesBar from '$lib/components/social/StoriesBar.svelte';
 	import PostComposer from '$lib/components/social/PostComposer.svelte';
 
-	type Workspace = AppDatabase['public']['Tables']['workspaces']['Row'];
+	type Workspace = Database['public']['Tables']['workspaces']['Row'];
 
 	let workspaces = $state<Workspace[]>([]);
 	let loading = $state(true);

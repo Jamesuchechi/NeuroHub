@@ -5,7 +5,8 @@
 		placeholder = '',
 		rows = 4,
 		id = Math.random().toString(36).substring(2, 9),
-		error = ''
+		error = '',
+		disabled = false
 	} = $props();
 </script>
 
@@ -22,7 +23,8 @@
 		bind:value
 		{placeholder}
 		{rows}
-		class="w-full resize-none rounded-xl border border-stroke bg-surface-dim px-4 py-3.5 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 focus:border-brand-orange"
+		{disabled}
+		class="w-full resize-none rounded-xl border border-stroke bg-surface-dim px-4 py-3.5 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 focus:border-brand-orange disabled:cursor-not-allowed disabled:opacity-50"
 	></textarea>
 	{#if error}
 		<p class="mt-1.5 text-xs text-red-500">{error}</p>

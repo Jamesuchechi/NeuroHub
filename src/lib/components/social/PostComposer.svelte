@@ -6,6 +6,7 @@
 	import { cloudinaryService } from '$lib/services/cloudinary';
 	import { fly, fade, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
+	import { type PostBlock } from '$lib/types/social';
 
 	let {
 		workspaceId = null,
@@ -20,15 +21,6 @@
 		options?: { parentId?: string | null };
 		showActions?: boolean;
 	}>();
-
-	type PostBlock = {
-		id: string;
-		content: string;
-		attachments: Attachment[];
-		showPollCreator: boolean;
-		pollQuestion: string;
-		pollOptions: string[];
-	};
 
 	const profile = $derived($profileStore.profile);
 	let posts = $state<PostBlock[]>([createEmptyBlock()]);

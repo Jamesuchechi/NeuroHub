@@ -4,6 +4,9 @@
 	import ContextPanel from './ContextPanel.svelte';
 	import CommandPalette from './CommandPalette.svelte';
 	import InviteMemberModal from './InviteMemberModal.svelte';
+	import CreateChannelModal from '../chat/CreateChannelModal.svelte';
+	import StartChatModal from '../chat/StartChatModal.svelte';
+	import ChannelSettingsModal from '../chat/ChannelSettingsModal.svelte';
 	import SplitPane from '../ui/SplitPane.svelte';
 	import { uiStore } from '$lib/stores/uiStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
@@ -64,5 +67,8 @@
 
 	{#if currentWorkspace}
 		<InviteMemberModal workspaceId={currentWorkspace.id} />
+		<CreateChannelModal />
+		<StartChatModal />
+		<ChannelSettingsModal />
 	{/if}
 </div>

@@ -1,13 +1,13 @@
 import { supabase } from './supabase';
-import type { AppDatabase } from '$lib/types/db';
+import type { Database } from '$lib/types/db';
 
-type Workspace = AppDatabase['public']['Tables']['workspaces']['Row'];
-type WorkspaceInsert = AppDatabase['public']['Tables']['workspaces']['Insert'];
-type MemberInsert = AppDatabase['public']['Tables']['workspace_members']['Insert'];
-type InviteInsert = AppDatabase['public']['Tables']['workspace_invites']['Insert'];
-type InviteUpdate = AppDatabase['public']['Tables']['workspace_invites']['Update'];
+type Workspace = Database['public']['Tables']['workspaces']['Row'];
+type WorkspaceInsert = Database['public']['Tables']['workspaces']['Insert'];
+type MemberInsert = Database['public']['Tables']['workspace_members']['Insert'];
+type InviteInsert = Database['public']['Tables']['workspace_invites']['Insert'];
+type InviteUpdate = Database['public']['Tables']['workspace_invites']['Update'];
 
-type Invite = AppDatabase['public']['Tables']['workspace_invites']['Row'];
+type Invite = Database['public']['Tables']['workspace_invites']['Row'];
 
 /**
  * Strict type bridge to resolve Supabase inference issues in the workspace service.
@@ -70,7 +70,9 @@ export const workspacesService = {
 			.eq('user_id', userId);
 
 		if (error) throw error;
-		return (data || []).map((d) => d.workspace).filter((w): w is Workspace => w !== null);
+		return ((data as { workspace: Workspace }[]) || [])
+			.map((d) => d.workspace)
+			.filter((w): w is Workspace => w !== null);
 	},
 
 	async createWorkspace(userId: string, workspace: WorkspaceInsert) {
@@ -83,9 +85,11 @@ export const workspacesService = {
 
 		if (wsError) throw wsError;
 
+		const workspaceData = ws as { id: string };
+
 		// 2. Add creator as owner
 		const { error: memError } = await db.from('workspace_members').insert({
-			workspace_id: ws.id,
+			workspace_id: workspaceData.id,
 			user_id: userId,
 			role: 'owner'
 		});
@@ -166,7 +170,7 @@ export const workspacesService = {
 			.single();
 
 		if (error) throw error;
-		return data as AppDatabase['public']['Tables']['workspace_invites']['Row'] & {
+		return data as Database['public']['Tables']['workspace_invites']['Row'] & {
 			workspace: Workspace;
 		};
 	},

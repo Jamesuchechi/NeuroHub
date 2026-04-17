@@ -10,6 +10,9 @@ interface UIState {
 	theme: Theme;
 	commandPaletteOpen: boolean;
 	inviteModalOpen: boolean;
+	createChannelModalOpen: boolean;
+	startChatModalOpen: boolean;
+	channelSettingsModalOpen: boolean;
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 260;
@@ -27,7 +30,10 @@ function createUIStore() {
 				contextPanelCollapsed: true, // Collapsed by default as requested/implied
 				theme: 'dark',
 				commandPaletteOpen: false,
-				inviteModalOpen: false
+				inviteModalOpen: false,
+				createChannelModalOpen: false,
+				startChatModalOpen: false,
+				channelSettingsModalOpen: false
 			};
 
 	const { subscribe, update } = writable<UIState>(initialState);
@@ -46,6 +52,11 @@ function createUIStore() {
 			update((s) => ({ ...s, commandPaletteOpen: !s.commandPaletteOpen })),
 		setInviteModalOpen: (open: boolean) => update((s) => ({ ...s, inviteModalOpen: open })),
 		toggleInviteModal: () => update((s) => ({ ...s, inviteModalOpen: !s.inviteModalOpen })),
+		setCreateChannelModalOpen: (open: boolean) =>
+			update((s) => ({ ...s, createChannelModalOpen: open })),
+		setStartChatModalOpen: (open: boolean) => update((s) => ({ ...s, startChatModalOpen: open })),
+		setChannelSettingsModalOpen: (open: boolean) =>
+			update((s) => ({ ...s, channelSettingsModalOpen: open })),
 
 		persist: (state: UIState) => {
 			if (typeof window !== 'undefined') {

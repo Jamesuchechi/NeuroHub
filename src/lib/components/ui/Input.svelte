@@ -9,6 +9,7 @@
 		required = false,
 		id = Math.random().toString(36).substring(2, 9),
 		error = '',
+		disabled = false,
 		oninput = (() => {}) as FormEventHandler<HTMLInputElement>
 	} = $props();
 </script>
@@ -28,7 +29,8 @@
 		{placeholder}
 		{required}
 		{oninput}
-		class="w-full rounded-xl border border-stroke bg-surface-dim px-4 py-3.5 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 focus:border-brand-orange"
+		{disabled}
+		class="w-full rounded-xl border border-stroke bg-surface-dim px-4 py-3.5 text-sm text-content transition-all outline-none placeholder:text-content-dim/30 focus:border-brand-orange disabled:cursor-not-allowed disabled:opacity-50"
 	/>
 	{#if error}
 		<p class="mt-1.5 text-xs text-red-500">{error}</p>

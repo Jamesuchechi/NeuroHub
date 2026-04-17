@@ -1,13 +1,13 @@
 import { writable, get } from 'svelte/store';
 import { supabase } from '$lib/services/supabase';
-import type { AppDatabase } from '$lib/types/db';
+import type { Database } from '$lib/types/db';
 
-type Workspace = AppDatabase['public']['Tables']['workspaces']['Row'];
-type WorkspaceUpdate = AppDatabase['public']['Tables']['workspaces']['Update'];
-type Member = AppDatabase['public']['Tables']['workspace_members']['Row'] & {
-	profile: AppDatabase['public']['Tables']['profiles']['Row'];
+type Workspace = Database['public']['Tables']['workspaces']['Row'];
+type WorkspaceUpdate = Database['public']['Tables']['workspaces']['Update'];
+type Member = Database['public']['Tables']['workspace_members']['Row'] & {
+	profile: Database['public']['Tables']['profiles']['Row'];
 };
-type MemberUpdate = AppDatabase['public']['Tables']['workspace_members']['Update'];
+type MemberUpdate = Database['public']['Tables']['workspace_members']['Update'];
 
 /**
  * Strict type bridge to resolve Supabase inference issues in the workspace store.

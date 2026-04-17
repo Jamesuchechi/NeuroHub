@@ -11,7 +11,7 @@
 		poll.options.reduce(
 			(
 				sum: number,
-				opt: import('$lib/types/db').AppDatabase['public']['Tables']['poll_options']['Row']
+				opt: import('$lib/types/db').Database['public']['Tables']['poll_options']['Row']
 			) => sum + opt.votes_count,
 			0
 		)

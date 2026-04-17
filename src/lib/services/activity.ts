@@ -1,8 +1,8 @@
 import { supabase } from './supabase';
 import { writable } from 'svelte/store';
-import type { AppDatabase, Json } from '$lib/types/db';
+import type { Database as Database, Json } from '$lib/types/db';
 
-export type Activity = AppDatabase['public']['Tables']['activities']['Row'] & {
+export type Activity = Database['public']['Tables']['activities']['Row'] & {
 	profiles: {
 		username: string;
 		avatar_url: string | null;
@@ -14,8 +14,8 @@ export type Activity = AppDatabase['public']['Tables']['activities']['Row'] & {
 	user_reposted: boolean;
 	original_post?: Activity | null;
 	poll?:
-		| (AppDatabase['public']['Tables']['polls']['Row'] & {
-				options: AppDatabase['public']['Tables']['poll_options']['Row'][];
+		| (Database['public']['Tables']['polls']['Row'] & {
+				options: Database['public']['Tables']['poll_options']['Row'][];
 				user_vote?: string | null;
 		  })
 		| null;
@@ -25,7 +25,7 @@ export interface PostPayload {
 	content?: string;
 }
 
-export type ActivityInsert = AppDatabase['public']['Tables']['activities']['Insert'];
+export type ActivityInsert = Database['public']['Tables']['activities']['Insert'];
 export type Attachment = {
 	type: 'image' | 'video' | 'link';
 	url: string;
@@ -34,14 +34,14 @@ export type Attachment = {
 	title?: string;
 };
 
-export type Comment = AppDatabase['public']['Tables']['activity_comments']['Row'] & {
+export type Comment = Database['public']['Tables']['activity_comments']['Row'] & {
 	profiles: {
 		username: string;
 		avatar_url: string | null;
 	} | null;
 };
 
-export type CommentInsert = AppDatabase['public']['Tables']['activity_comments']['Insert'];
+export type CommentInsert = Database['public']['Tables']['activity_comments']['Insert'];
 
 interface RawActivityResponse {
 	id: string;
@@ -59,13 +59,13 @@ interface RawActivityResponse {
 	activity_comments: { count: number }[];
 	replies: { count: number }[];
 	reposts: { count: number }[];
-	polls: (AppDatabase['public']['Tables']['polls']['Row'] & {
-		poll_options: AppDatabase['public']['Tables']['poll_options']['Row'][];
+	polls: (Database['public']['Tables']['polls']['Row'] & {
+		poll_options: Database['public']['Tables']['poll_options']['Row'][];
 	})[];
 }
 
 interface TypedSupabase {
-	from<T extends keyof AppDatabase['public']['Tables']>(
+	from<T extends keyof Database['public']['Tables']>(
 		table: T
 	): {
 		select(columns?: string): {
@@ -82,8 +82,8 @@ interface TypedSupabase {
 		};
 		insert(
 			values:
-				| AppDatabase['public']['Tables'][T]['Insert']
-				| AppDatabase['public']['Tables'][T]['Insert'][]
+				| Database['public']['Tables'][T]['Insert']
+				| Database['public']['Tables'][T]['Insert'][]
 		): Promise<{
 			data: unknown;
 			error: unknown;
@@ -145,11 +145,14 @@ function createActivityService() {
 		 * Fetches initial activities with interaction counts and states
 		 */
 		fetchReplies: async (parentId: string, userId: string | null = null) => {
-			const { data: activitiesDataRaw, error } = await supabase
+			const { data: activitiesDataRaw, error } = await (supabase
 				.from('activities')
 				.select(ACTIVITY_SELECT)
 				.eq('parent_id', parentId)
-				.order('created_at', { ascending: true });
+				.order('created_at', { ascending: true }) as unknown as Promise<{
+				data: RawActivityResponse[] | null;
+				error: Error | null;
+			}>);
 
 			if (error) throw error as Error;
 
@@ -460,7 +463,7 @@ function createActivityService() {
 
 			if (actError) throw actError as Error;
 
-			const activity = act as Activity;
+			const activity = act as { id: string };
 
 			// Create Poll if requested
 			if (options?.poll) {
@@ -470,12 +473,12 @@ function createActivityService() {
 						activity_id: activity.id,
 						question: options.poll.question,
 						expires_at: new Date(Date.now() + 86400000).toISOString() // 24h default
-					} as AppDatabase['public']['Tables']['polls']['Insert'])
+					} as Database['public']['Tables']['polls']['Insert'])
 					.select()
 					.single();
 
 				if (pollError) throw pollError as Error;
-				const poll = pollData as AppDatabase['public']['Tables']['polls']['Row'];
+				const poll = pollData as Database['public']['Tables']['polls']['Row'];
 
 				// Create options
 				const optionInserts = options.poll.options.map((text) => ({

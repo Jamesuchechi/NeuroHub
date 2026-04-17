@@ -1,8 +1,132 @@
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type AppDatabase = {
+export type Database = {
 	public: {
 		Tables: {
+			message_reactions: {
+				Row: {
+					message_id: string;
+					user_id: string;
+					emoji: string;
+					created_at: string;
+				};
+				Insert: {
+					message_id: string;
+					user_id: string;
+					emoji: string;
+					created_at?: string;
+				};
+				Update: {
+					message_id?: string;
+					user_id?: string;
+					emoji?: string;
+					created_at?: string;
+				};
+			};
+			message_reads: {
+				Row: {
+					user_id: string;
+					channel_id: string;
+					last_read_message_id: string | null;
+					updated_at: string;
+				};
+				Insert: {
+					user_id: string;
+					channel_id: string;
+					last_read_message_id?: string | null;
+					updated_at?: string;
+				};
+				Update: {
+					user_id?: string;
+					channel_id?: string;
+					last_read_message_id?: string | null;
+					updated_at?: string;
+				};
+			};
+			typing_indicators: {
+				Row: {
+					channel_id: string;
+					user_id: string;
+					updated_at: string;
+				};
+				Insert: {
+					channel_id: string;
+					user_id: string;
+					updated_at?: string;
+				};
+				Update: {
+					channel_id?: string;
+					user_id?: string;
+					updated_at?: string;
+				};
+			};
+			channels: {
+				Row: {
+					id: string;
+					workspace_id: string;
+					name: string;
+					description: string | null;
+					type: 'text' | 'announcement' | 'private';
+					created_by: string | null;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					workspace_id: string;
+					name: string;
+					description?: string | null;
+					type?: 'text' | 'announcement' | 'private';
+					created_by?: string | null;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					workspace_id?: string;
+					name?: string;
+					description?: string | null;
+					type?: 'text' | 'announcement' | 'private';
+					created_by?: string | null;
+					created_at?: string;
+				};
+			};
+			messages: {
+				Row: {
+					id: string;
+					channel_id: string;
+					user_id: string;
+					content: string;
+					attachments: Json;
+					parent_id: string | null;
+					metadata: Json;
+					edited_at: string | null;
+					deleted_at: string | null;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					channel_id: string;
+					user_id: string;
+					content: string;
+					attachments?: Json;
+					parent_id?: string | null;
+					metadata?: Json;
+					edited_at?: string | null;
+					deleted_at?: string | null;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					channel_id?: string;
+					user_id?: string;
+					content?: string;
+					attachments?: Json;
+					parent_id?: string | null;
+					metadata?: Json;
+					edited_at?: string | null;
+					deleted_at?: string | null;
+					created_at?: string;
+				};
+			};
 			stories: {
 				Row: {
 					id: string;
@@ -348,8 +472,13 @@ export type AppDatabase = {
 	};
 };
 
-export type StoriesTable = AppDatabase['public']['Tables']['stories'];
-export type FollowsTable = AppDatabase['public']['Tables']['follows'];
-export type ActivitiesTable = AppDatabase['public']['Tables']['activities'];
-export type ProfilesTable = AppDatabase['public']['Tables']['profiles'];
-export type WorkspacesTable = AppDatabase['public']['Tables']['workspaces'];
+export type StoriesTable = Database['public']['Tables']['stories'];
+export type FollowsTable = Database['public']['Tables']['follows'];
+export type ActivitiesTable = Database['public']['Tables']['activities'];
+export type ProfilesTable = Database['public']['Tables']['profiles'];
+export type WorkspacesTable = Database['public']['Tables']['workspaces'];
+export type MessagesTable = Database['public']['Tables']['messages'];
+export type ChannelsTable = Database['public']['Tables']['channels'];
+export type MessageReactionsTable = Database['public']['Tables']['message_reactions'];
+export type MessageReadsTable = Database['public']['Tables']['message_reads'];
+export type TypingIndicatorsTable = Database['public']['Tables']['typing_indicators'];
