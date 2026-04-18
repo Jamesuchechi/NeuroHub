@@ -1,3 +1,3 @@
 import { supabase } from './src/lib/services/supabase';
 
-const q = supabase.from('snippets').select('*');
+const _q = supabase.from('snippets').select('*');
