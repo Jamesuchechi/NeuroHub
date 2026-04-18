@@ -465,6 +465,13 @@ export type Database = {
 				};
 				Returns: boolean;
 			};
+			duplicate_note: {
+				Args: {
+					note_id: string;
+					new_author_id: string;
+				};
+				Returns: string;
+			};
 		};
 		Enums: {
 			user_role: 'owner' | 'member' | 'guest';
@@ -482,3 +489,72 @@ export type ChannelsTable = Database['public']['Tables']['channels'];
 export type MessageReactionsTable = Database['public']['Tables']['message_reactions'];
 export type MessageReadsTable = Database['public']['Tables']['message_reads'];
 export type TypingIndicatorsTable = Database['public']['Tables']['typing_indicators'];
+
+export type NotesTable = {
+	Row: {
+		id: string;
+		workspace_id: string;
+		author_id: string;
+		title: string;
+		status: 'draft' | 'published';
+		content: Json;
+		tags: string[];
+		is_public: boolean;
+		created_at: string;
+		updated_at: string;
+		is_pinned: boolean; // Added in local migration
+		share_token: string | null; // Added in local migration
+	};
+	Insert: {
+		id?: string;
+		workspace_id: string;
+		author_id: string;
+		title: string;
+		status?: 'draft' | 'published';
+		content?: Json;
+		tags?: string[];
+		is_public?: boolean;
+		created_at?: string;
+		updated_at?: string;
+		is_pinned?: boolean;
+		share_token?: string | null;
+	};
+	Update: {
+		id?: string;
+		workspace_id?: string;
+		author_id?: string;
+		title?: string;
+		status?: 'draft' | 'published';
+		content?: Json;
+		tags?: string[];
+		is_public?: boolean;
+		created_at?: string;
+		updated_at?: string;
+		is_pinned?: boolean;
+		share_token?: string | null;
+	};
+};
+
+export type NoteVersionsTable = {
+	Row: {
+		id: string;
+		note_id: string;
+		author_id: string;
+		content: Json;
+		created_at: string;
+	};
+	Insert: {
+		id?: string;
+		note_id: string;
+		author_id: string;
+		content: Json;
+		created_at?: string;
+	};
+	Update: {
+		id?: string;
+		note_id?: string;
+		author_id?: string;
+		content?: Json;
+		created_at?: string;
+	};
+};

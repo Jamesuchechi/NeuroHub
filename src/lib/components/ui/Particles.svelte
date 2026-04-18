@@ -35,11 +35,18 @@
 			}
 		};
 
+		const handleResize = () => {
+			if (!canvas) return;
+			resize();
+			init();
+		};
+
 		resize();
 		init();
 
 		let animationFrame: number;
 		const draw = () => {
+			if (!canvas || !ctx) return;
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 			points.forEach((p) => {
 				ctx.globalAlpha = 0.5;
@@ -57,14 +64,11 @@
 
 		draw();
 
-		window.addEventListener('resize', () => {
-			resize();
-			init();
-		});
+		window.addEventListener('resize', handleResize);
 
 		return () => {
 			cancelAnimationFrame(animationFrame);
-			window.removeEventListener('resize', resize);
+			window.removeEventListener('resize', handleResize);
 		};
 	});
 </script>

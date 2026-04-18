@@ -28,7 +28,9 @@
 		onResize={(w) => uiStore.setSidebarWidth(w)}
 	>
 		{#snippet left()}
-			<Sidebar />
+			<div class="no-print h-full w-full">
+				<Sidebar />
+			</div>
 		{/snippet}
 		{#snippet right()}
 			<div class="flex h-full flex-1 flex-col overflow-hidden">
@@ -43,7 +45,10 @@
 					{#snippet left()}
 						<div class="flex h-full flex-1 flex-col overflow-hidden">
 							<!-- Main Top Header -->
-							<div in:fly={{ y: -64, duration: 800, easing: cubicOut, delay: 100 }}>
+							<div
+								class="no-print"
+								in:fly={{ y: -64, duration: 800, easing: cubicOut, delay: 100 }}
+							>
 								<Topbar />
 							</div>
 
@@ -55,7 +60,9 @@
 					{/snippet}
 					{#snippet right()}
 						{#if !contextPanelCollapsed}
-							<ContextPanel />
+							<div class="no-print h-full w-full">
+								<ContextPanel />
+							</div>
 						{/if}
 					{/snippet}
 				</SplitPane>

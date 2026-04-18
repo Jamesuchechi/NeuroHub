@@ -1,0 +1,83 @@
+Loading svelte-check in workspace: /home/jamesuchechi/Projects/NeuroHub
+Getting Svelte diagnostics...
+
+/home/jamesuchechi/Projects/NeuroHub/src/lib/components/ui/Skeleton.svelte:18:26
+Warn: This reference only captures the initial value of `count`. Did you mean to reference it inside a closure instead?
+https://svelte.dev/e/state_referenced_locally (svelte)
+
+	const items = [...Array(count).keys()];
+</script>
+
+/home/jamesuchechi/Projects/NeuroHub/src/lib/components/notes/NoteEditor.svelte:36:51
+Error: Type 'false' has no properties in common with type 'SetContentOptions'. (ts)
+			if (JSON.stringify(currentContent) !== JSON.stringify(newContent)) {
+				editor.commands.setContent(newContent as any, false);
+			}
+
+/home/jamesuchechi/Projects/NeuroHub/src/lib/components/notes/NoteEditor.svelte:46:6
+Error: Object literal may only specify known properties, and 'history' does not exist in type 'Partial<StarterKitOptions>'. (ts)
+				StarterKit.configure({
+					history: true
+				}),
+
+/home/jamesuchechi/Projects/NeuroHub/src/lib/components/notes/NoteEditor.svelte:78:4
+Error: Object literal may only specify known properties, and 'onClick' does not exist in type 'Partial<EditorOptions>'. (ts)
+			},
+			onClick: ({ event }) => {
+				const target = event.target as HTMLElement;
+
+/home/jamesuchechi/Projects/NeuroHub/src/lib/components/notes/NoteEditor.svelte:78:16
+Error: Binding element 'event' implicitly has an 'any' type. (ts)
+			},
+			onClick: ({ event }) => {
+				const target = event.target as HTMLElement;
+
+/home/jamesuchechi/Projects/NeuroHub/src/lib/components/notes/NoteEditor.svelte:230:5
+Error: Type '"primary" | "outline"' is not assignable to type '"primary" | "secondary" | "ghost" | "danger" | undefined'.
+  Type '"outline"' is not assignable to type '"primary" | "secondary" | "ghost" | "danger" | undefined'. (ts)
+			<Button
+				variant={isPublished ? 'outline' : 'primary'}
+				size="sm"
+
+/home/jamesuchechi/Projects/NeuroHub/src/routes/profile/[username]/+page.svelte:96:8
+Error: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. (ts)
+						<Avatar
+							name={profile.username}
+							src={profile.avatar_url}
+
+/home/jamesuchechi/Projects/NeuroHub/src/routes/profile/[username]/+page.svelte:210:17
+Error: Object literal may only specify known properties, and '"onStoryClick"' does not exist in type '$$ComponentProps'. (ts)
+			<div class="mb-12 border-y border-stroke py-6">
+				<StoriesBar onStoryClick={handleStoryClick} />
+			</div>
+
+/home/jamesuchechi/Projects/NeuroHub/src/routes/profile/[username]/+page.svelte:239:12
+Error: 'activities' is possibly 'null'. (ts)
+					<div in:fade={{ duration: 400 }} class="space-y-8">
+						{#if activities.length > 0}
+							{#each activities as activity (activity.id)}
+
+/home/jamesuchechi/Projects/NeuroHub/src/routes/profile/[username]/+page.svelte:246:20
+Error: Type 'string | null' is not assignable to type 'string | undefined'.
+  Type 'null' is not assignable to type 'string | undefined'. (ts)
+										<div class="flex items-center gap-3">
+											<Avatar name={profile.username} src={profile.avatar_url} size="sm" />
+											<div>
+
+/home/jamesuchechi/Projects/NeuroHub/src/routes/workspace/[slug]/notes/[noteId]/+page.svelte:33:17
+Error: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'. (ts)
+		<div class="flex-1 overflow-hidden">
+			<NoteEditor {noteId} />
+		</div>
+
+/home/jamesuchechi/Projects/NeuroHub/src/routes/workspace/[slug]/notes/[noteId]/+page.svelte:36:21
+Error: Type 'string | undefined' is not assignable to type 'string'.
+  Type 'undefined' is not assignable to type 'string'. (ts)
+		<div class="hidden w-72 shrink-0 xl:block">
+			<BacklinksPanel {noteId} />
+		</div>
+
+====================================
+svelte-check found 11 errors and 1 warning in 4 files

@@ -15,14 +15,14 @@
 		className = ''
 	}: Props = $props();
 
-	const items = [...Array(count).keys()];
+	const items = $derived(Array.from({ length: count }, (_, i) => i));
 </script>
 
 <div class="flex flex-col gap-2 {className}" aria-hidden="true">
 	{#each items as i (i)}
 		{#if type === 'chat'}
 			<div class="flex animate-pulse items-start gap-4 p-4">
-				<div class="h-10 w-10 flex-shrink-0 rounded-full bg-surface-dim"></div>
+				<div class="h-10 w-10 shrink-0 rounded-full bg-surface-dim"></div>
 				<div class="flex flex-1 flex-col gap-2">
 					<div class="h-3 w-24 rounded bg-surface-dim"></div>
 					<div class="h-4 w-full rounded bg-surface-dim/50"></div>

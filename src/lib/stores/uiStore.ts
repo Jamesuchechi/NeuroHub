@@ -13,6 +13,7 @@ interface UIState {
 	createChannelModalOpen: boolean;
 	startChatModalOpen: boolean;
 	channelSettingsModalOpen: boolean;
+	dashboardTeamCollapsed: boolean;
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 260;
@@ -33,7 +34,8 @@ function createUIStore() {
 				inviteModalOpen: false,
 				createChannelModalOpen: false,
 				startChatModalOpen: false,
-				channelSettingsModalOpen: false
+				channelSettingsModalOpen: false,
+				dashboardTeamCollapsed: false
 			};
 
 	const { subscribe, update } = writable<UIState>(initialState);
@@ -57,6 +59,8 @@ function createUIStore() {
 		setStartChatModalOpen: (open: boolean) => update((s) => ({ ...s, startChatModalOpen: open })),
 		setChannelSettingsModalOpen: (open: boolean) =>
 			update((s) => ({ ...s, channelSettingsModalOpen: open })),
+		setDashboardTeamCollapsed: (collapsed: boolean) =>
+			update((s) => ({ ...s, dashboardTeamCollapsed: collapsed })),
 
 		persist: (state: UIState) => {
 			if (typeof window !== 'undefined') {

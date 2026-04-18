@@ -5,6 +5,8 @@
 	import Textarea from '$lib/components/ui/Textarea.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import BirthdaySelector from '$lib/components/ui/BirthdaySelector.svelte';
+	import TagSelector from '$lib/components/ui/TagSelector.svelte';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 
@@ -17,7 +19,10 @@
 		location: '',
 		website: '',
 		avatar_url: '',
-		header_url: ''
+		header_url: '',
+		birthday: '',
+		title: '',
+		skills: [] as string[]
 	});
 
 	let uploadStates = $state({
@@ -37,6 +42,9 @@
 			formData.website = profile.website || '';
 			formData.avatar_url = profile.avatar_url || '';
 			formData.header_url = profile.header_url || '';
+			formData.birthday = profile.birthday || '';
+			formData.title = profile.title || '';
+			formData.skills = profile.skills || [];
 		}
 	});
 
@@ -216,7 +224,19 @@
 			<div class="grid gap-6 md:grid-cols-2">
 				<Input label="Full Name" placeholder="James Uche" bind:value={formData.full_name} />
 				<Input label="Username" placeholder="james_dev" bind:value={formData.username} />
+				<Input
+					label="Professional Title"
+					placeholder="e.g. Senior Software Engineer"
+					bind:value={formData.title}
+				/>
+				<BirthdaySelector bind:value={formData.birthday} label="Birthday" />
 			</div>
+
+			<TagSelector
+				bind:value={formData.skills}
+				label="Skills & Expertise"
+				placeholder="Add a skill (e.g. Svelte, Rust, AI)..."
+			/>
 		</section>
 
 		<!-- Bio & Social -->

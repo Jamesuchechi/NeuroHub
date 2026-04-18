@@ -9,7 +9,67 @@ import {
 import { profileStore } from './profileStore';
 import { get } from 'svelte/store';
 import { SvelteDate, SvelteSet } from 'svelte/reactivity';
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type {
+	RealtimeChannel,
+	RealtimePostgresChangesPayload,
+	PostgrestResponse,
+	PostgrestSingleResponse
+} from '@supabase/supabase-js';
+import type { Database } from '$lib/types/db';
+
+type DB = Database['public']['Tables'];
+
+type ChannelWithLastMessage = DB['channels']['Row'] & {
+	last_message: Array<{ id: string; created_at: string }>;
+};
+
+interface ChatDB {
+	from(table: 'channels'): {
+		select<T = DB['channels']['Row']>(
+			q?: string
+		): {
+			eq(
+				k: string,
+				v: string
+			): {
+				order(k: string, o: { ascending: boolean }): Promise<PostgrestResponse<T>>;
+			};
+		};
+	};
+	from(table: 'messages'): {
+		select(q?: string): {
+			eq(
+				k: string,
+				v: string
+			): {
+				single(): Promise<PostgrestSingleResponse<DB['messages']['Row']>>;
+			};
+		};
+	};
+	from(table: 'message_reads'): {
+		select(q?: string): {
+			eq(k: string, v: string): Promise<PostgrestResponse<DB['message_reads']['Row']>>;
+		};
+	};
+	from(table: 'typing_indicators'): {
+		upsert(d: DB['typing_indicators']['Insert']): Promise<{ error: Error | null }>;
+		delete(): {
+			match(d: Record<string, string>): Promise<{ error: Error | null }>;
+		};
+	};
+	from(table: 'profiles'): {
+		select(q?: string): {
+			eq(
+				k: string,
+				v: string
+			): {
+				single(): Promise<PostgrestSingleResponse<DB['profiles']['Row']>>;
+			};
+		};
+	};
+}
+
+const db = supabase as unknown as ChatDB;
 
 interface PresenceState {
 	user_id: string;
@@ -37,9 +97,9 @@ export class ChatStore {
 
 	async init(workspaceId: string) {
 		try {
-			const { data: channelsData } = await supabase
+			const { data: channelsData } = await db
 				.from('channels')
-				.select(
+				.select<ChannelWithLastMessage>(
 					`
 					*,
 					last_message:messages(id, created_at)
@@ -49,12 +109,10 @@ export class ChatStore {
 				.order('name', { ascending: true });
 
 			if (channelsData) {
-				this.channels = (channelsData as (Channel & { last_message: { id: string }[] })[]).map(
-					(c) => ({
-						...c,
-						last_msg_id: c.last_message?.[0]?.id || null
-					})
-				) as Channel[];
+				this.channels = channelsData.map((c) => ({
+					...c,
+					last_msg_id: c.last_message?.[0]?.id || null
+				})) as Channel[];
 			}
 
 			if (this.channels.length > 0 && !this.activeChannelId) {
@@ -83,12 +141,10 @@ export class ChatStore {
 		const profile = get(profileStore).profile;
 		if (!profile) return;
 
-		const { data } = (await supabase
+		const { data } = await db
 			.from('message_reads')
 			.select('channel_id, last_read_message_id')
-			.eq('user_id', profile.id)) as {
-			data: { channel_id: string; last_read_message_id: string | null }[] | null;
-		};
+			.eq('user_id', profile.id);
 
 		if (data) {
 			const map: Record<string, string> = {};
@@ -244,17 +300,13 @@ export class ChatStore {
 
 		try {
 			if (isTyping) {
-				await (
-					supabase.from('typing_indicators') as unknown as {
-						upsert: (d: object) => Promise<unknown>;
-					}
-				).upsert({
+				await db.from('typing_indicators').upsert({
 					channel_id: channelId,
 					user_id: profile.id,
 					updated_at: new SvelteDate().toISOString()
 				});
 			} else {
-				await supabase.from('typing_indicators').delete().match({
+				await db.from('typing_indicators').delete().match({
 					channel_id: channelId,
 					user_id: profile.id
 				});
@@ -348,7 +400,7 @@ export class ChatStore {
 			if (this.messages.some((m) => m.id === record.id)) return;
 
 			// Fetch user info for the new message
-			const { data: user } = await supabase
+			const { data: user } = await db
 				.from('profiles')
 				.select('username, avatar_url')
 				.eq('id', record.user_id)

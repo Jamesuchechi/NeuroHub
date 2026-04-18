@@ -11,11 +11,13 @@
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/authStore';
 	import { profileStore } from '$lib/stores/profileStore';
+	import { uiStore } from '$lib/stores/uiStore';
 
 	const workspace = $derived($workspaceStore.currentWorkspace);
 	const members = $derived($workspaceStore.members);
 	const userRole = $derived($workspaceStore.userRole);
 	const { user } = $derived($authStore);
+	const { dashboardTeamCollapsed } = $derived($uiStore);
 
 	// Contextual stats
 	const stats = $derived([
@@ -167,11 +169,11 @@
 			{/each}
 		</div>
 
-		<div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+		<div class="flex flex-col gap-8 lg:flex-row">
 			<!-- Recent Activity -->
 			<div
 				in:fly={{ y: 40, duration: 1200, easing: cubicOut, delay: 400 }}
-				class="rounded-3xl border border-stroke bg-surface-dim/20 p-8 lg:col-span-2"
+				class="flex-1 rounded-3xl border border-stroke bg-surface-dim/20 p-8"
 			>
 				<h3 class="mb-8 text-xl font-black text-content">Recent Activity</h3>
 
@@ -197,34 +199,93 @@
 			</div>
 
 			<!-- Team Members -->
-			<div
-				in:fly={{ y: 40, duration: 1200, easing: cubicOut, delay: 600 }}
-				class="rounded-3xl border border-stroke bg-surface-dim/20 p-8"
-			>
-				<div class="mb-8 flex items-center justify-between">
-					<h3 class="text-xl font-black text-content">Team</h3>
-					<span class="text-xs font-bold text-content-dim">{members.length} Online</span>
-				</div>
-				<div class="space-y-4">
-					{#each members as member (member.user_id)}
-						<div class="group flex items-center justify-between transition-all hover:translate-x-1">
-							<div class="flex items-center gap-3">
-								<Avatar
-									name={member.profile.username || 'User'}
-									src={member.profile.avatar_url}
-									size="sm"
-								/>
-								<div>
-									<p class="text-sm font-bold text-content">{member.profile.username}</p>
-									<p class="text-[10px] font-bold text-content-dim uppercase">{member.role}</p>
-								</div>
-							</div>
-							<div class="h-1.5 w-1.5 rounded-full bg-brand-green"></div>
+			{#if !dashboardTeamCollapsed}
+				<div
+					in:fly={{ x: 20, duration: 800, easing: cubicOut }}
+					class="w-full rounded-3xl border border-stroke bg-surface-dim/20 p-8 lg:w-[320px] xl:w-[380px]"
+				>
+					<div class="mb-8 flex items-center justify-between">
+						<div class="flex items-center gap-2">
+							<h3 class="text-xl font-black text-content">Team</h3>
+							<span class="text-xs font-bold text-content-dim">{members.length} Online</span>
 						</div>
-					{/each}
+						<button
+							onclick={() => uiStore.setDashboardTeamCollapsed(true)}
+							class="rounded-lg p-1.5 text-content-dim transition-all hover:bg-surface hover:text-content"
+							title="Collapse Team"
+						>
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M13 5H19V11M11 19H5V13"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M19 5L13 11M5 19L11 13"
+								/>
+							</svg>
+						</button>
+					</div>
+					<div class="space-y-4">
+						{#each members as member (member.user_id)}
+							<div
+								class="group flex items-center justify-between transition-all hover:translate-x-1"
+							>
+								<div class="flex items-center gap-3">
+									<Avatar
+										name={member.profile.username || 'User'}
+										src={member.profile.avatar_url}
+										size="sm"
+									/>
+									<div>
+										<p class="text-sm font-bold text-content">{member.profile.username}</p>
+										<p class="text-[10px] font-bold text-content-dim uppercase">{member.role}</p>
+									</div>
+								</div>
+								<div class="h-1.5 w-1.5 rounded-full bg-brand-green"></div>
+							</div>
+						{/each}
+					</div>
+					<Button variant="secondary" class="mt-8 w-full">View All Members</Button>
 				</div>
-				<Button variant="secondary" class="mt-8 w-full">View All Members</Button>
-			</div>
+			{:else}
+				<button
+					onclick={() => uiStore.setDashboardTeamCollapsed(false)}
+					class="group relative hidden w-12 flex-col items-center rounded-3xl border border-stroke bg-surface-dim/20 py-8 transition-all hover:bg-surface-dim/40 lg:flex"
+					title="Expand Team"
+				>
+					<div class="mb-10 text-content-dim transition-colors group-hover:text-brand-orange">
+						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
+							/>
+						</svg>
+					</div>
+					<div class="flex flex-1 items-center">
+						<span
+							class="rotate-180 text-[10px] font-black tracking-[4px] text-content-dim uppercase opacity-30 transition-all group-hover:opacity-100"
+							style="writing-mode: vertical-rl;">Team Panel</span
+						>
+					</div>
+					<div class="mt-10 text-content-dim transition-colors group-hover:text-brand-orange">
+						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 19l-7-7 7-7"
+							/>
+						</svg>
+					</div>
+				</button>
+			{/if}
 		</div>
 	{:else}
 		<div class="flex h-[60vh] items-center justify-center">

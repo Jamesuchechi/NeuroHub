@@ -222,47 +222,55 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ## Phase 5 — Knowledge Engine (Notes)
 
-**Target: Week 3–4**
+**Status: Completed ✅**
+
+### Achievements
+
+- [x] **Relational Knowledge Graph**: Implemented bi-directional wikilinks (`[[link]]`) with real-time backlink indexing and sync.
+- [x] **High-Fidelity Editor**: Integrated TipTap with support for Mermaid diagrams (live preview), @mentions, and storage-backed image uploads.
+- [x] **Hybrid Storage**: Combined Postgres JSONB for active state with a separate `note_versions` table for robust point-in-time recovery.
+- [x] **Premium Organization**: Advanced pinning system, server-side Full-Text Search integration, and multi-format export (Markdown/PDF).
+- [x] **Published View Engine**: Dedicated high-performance read-only view for published notes and public sharing.
 
 ### Database Schema — Notes
 
-- [ ] Create `notes` table (id, workspace_id, author_id, title, content TEXT, versions JSONB[], tags TEXT[], is_public, created_at, updated_at)
-- [ ] Create `note_links` table (from_note_id, to_note_id) — for bi-directional links
-- [ ] Create `note_collaborators` table (note_id, user_id, permission: `view|edit`)
-- [ ] Supabase Storage bucket `note-attachments` with RLS policies
+- [x] Create `notes` table (id, workspace_id, author_id, title, content TEXT, versions JSONB[], tags TEXT[], is_public, created_at, updated_at)
+- [x] Create `note_links` table (from_note_id, to_note_id) — for bi-directional links
+- [x] Create `note_collaborators` table (note_id, user_id, permission: `view|edit`)
+- [x] Supabase Storage bucket `note-attachments` with RLS policies
 
 ### Notes Editor
 
-- [ ] Integrate `@tiptap/svelte` or `CodeMirror` for rich markdown editor
-- [ ] Implement `[[note-title]]` bi-directional link syntax with autocomplete
-- [ ] `@mention` user syntax in notes
-- [ ] Image upload via drag-and-drop (upload to Supabase Storage, embed URL)
-- [ ] Syntax-highlighted code blocks inside notes
-- [ ] Build `NoteEditor.svelte` with toolbar (headings, bold, italic, code, lists, links)
+- [x] Integrate `@tiptap/svelte` or `CodeMirror` for rich markdown editor
+- [x] Implement `[[note-title]]` bi-directional link syntax with autocomplete
+- [x] `@mention` user syntax in notes
+- [x] Image upload via drag-and-drop (upload to Supabase Storage, embed URL)
+- [x] Syntax-highlighted code blocks inside notes
+- [x] Build `NoteEditor.svelte` with toolbar (headings, bold, italic, code, lists, links)
 
 ### Notes List & Navigation
 
-- [ ] Build notes sidebar panel (list, search, filter by tag)
-- [ ] Build note card component (title, excerpt, tags, last edited)
-- [ ] Tag system: add/remove tags, filter notes by tag
-- [ ] Build backlinks panel (which notes link to this note)
-- [ ] Pin important notes to sidebar
+- [x] Build notes sidebar panel (list, search, filter by tag)
+- [x] Build note card component (title, excerpt, tags, last edited)
+- [x] Tag system: add/remove tags, filter notes by tag
+- [x] Build backlinks panel (which notes link to this note)
+- [x] Pin important notes to sidebar
 
 ### Versioning
 
-- [ ] Auto-save every 30s to `versions` JSONB array (keep last 50 versions)
-- [ ] Build version history drawer (list versions with timestamp + author)
-- [ ] Version diff view (highlight added/removed lines)
-- [ ] Restore from version with confirm dialog
-- [ ] Future upgrade path: Yjs CRDTs for live collaborative editing
+- [x] Auto-save every 30s to `versions` JSONB array (keep last 50 versions)
+- [x] Build version history drawer (list versions with timestamp + author)
+- [x] Version diff view (highlight added/removed lines)
+- [x] Restore from version with confirm dialog
+- [x] Future upgrade path: Yjs CRDTs for live collaborative editing
 
 ### Notes Organization
 
-- [ ] Workspace-wide notes home page (recent, pinned, by tag)
-- [ ] Note search (full-text using Supabase `to_tsvector`)
-- [ ] Export note as Markdown / PDF
-- [ ] Duplicate note
-- [ ] Share note publicly (generate shareable link with token)
+- [x] Workspace-wide notes home page (recent, pinned, by tag)
+- [x] Note search (full-text using Supabase `to_tsvector`)
+- [x] Export note as Markdown / PDF
+- [x] Duplicate note
+- [x] Share note publicly (generate shareable link with token)
 
 ---
 
@@ -312,7 +320,7 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Infrastructure
 
-- [ ] Create Supabase Edge Function `ai-chat` to proxy OpenAI/Groq (never expose keys to client)
+- [ ] Create Supabase Edge Function `ai-chat` to proxy Openrouter/Groq/mistral (never expose keys to client)
 - [ ] Integrate Vercel AI SDK for streaming responses in SvelteKit
 - [ ] Build `src/lib/services/ai.ts` — unified AI client with error handling + retry
 - [ ] Rate limiting on Edge Function (per user: 20 req/min via Supabase Redis / Upstash)
@@ -613,4 +621,4 @@ src/
 
 ---
 
-_Last updated: Phase 3 Complete — Social Architecture Stabilized_
+_Last updated: Phase 5 Complete — Knowledge Engine Stabilized_

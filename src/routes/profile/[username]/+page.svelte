@@ -12,7 +12,7 @@
 
 	let { data } = $props();
 	const profile = $derived(data.profile);
-	const activities = $derived(data.activities);
+	const activities = $derived(data.activities ?? []);
 	const isOwnProfile = $derived($profileStore.profile?.id === profile.id);
 
 	let activeTab = $state('activity');
@@ -36,7 +36,7 @@
 	});
 
 	async function toggleFollow() {
-		if (!$profileStore.profile) return; // In a real app, prompt login
+		if (!$profileStore.profile) return;
 
 		const wasFollowing = isFollowing;
 
@@ -56,11 +56,6 @@
 			followersCount += isFollowing ? 1 : -1;
 			console.error('[Profile] Follow toggle failed:', err);
 		}
-	}
-
-	function handleStoryClick(id: string) {
-		console.log('Story clicked:', id);
-		// Future: Open story viewer modal
 	}
 
 	const joinedDate = $derived(
@@ -93,8 +88,8 @@
 				<div class="rounded-full bg-surface p-1.5 shadow-2xl">
 					<div class="h-32 w-32 md:h-40 md:w-40">
 						<Avatar
-							name={profile.username}
-							src={profile.avatar_url}
+							name={profile.username ?? ''}
+							src={profile.avatar_url ?? undefined}
 							class="h-full w-full ring-4 ring-surface"
 						/>
 					</div>
@@ -133,7 +128,14 @@
 				<h1 class="text-3xl font-black tracking-tight text-content">
 					{profile.full_name || profile.username}
 				</h1>
-				<p class="mb-4 text-sm font-medium text-content-dim">@{profile.username}</p>
+
+				<div class="mb-4 flex flex-wrap items-center gap-2">
+					<p class="text-sm font-medium text-content-dim">@{profile.username}</p>
+					{#if profile.title}
+						<span class="h-1 w-1 rounded-full bg-zinc-800"></span>
+						<p class="text-sm font-bold text-brand-orange">{profile.title}</p>
+					{/if}
+				</div>
 
 				{#if profile.bio}
 					<p class="mb-6 max-w-2xl text-base leading-relaxed text-content/80">
@@ -141,6 +143,19 @@
 					</p>
 				{:else}
 					<p class="mb-6 text-content-dim italic">No bio yet.</p>
+				{/if}
+
+				<!-- Skills Cloud -->
+				{#if profile.skills && profile.skills.length > 0}
+					<div class="mb-8 flex flex-wrap gap-2">
+						{#each profile.skills as skill (skill)}
+							<span
+								class="rounded-lg border border-white/5 bg-surface-dim/40 px-3 py-1 text-xs font-bold text-content/80 transition-colors hover:bg-surface-dim/60"
+							>
+								{skill}
+							</span>
+						{/each}
+					</div>
 				{/if}
 
 				<div class="flex flex-wrap gap-5 text-sm font-medium text-content-dim">
@@ -207,7 +222,7 @@
 
 			<!-- IG-Style Stories Bar -->
 			<div class="mb-12 border-y border-stroke py-6">
-				<StoriesBar onStoryClick={handleStoryClick} />
+				<StoriesBar />
 			</div>
 
 			<!-- X-Style Tabs -->
@@ -243,7 +258,11 @@
 								>
 									<div class="mb-4 flex items-center justify-between">
 										<div class="flex items-center gap-3">
-											<Avatar name={profile.username} src={profile.avatar_url} size="sm" />
+											<Avatar
+												name={profile.username ?? ''}
+												src={profile.avatar_url ?? undefined}
+												size="sm"
+											/>
 											<div>
 												<p class="text-sm font-bold text-content">
 													{profile.full_name || profile.username}

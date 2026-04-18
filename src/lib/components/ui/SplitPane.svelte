@@ -83,7 +83,9 @@
 
 <div
 	bind:this={container}
-	class="flex h-full w-full overflow-hidden {type === 'horizontal' ? 'flex-row' : 'flex-col'}"
+	class="split-pane-container flex h-full w-full overflow-hidden {type === 'horizontal'
+		? 'flex-row'
+		: 'flex-col'}"
 >
 	<div
 		style={fixedSide === 'left'
@@ -91,7 +93,7 @@
 				? `width: ${currentSize}px`
 				: `height: ${currentSize}px`
 			: 'flex: 1'}
-		class="relative h-full min-h-0 min-w-0 overflow-hidden"
+		class="split-pane-panel relative h-full min-h-0 min-w-0 overflow-hidden"
 	>
 		{@render left()}
 	</div>
@@ -107,7 +109,7 @@
 		aria-valuemin={minSize}
 		aria-valuemax={maxSize}
 		tabindex="0"
-		class="relative z-10 flex items-center justify-center transition-colors select-none
+		class="split-pane-divider relative z-10 flex items-center justify-center transition-colors select-none
 			{type === 'horizontal'
 			? 'w-1 cursor-col-resize hover:bg-orange-500/50 active:bg-orange-500'
 			: 'h-1 cursor-row-resize hover:bg-orange-500/50 active:bg-orange-500'}
@@ -123,7 +125,7 @@
 				? `width: ${currentSize}px`
 				: `height: ${currentSize}px`
 			: 'flex: 1'}
-		class="h-full min-h-0 min-w-0 overflow-hidden"
+		class="split-pane-panel h-full min-h-0 min-w-0 overflow-hidden"
 	>
 		{@render right()}
 	</div>

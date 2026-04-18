@@ -73,3 +73,42 @@
 	@apply border border-stroke/10 shadow-glass backdrop-blur-xl;
 	@apply bg-white/60 dark:bg-black/60;
 }
+
+/* Print optimizations for document generation */
+@media print {
+	html,
+	body {
+		height: auto !important;
+		overflow: visible !important;
+		background: white !important;
+		color: black !important;
+	}
+
+	/* Hide UI components we don't want on paper */
+	.no-print {
+		display: none !important;
+	}
+
+	/* Flatten split panes to allow content to span 100% width and break naturally */
+	.split-pane-container {
+		display: block !important;
+		height: auto !important;
+		width: 100% !important;
+	}
+
+	.split-pane-panel {
+		width: 100% !important;
+		height: auto !important;
+		flex: none !important;
+		overflow: visible !important;
+	}
+
+	/* Automatically hide the panel if its only content is .no-print */
+	.split-pane-panel:has(> .no-print:only-child) {
+		display: none !important;
+	}
+
+	.split-pane-divider {
+		display: none !important;
+	}
+}

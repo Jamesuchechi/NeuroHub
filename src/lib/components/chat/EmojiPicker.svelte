@@ -2,8 +2,6 @@
 	import data from '@emoji-mart/data';
 	import * as EmojiMart from 'emoji-mart';
 
-	const Picker = (EmojiMart as unknown as { Picker: new (options: unknown) => HTMLElement }).Picker;
-
 	interface EmojiData {
 		id: string;
 		name: string;
@@ -12,6 +10,20 @@
 		keywords: string[];
 		shortcodes: string;
 	}
+
+	interface EmojiMartModule {
+		Picker: new (options: {
+			data: unknown;
+			onEmojiSelect: (emoji: EmojiData) => void;
+			theme?: string;
+			skinTonePosition?: string;
+			previewPosition?: string;
+			navPosition?: string;
+			perLine?: number;
+		}) => HTMLElement;
+	}
+
+	const Picker = (EmojiMart as unknown as EmojiMartModule).Picker;
 
 	let { onSelect } = $props<{ onSelect: (emoji: string) => void }>();
 
