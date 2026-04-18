@@ -64,42 +64,6 @@ interface RawActivityResponse {
 	})[];
 }
 
-interface TypedSupabase {
-	from<T extends keyof Database['public']['Tables']>(
-		table: T
-	): {
-		select(columns?: string): {
-			eq(
-				col: string,
-				val: string | null | boolean
-			): Promise<{ data: unknown[]; error: unknown }> & {
-				order(
-					col: string,
-					opt: { ascending: boolean }
-				): Promise<{ data: unknown[]; error: unknown }>;
-			};
-			single(): Promise<{ data: unknown; error: unknown }>;
-		};
-		insert(
-			values:
-				| Database['public']['Tables'][T]['Insert']
-				| Database['public']['Tables'][T]['Insert'][]
-		): Promise<{
-			data: unknown;
-			error: unknown;
-		}> & {
-			select(columns?: string): {
-				single(): Promise<{ data: unknown; error: unknown }>;
-			};
-		};
-		delete(): Promise<{ error: unknown }> & {
-			match(filter: Record<string, string>): Promise<{ error: unknown }>;
-		};
-	};
-}
-
-const db = supabase as unknown as TypedSupabase;
-
 const ACTIVITY_SELECT = `
 	*,
 	profiles(username, avatar_url),
@@ -287,7 +251,7 @@ function createActivityService() {
 
 			if (activitiesError) throw activitiesError as Error;
 
-			const activitiesData = (rawActivities || []) as RawActivityResponse[];
+			const activitiesData = (rawActivities as unknown as RawActivityResponse[]) || [];
 			let userLikes: string[] = [];
 			const userVotes: Record<string, string> = {};
 
@@ -372,13 +336,13 @@ function createActivityService() {
 		 */
 		toggleLike: async (userId: string, activityId: string, currentlyLiked: boolean) => {
 			if (currentlyLiked) {
-				const { error } = await db
+				const { error } = await supabase
 					.from('likes')
 					.delete()
 					.match({ user_id: userId, activity_id: activityId });
 				if (error) throw error as Error;
 			} else {
-				const { error } = await db.from('likes').insert({
+				const { error } = await supabase.from('likes').insert({
 					user_id: userId,
 					activity_id: activityId
 				});
@@ -404,7 +368,7 @@ function createActivityService() {
 		 * Casts a vote in a poll
 		 */
 		castVote: async (userId: string, pollId: string, optionId: string) => {
-			const { error } = await db.from('poll_votes').insert({
+			const { error } = await supabase.from('poll_votes').insert({
 				user_id: userId,
 				poll_id: pollId,
 				option_id: optionId
@@ -446,7 +410,7 @@ function createActivityService() {
 				poll?: { question: string; options: string[] };
 			}
 		) => {
-			const { data: act, error: actError } = await db
+			const { data: act, error: actError } = await supabase
 				.from('activities')
 				.insert({
 					user_id: userId,
@@ -467,7 +431,7 @@ function createActivityService() {
 
 			// Create Poll if requested
 			if (options?.poll) {
-				const { data: pollData, error: pollError } = await db
+				const { data: pollData, error: pollError } = await supabase
 					.from('polls')
 					.insert({
 						activity_id: activity.id,
@@ -485,7 +449,7 @@ function createActivityService() {
 					poll_id: poll.id,
 					text
 				}));
-				const { error: optError } = await db.from('poll_options').insert(optionInserts);
+				const { error: optError } = await supabase.from('poll_options').insert(optionInserts);
 				if (optError) throw optError as Error;
 			}
 
@@ -503,7 +467,7 @@ function createActivityService() {
 				.single();
 
 			if (error) throw error as Error;
-			const item = data as RawActivityResponse;
+			const item = data as unknown as RawActivityResponse;
 
 			// Handle user-specific state if logged in
 			let userLiked = false;
@@ -536,7 +500,7 @@ function createActivityService() {
 		 * Adds a comment to an activity
 		 */
 		addComment: async (userId: string, activityId: string, content: string) => {
-			const { data: commentData, error } = await db
+			const { data: commentData, error } = await supabase
 				.from('activity_comments')
 				.insert({
 					user_id: userId,
@@ -565,7 +529,7 @@ function createActivityService() {
 		 * Fetches comments for an activity
 		 */
 		fetchComments: async (activityId: string) => {
-			const { data, error } = await db
+			const { data, error } = await supabase
 				.from('activity_comments')
 				.select('*, profiles(username, avatar_url)')
 				.eq('activity_id', activityId)
@@ -579,7 +543,7 @@ function createActivityService() {
 		 * Reposts an activity
 		 */
 		repostActivity: async (userId: string, originalId: string) => {
-			const { data: repostData, error } = await db
+			const { data: repostData, error } = await supabase
 				.from('activities')
 				.insert({
 					user_id: userId,

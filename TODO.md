@@ -280,37 +280,37 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Database Schema — Snippets & API Tests
 
-- [ ] Create `snippets` table (id, workspace_id, author_id, title, code TEXT, language, description, tags TEXT[], parent_id [forks], visibility, created_at)
-- [ ] Create `api_tests` table (id, workspace_id, author_id, name, method, url, headers JSONB, body TEXT, last_response JSONB, created_at)
-- [ ] Create `snippet_stars` table (snippet_id, user_id)
+- [x] Create `snippets` table (id, workspace_id, author_id, title, code TEXT, language, description, tags TEXT[], parent_id [forks], visibility, created_at)
+- [x] Create `api_tests` table (id, workspace_id, author_id, name, method, url, headers JSONB, body TEXT, last_response JSONB, created_at)
+- [x] Create `snippet_stars` table (snippet_id, user_id)
 
 ### Code Snippets
 
-- [ ] Build `SnippetEditor.svelte` with Prism.js or CodeMirror 6 syntax highlighting
-- [ ] Language selector (30+ languages via Prism)
-- [ ] Build snippets browser (grid/list toggle, filter by language/tag/author)
-- [ ] Snippet fork: create copy with `parent_id` reference, show fork lineage
-- [ ] Share snippet across workspaces (visibility: private/workspace/public)
-- [ ] Copy snippet to clipboard button
-- [ ] Star/unstar snippets
+- [x] Build `SnippetEditor.svelte` with Prism.js or CodeMirror 6 syntax highlighting
+- [x] Language selector (30+ languages via Prism)
+- [x] Build snippets browser (grid/list toggle, filter by language/tag/author)
+- [x] Snippet fork: create copy with `parent_id` reference, show fork lineage
+- [x] Share snippet across workspaces (visibility: private/workspace/public)
+- [x] Copy snippet to clipboard button
+- [x] Star/unstar snippets
 
 ### Code Execution Sandbox
 
-- [ ] Build iframe + Web Worker sandbox for JavaScript execution
-- [ ] Show stdout / stderr in output panel
-- [ ] Timeout execution after 5s (kill worker)
-- [ ] Security: block DOM access from sandbox, whitelist safe APIs only
-- [ ] Show execution time + memory estimate
+- [x] Build iframe + Web Worker sandbox for JavaScript execution
+- [x] Show stdout / stderr in output panel
+- [x] Timeout execution after 5s (kill worker)
+- [x] Security: block DOM access from sandbox, whitelist safe APIs only
+- [x] Show execution time + memory estimate
 
 ### API Tester
 
-- [ ] Build `ApiTester.svelte` modal/panel (URL, method, headers editor, body editor)
-- [ ] Send request from browser (handle CORS via Supabase Edge Function proxy if needed)
-- [ ] Response viewer (JSON tree, raw, headers)
-- [ ] Save request to `api_tests` table
-- [ ] Request history list per workspace
-- [ ] cURL export button (generate curl command from request)
-- [ ] Environment variables (store base URLs, tokens per workspace)
+- [x] Build `ApiTester.svelte` modal/panel (URL, method, headers editor, body editor)
+- [x] Send request from browser (handle CORS via Supabase Edge Function proxy if needed)
+- [x] Response viewer (JSON tree, raw, headers)
+- [x] Save request to `api_tests` table
+- [x] Request history list per workspace
+- [x] cURL export button (generate curl command from request)
+- [x] Environment variables (store base URLs, tokens per workspace)
 
 ---
 

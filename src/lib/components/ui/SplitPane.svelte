@@ -8,6 +8,7 @@
 		maxSize?: number;
 		fixedSide?: 'left' | 'right';
 		onResize?: (size: number) => void;
+		disabled?: boolean;
 		left: Snippet;
 		right: Snippet;
 	}
@@ -19,6 +20,7 @@
 		maxSize = 600,
 		fixedSide = 'left',
 		onResize,
+		disabled = false,
 		left,
 		right
 	}: Props = $props();
@@ -33,6 +35,7 @@
 	});
 
 	function startResizing(e: MouseEvent) {
+		if (disabled) return;
 		isResizing = true;
 		e.preventDefault();
 	}
@@ -111,9 +114,9 @@
 		tabindex="0"
 		class="split-pane-divider relative z-10 flex items-center justify-center transition-colors select-none
 			{type === 'horizontal'
-			? 'w-1 cursor-col-resize hover:bg-orange-500/50 active:bg-orange-500'
-			: 'h-1 cursor-row-resize hover:bg-orange-500/50 active:bg-orange-500'}
-			{isResizing ? 'bg-orange-500' : 'bg-zinc-800'}"
+			? `w-1 ${disabled ? 'cursor-default' : 'cursor-col-resize hover:bg-orange-500/50 active:bg-orange-500'}`
+			: `h-1 ${disabled ? 'cursor-default' : 'cursor-row-resize hover:bg-orange-500/50 active:bg-orange-500'}`}
+			{isResizing && !disabled ? 'bg-orange-500' : 'bg-zinc-800'}"
 	>
 		<!-- Optional handle visual -->
 		<div class="{type === 'horizontal' ? 'h-8 w-px' : 'h-px w-8'} bg-zinc-600"></div>

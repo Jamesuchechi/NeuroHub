@@ -15,6 +15,8 @@
 	import { onMount } from 'svelte';
 	import { chatStore } from '$lib/stores/chatStore.svelte';
 
+	const sidebarCollapsed = $derived($uiStore.sidebarCollapsed);
+
 	import type { Database } from '$lib/types/db';
 
 	type Workspace = Database['public']['Tables']['workspaces']['Row'];
@@ -117,8 +119,26 @@
 
 <aside
 	in:fly={{ x: -280, duration: 800, easing: cubicOut }}
-	class="flex h-screen w-full flex-col border-r border-stroke bg-surface text-content-dim"
+	class="relative flex h-screen flex-col border-r border-stroke bg-surface text-content-dim transition-all duration-300 ease-in-out {sidebarCollapsed
+		? 'w-20'
+		: 'w-full'}"
 >
+	<!-- Collapse Toggle -->
+	<button
+		onclick={() => uiStore.setSidebarCollapsed(!sidebarCollapsed)}
+		class="absolute top-20 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stroke bg-surface text-zinc-500 shadow-lg transition-all hover:text-white"
+		aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+	>
+		<svg
+			class="h-3 w-3 transition-transform duration-300 {sidebarCollapsed ? 'rotate-180' : ''}"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+		>
+			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+		</svg>
+	</button>
+
 	<!-- Workspace Switcher -->
 	<div class="relative p-5">
 		<button
@@ -138,7 +158,11 @@
 					<img src="/logo.png" alt="Logo" class="h-full w-full object-contain" />
 				{/if}
 			</div>
-			<div class="flex-1 overflow-hidden">
+			<div
+				class="flex-1 overflow-hidden transition-all duration-300 {sidebarCollapsed
+					? 'w-0 opacity-0'
+					: 'w-auto opacity-100'}"
+			>
 				<p class="truncate text-sm font-bold whitespace-nowrap text-content">
 					{currentWorkspace?.name || 'Select Workspace'}
 				</p>
@@ -146,16 +170,23 @@
 					{currentWorkspace ? 'Active Workspace' : 'NeuroHub Hub'}
 				</p>
 			</div>
-			<svg
-				class="h-4 w-4 text-zinc-600 transition-transform duration-300 {showSwitcher
-					? 'rotate-180'
-					: ''}"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-			</svg>
+			{#if !sidebarCollapsed}
+				<svg
+					class="h-4 w-4 text-zinc-600 transition-transform duration-300 {showSwitcher
+						? 'rotate-180'
+						: ''}"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 9l-7 7-7-7"
+					/>
+				</svg>
+			{/if}
 		</button>
 
 		{#if showSwitcher}
@@ -222,7 +253,7 @@
 			<button
 				class="flex w-full items-center gap-3 rounded-xl border border-stroke bg-surface-dim/50 px-4 py-2.5 text-content-dim transition-all hover:border-stroke hover:bg-surface-dim"
 			>
-				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -230,10 +261,13 @@
 						d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 					/>
 				</svg>
-				<span class="text-xs font-medium">Search...</span>
-				<span class="ml-auto rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600"
-					>⌘K</span
-				>
+				{#if !sidebarCollapsed}
+					<span class="text-xs font-medium">Search...</span>
+					<span
+						class="ml-auto rounded bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] text-zinc-600"
+						>⌘K</span
+					>
+				{/if}
 			</button>
 		</div>
 
@@ -242,10 +276,11 @@
 			{#if currentWorkspace}
 				<a
 					href={resolve('/dashboard' as unknown as '/')}
+					title={sidebarCollapsed ? 'Back to Hub' : ''}
 					class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-content-dim transition-all hover:bg-surface-dim hover:text-content"
 				>
 					<div
-						class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+						class="flex h-5 w-5 shrink-0 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
 					>
 						<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path
@@ -256,23 +291,28 @@
 							/>
 						</svg>
 					</div>
-					<span>Back to Hub</span>
+					{#if !sidebarCollapsed}
+						<span>Back to Hub</span>
+					{/if}
 				</a>
 			{:else}
-				<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">
-					Global Hub
-				</p>
+				{#if !sidebarCollapsed}
+					<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">
+						Global Hub
+					</p>
+				{/if}
 				<nav class="space-y-1">
 					{#each globalLinks as link (link.name)}
 						<a
 							href={resolve(link.href as unknown as '/')}
+							title={sidebarCollapsed ? link.name : ''}
 							class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {page
 								.url.pathname === link.href
 								? 'bg-surface-dim text-content'
 								: 'hover:bg-surface-dim/40 hover:text-content'}"
 						>
 							<div
-								class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+								class="flex h-5 w-5 shrink-0 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
 							>
 								{#if link.icon === 'pulse'}
 									<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -294,7 +334,9 @@
 									</svg>
 								{/if}
 							</div>
-							{link.name}
+							{#if !sidebarCollapsed}
+								{link.name}
+							{/if}
 						</a>
 					{/each}
 				</nav>
@@ -303,11 +345,14 @@
 
 		<!-- Tools Section (Always Visible) -->
 		<div class="mb-6">
-			<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">Tools</p>
+			{#if !sidebarCollapsed}
+				<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">Tools</p>
+			{/if}
 			<nav class="space-y-1">
 				{#each workspaceLinks as link (link.name)}
 					<a
 						href={link.href !== '#' ? resolve(link.href as unknown as '/') : '#'}
+						title={sidebarCollapsed ? link.name : ''}
 						class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {!currentWorkspace &&
 						link.href === '#'
 							? 'cursor-not-allowed opacity-40'
@@ -322,7 +367,7 @@
 						}}
 					>
 						<div
-							class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+							class="flex h-5 w-5 shrink-0 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
 						>
 							{#if link.icon === 'dashboard'}
 								<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -353,18 +398,20 @@
 								</svg>
 							{/if}
 						</div>
-						{link.name}
-						{#if link.name === 'Notes'}
-							<button
-								class="ml-auto flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800 text-zinc-600 transition-colors hover:border-brand-orange hover:text-brand-orange"
-								title="New Note"
-								onclick={(e) => {
-									e.stopPropagation();
-									if (!currentWorkspace) showSwitcher = true;
-								}}
-							>
-								+
-							</button>
+						{#if !sidebarCollapsed}
+							{link.name}
+							{#if link.name === 'Notes'}
+								<button
+									class="ml-auto flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800 text-zinc-600 transition-colors hover:border-brand-orange hover:text-brand-orange"
+									title="New Note"
+									onclick={(e) => {
+										e.stopPropagation();
+										if (!currentWorkspace) showSwitcher = true;
+									}}
+								>
+									+
+								</button>
+							{/if}
 						{/if}
 					</a>
 				{/each}
@@ -374,21 +421,41 @@
 		<!-- Channels Section (Always Visible) -->
 		<div class="mb-6">
 			<button
-				onclick={() => (channelsExpanded = !channelsExpanded)}
+				onclick={() => {
+					if (sidebarCollapsed) {
+						uiStore.setSidebarCollapsed(false);
+						channelsExpanded = true;
+					} else {
+						channelsExpanded = !channelsExpanded;
+					}
+				}}
 				class="group mb-1 flex w-full items-center justify-between px-3 py-1 text-[10px] font-bold tracking-[2px] text-content-dim uppercase hover:text-content"
 			>
-				<span>Channels</span>
-				<svg
-					class="h-3 w-3 transition-transform duration-200 {channelsExpanded ? 'rotate-90' : ''}"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-				</svg>
+				{#if !sidebarCollapsed}
+					<span>Channels</span>
+					<svg
+						class="h-3 w-3 transition-transform duration-200 {channelsExpanded ? 'rotate-90' : ''}"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 5l7 7-7 7"
+						/>
+					</svg>
+				{:else}
+					<div
+						class="flex h-5 w-5 items-center justify-center text-zinc-500 group-hover:text-brand-orange"
+					>
+						#
+					</div>
+				{/if}
 			</button>
 
-			{#if channelsExpanded}
+			{#if channelsExpanded && !sidebarCollapsed}
 				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
 					{#if currentWorkspace}
 						{#if channels.length > 0}
@@ -454,21 +521,48 @@
 		<!-- Chats Section (Always Visible) -->
 		<div class="mb-6">
 			<button
-				onclick={() => (chatsExpanded = !chatsExpanded)}
+				onclick={() => {
+					if (sidebarCollapsed) {
+						uiStore.setSidebarCollapsed(false);
+						chatsExpanded = true;
+					} else {
+						chatsExpanded = !chatsExpanded;
+					}
+				}}
 				class="group mb-1 flex w-full items-center justify-between px-3 py-1 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase hover:text-zinc-400"
 			>
-				<span>Chats</span>
-				<svg
-					class="h-3 w-3 transition-transform duration-200 {chatsExpanded ? 'rotate-90' : ''}"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-				</svg>
+				{#if !sidebarCollapsed}
+					<span>Chats</span>
+					<svg
+						class="h-3 w-3 transition-transform duration-200 {chatsExpanded ? 'rotate-90' : ''}"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 5l7 7-7 7"
+						/>
+					</svg>
+				{:else}
+					<div
+						class="flex h-5 w-5 items-center justify-center text-zinc-500 group-hover:text-brand-orange"
+					>
+						<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+							/>
+						</svg>
+					</div>
+				{/if}
 			</button>
 
-			{#if chatsExpanded}
+			{#if chatsExpanded && !sidebarCollapsed}
 				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
 					{#if currentWorkspace}
 						<div class="px-3 py-2 text-left">
@@ -498,13 +592,16 @@
 		{#if currentWorkspace}
 			<!-- Administration Section -->
 			<div class="mb-6">
-				<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">
-					Administration
-				</p>
+				{#if !sidebarCollapsed}
+					<p class="mb-2 px-3 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase">
+						Administration
+					</p>
+				{/if}
 				<nav class="space-y-1">
 					{#each adminLinks as link (link.name)}
 						<a
 							href={resolve(link.href as unknown as '/')}
+							title={sidebarCollapsed ? link.name : ''}
 							class="group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all {page.url.pathname.startsWith(
 								link.href
 							)
@@ -512,7 +609,7 @@
 								: 'hover:bg-zinc-900/40 hover:text-white'}"
 						>
 							<div
-								class="flex h-5 w-5 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
+								class="flex h-5 w-5 shrink-0 items-center justify-center text-zinc-500 transition-colors group-hover:text-brand-orange"
 							>
 								{#if link.icon === 'users'}
 									<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -540,7 +637,9 @@
 									</svg>
 								{/if}
 							</div>
-							{link.name}
+							{#if !sidebarCollapsed}
+								{link.name}
+							{/if}
 						</a>
 					{/each}
 				</nav>
@@ -551,14 +650,15 @@
 	<!-- Sidebar Footer -->
 	<div class="mt-auto space-y-4 border-t border-stroke p-5">
 		<!-- Theme Toggle Integrated -->
-		<ThemeToggle />
+		<ThemeToggle collapsed={sidebarCollapsed} />
 
 		<!-- User Profile Section -->
 		<a
 			href={resolve('/profile' as unknown as '/')}
+			title={sidebarCollapsed ? profile?.username || 'User' : ''}
 			class="group/profile flex items-center gap-3 rounded-xl border border-stroke bg-surface-dim/20 p-2.5 transition-all hover:border-brand-orange/30 hover:bg-surface-dim/40"
 		>
-			<div class="relative">
+			<div class="relative shrink-0">
 				<Avatar name={profile?.username || 'User'} size="sm" src={profile?.avatar_url} />
 				<!-- Presence Indicator -->
 				<div
@@ -567,7 +667,11 @@
 				></div>
 			</div>
 
-			<div class="flex-1 overflow-hidden">
+			<div
+				class="flex-1 overflow-hidden transition-all duration-300 {sidebarCollapsed
+					? 'w-0 opacity-0'
+					: 'w-auto opacity-100'}"
+			>
 				<p
 					class="truncate text-xs font-bold text-content transition-colors group-hover/profile:text-brand-orange"
 				>
@@ -579,9 +683,13 @@
 
 		<!-- Action Rail (Separated) -->
 		<div
-			class="flex items-center justify-between rounded-xl border border-stroke bg-surface-dim/50 p-1.5"
+			class="flex items-center rounded-xl border border-stroke bg-surface-dim/50 p-1.5 transition-all {sidebarCollapsed
+				? 'flex-col gap-1'
+				: 'justify-between'}"
 		>
-			<div class="flex items-center gap-0.5">
+			<div
+				class="flex items-center transition-all {sidebarCollapsed ? 'flex-col gap-0.5' : 'gap-0.5'}"
+			>
 				<button
 					class="rounded-lg p-2 text-zinc-600 transition-all hover:bg-zinc-900 hover:text-white"
 					aria-label="Settings"

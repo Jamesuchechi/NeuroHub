@@ -3,6 +3,7 @@
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 
+	let { collapsed = false } = $props<{ collapsed?: boolean }>();
 	const { theme } = $derived($uiStore);
 
 	const themes: { id: Theme; icon: string; label: string }[] = [
@@ -28,7 +29,11 @@
 	}
 </script>
 
-<div class="flex items-center gap-1 rounded-xl border border-zinc-900 bg-zinc-950/50 p-1">
+<div
+	class="flex gap-1 rounded-xl border border-zinc-900 bg-zinc-950/50 p-1 transition-all duration-300 {collapsed
+		? 'flex-col'
+		: 'items-center'}"
+>
 	{#each themes as t (t.id)}
 		<button
 			onclick={() => selectTheme(t.id)}

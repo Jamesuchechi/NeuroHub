@@ -15,17 +15,19 @@
 
 	let { children } = $props();
 
-	const { sidebarWidth, contextPanelWidth, contextPanelCollapsed } = $derived($uiStore);
+	const { sidebarWidth, sidebarCollapsed, contextPanelWidth, contextPanelCollapsed } =
+		$derived($uiStore);
 	const { currentWorkspace } = $derived($workspaceStore);
 </script>
 
 <div class="flex h-screen w-full overflow-hidden bg-surface selection:bg-orange-500/30">
 	<SplitPane
 		type="horizontal"
-		initialSize={sidebarWidth}
-		minSize={200}
-		maxSize={400}
-		onResize={(w) => uiStore.setSidebarWidth(w)}
+		initialSize={sidebarCollapsed ? 80 : sidebarWidth}
+		minSize={sidebarCollapsed ? 80 : 200}
+		maxSize={sidebarCollapsed ? 80 : 400}
+		disabled={sidebarCollapsed}
+		onResize={(w) => !sidebarCollapsed && uiStore.setSidebarWidth(w)}
 	>
 		{#snippet left()}
 			<div class="no-print h-full w-full">

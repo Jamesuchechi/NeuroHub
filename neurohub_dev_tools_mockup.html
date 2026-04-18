@@ -1,0 +1,1471 @@
+<style>
+	* {
+		box-sizing: border-box;
+		margin: 0;
+		padding: 0;
+	}
+	body {
+		font-family: var(--font-sans, system-ui);
+		font-size: 13px;
+		color: var(--color-text-primary);
+	}
+	.app {
+		display: flex;
+		height: 720px;
+		border: 0.5px solid var(--color-border-tertiary);
+		border-radius: var(--border-radius-lg);
+		overflow: hidden;
+		background: var(--color-background-tertiary);
+	}
+	.sidebar {
+		width: 52px;
+		background: var(--color-background-primary);
+		border-right: 0.5px solid var(--color-border-tertiary);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: 12px 0;
+		gap: 4px;
+		flex-shrink: 0;
+	}
+	.sicon {
+		width: 34px;
+		height: 34px;
+		border-radius: var(--border-radius-md);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+		color: var(--color-text-secondary);
+		font-size: 15px;
+		transition: background 0.15s;
+	}
+	.sicon:hover {
+		background: var(--color-background-secondary);
+	}
+	.sicon.active {
+		background: #eeedfe;
+		color: #534ab7;
+	}
+	.sdivider {
+		width: 24px;
+		height: 0.5px;
+		background: var(--color-border-tertiary);
+		margin: 6px 0;
+	}
+	.savatar {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: #1d9e75;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		font-weight: 500;
+		color: #fff;
+		margin-top: auto;
+	}
+	.left-panel {
+		width: 190px;
+		background: var(--color-background-primary);
+		border-right: 0.5px solid var(--color-border-tertiary);
+		display: flex;
+		flex-direction: column;
+		flex-shrink: 0;
+	}
+	.panel-header {
+		padding: 12px 14px 8px;
+		border-bottom: 0.5px solid var(--color-border-tertiary);
+	}
+	.panel-title {
+		font-size: 11px;
+		font-weight: 500;
+		color: var(--color-text-secondary);
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		margin-bottom: 8px;
+	}
+	.ws-badge {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		padding: 6px 8px;
+		background: var(--color-background-secondary);
+		border-radius: var(--border-radius-md);
+	}
+	.ws-icon {
+		width: 22px;
+		height: 22px;
+		border-radius: 5px;
+		background: #534ab7;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 10px;
+		color: #fff;
+		font-weight: 500;
+		flex-shrink: 0;
+	}
+	.ws-name {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--color-text-primary);
+	}
+	.nav-section {
+		padding: 10px 8px 4px;
+	}
+	.nav-label {
+		font-size: 10px;
+		color: var(--color-text-tertiary);
+		text-transform: uppercase;
+		letter-spacing: 0.07em;
+		padding: 0 6px;
+		margin-bottom: 4px;
+	}
+	.nav-item {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		padding: 5px 8px;
+		border-radius: var(--border-radius-md);
+		cursor: pointer;
+		color: var(--color-text-secondary);
+		font-size: 12px;
+	}
+	.nav-item:hover {
+		background: var(--color-background-secondary);
+		color: var(--color-text-primary);
+	}
+	.nav-item.active {
+		background: #eeedfe;
+		color: #534ab7;
+		font-weight: 500;
+	}
+	.nav-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+	.nav-dot.green {
+		background: #1d9e75;
+	}
+	.nav-dot.blue {
+		background: #378add;
+	}
+	.nav-dot.amber {
+		background: #ba7517;
+	}
+	.nav-icon {
+		width: 14px;
+		height: 14px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 11px;
+		flex-shrink: 0;
+	}
+	.badge-count {
+		margin-left: auto;
+		font-size: 10px;
+		background: var(--color-background-secondary);
+		color: var(--color-text-secondary);
+		padding: 1px 5px;
+		border-radius: 10px;
+	}
+	.main {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		min-width: 0;
+	}
+	.topbar {
+		height: 44px;
+		border-bottom: 0.5px solid var(--color-border-tertiary);
+		display: flex;
+		align-items: center;
+		padding: 0 16px;
+		gap: 8px;
+		background: var(--color-background-primary);
+		flex-shrink: 0;
+	}
+	.tab-bar {
+		display: flex;
+		gap: 2px;
+	}
+	.tab {
+		padding: 5px 12px;
+		border-radius: var(--border-radius-md);
+		font-size: 12px;
+		font-weight: 500;
+		cursor: pointer;
+		color: var(--color-text-secondary);
+		display: flex;
+		align-items: center;
+		gap: 5px;
+	}
+	.tab.active {
+		background: #eeedfe;
+		color: #534ab7;
+	}
+	.tab-mono {
+		font-family: var(--font-mono, monospace);
+		font-size: 10px;
+	}
+	.topbar-actions {
+		margin-left: auto;
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+	.btn {
+		padding: 4px 10px;
+		border-radius: var(--border-radius-md);
+		font-size: 11px;
+		font-weight: 500;
+		cursor: pointer;
+		border: 0.5px solid var(--color-border-secondary);
+		background: var(--color-background-primary);
+		color: var(--color-text-primary);
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.btn-primary {
+		background: #534ab7;
+		border-color: #534ab7;
+		color: #fff;
+	}
+	.search-box {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		padding: 0 8px;
+		height: 26px;
+		border: 0.5px solid var(--color-border-tertiary);
+		border-radius: var(--border-radius-md);
+		background: var(--color-background-secondary);
+		font-size: 11px;
+		color: var(--color-text-tertiary);
+		width: 140px;
+	}
+	.content {
+		flex: 1;
+		overflow: hidden;
+		display: flex;
+		flex-direction: column;
+	}
+	.snippets-view {
+		display: flex;
+		flex: 1;
+		overflow: hidden;
+	}
+	.filter-bar {
+		width: 150px;
+		border-right: 0.5px solid var(--color-border-tertiary);
+		padding: 12px 10px;
+		overflow-y: auto;
+		flex-shrink: 0;
+		background: var(--color-background-primary);
+	}
+	.filter-section {
+		margin-bottom: 14px;
+	}
+	.filter-label {
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-tertiary);
+		margin-bottom: 6px;
+	}
+	.filter-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 3px 6px;
+		border-radius: 5px;
+		cursor: pointer;
+		font-size: 11px;
+		color: var(--color-text-secondary);
+	}
+	.filter-item:hover {
+		background: var(--color-background-secondary);
+	}
+	.filter-item.sel {
+		color: #534ab7;
+		background: #eeedfe;
+	}
+	.f-count {
+		font-size: 10px;
+		color: var(--color-text-tertiary);
+	}
+	.tag-pill {
+		display: inline-flex;
+		padding: 2px 7px;
+		border-radius: 10px;
+		font-size: 10px;
+		margin: 2px;
+		cursor: pointer;
+		border: 0.5px solid var(--color-border-tertiary);
+		color: var(--color-text-secondary);
+	}
+	.tag-pill:hover {
+		border-color: #afa9ec;
+		color: #534ab7;
+	}
+	.snippet-grid {
+		flex: 1;
+		padding: 14px;
+		overflow-y: auto;
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+		gap: 10px;
+		align-content: start;
+	}
+	.s-card {
+		background: var(--color-background-primary);
+		border: 0.5px solid var(--color-border-tertiary);
+		border-radius: var(--border-radius-lg);
+		padding: 12px;
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+		gap: 7px;
+		transition: border-color 0.15s;
+	}
+	.s-card:hover {
+		border-color: var(--color-border-secondary);
+	}
+	.s-card-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.lang-badge {
+		font-size: 9px;
+		font-weight: 500;
+		padding: 2px 6px;
+		border-radius: 4px;
+	}
+	.lang-js {
+		background: #faeeda;
+		color: #633806;
+	}
+	.lang-ts {
+		background: #e6f1fb;
+		color: #0c447c;
+	}
+	.lang-py {
+		background: #eaf3de;
+		color: #27500a;
+	}
+	.lang-rust {
+		background: #faece7;
+		color: #712b13;
+	}
+	.lang-go {
+		background: #e1f5ee;
+		color: #085041;
+	}
+	.lang-sql {
+		background: #eeedfe;
+		color: #3c3489;
+	}
+	.star-btn {
+		display: flex;
+		align-items: center;
+		gap: 3px;
+		font-size: 10px;
+		color: var(--color-text-tertiary);
+		cursor: pointer;
+	}
+	.star-btn.starred {
+		color: #ba7517;
+	}
+	.star-icon {
+		font-size: 12px;
+	}
+	.s-title {
+		font-size: 12px;
+		font-weight: 500;
+		color: var(--color-text-primary);
+		line-height: 1.3;
+	}
+	.s-desc {
+		font-size: 11px;
+		color: var(--color-text-secondary);
+		line-height: 1.4;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.s-code-preview {
+		background: var(--color-background-secondary);
+		border-radius: 5px;
+		padding: 6px 8px;
+		font-family: var(--font-mono, monospace);
+		font-size: 9px;
+		color: var(--color-text-secondary);
+		line-height: 1.5;
+		overflow: hidden;
+		max-height: 48px;
+	}
+	.s-footer {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+	.s-author {
+		display: flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 10px;
+		color: var(--color-text-tertiary);
+	}
+	.avatar-xs {
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 8px;
+		font-weight: 500;
+		color: #fff;
+		flex-shrink: 0;
+	}
+	.s-stats {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 10px;
+		color: var(--color-text-tertiary);
+	}
+	.fork-badge {
+		font-size: 9px;
+		background: #eeedfe;
+		color: #534ab7;
+		padding: 1px 5px;
+		border-radius: 4px;
+	}
+	.api-view {
+		flex: 1;
+		display: flex;
+		overflow: hidden;
+	}
+	.api-left {
+		width: 260px;
+		border-right: 0.5px solid var(--color-border-tertiary);
+		display: flex;
+		flex-direction: column;
+		background: var(--color-background-primary);
+		flex-shrink: 0;
+	}
+	.api-history {
+		flex: 1;
+		overflow-y: auto;
+		padding: 10px;
+	}
+	.hist-label {
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.06em;
+		color: var(--color-text-tertiary);
+		margin-bottom: 8px;
+	}
+	.hist-item {
+		display: flex;
+		align-items: center;
+		gap: 7px;
+		padding: 6px 8px;
+		border-radius: var(--border-radius-md);
+		cursor: pointer;
+		margin-bottom: 2px;
+	}
+	.hist-item:hover {
+		background: var(--color-background-secondary);
+	}
+	.hist-item.active {
+		background: #eeedfe;
+	}
+	.method-badge {
+		font-size: 9px;
+		font-weight: 500;
+		padding: 2px 5px;
+		border-radius: 3px;
+		flex-shrink: 0;
+		font-family: var(--font-mono, monospace);
+	}
+	.m-get {
+		background: #eaf3de;
+		color: #27500a;
+	}
+	.m-post {
+		background: #e6f1fb;
+		color: #0c447c;
+	}
+	.m-put {
+		background: #faeeda;
+		color: #633806;
+	}
+	.m-del {
+		background: #fcebeb;
+		color: #791f1f;
+	}
+	.m-patch {
+		background: #eeedfe;
+		color: #3c3489;
+	}
+	.hist-name {
+		font-size: 11px;
+		color: var(--color-text-primary);
+		flex: 1;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	.hist-time {
+		font-size: 9px;
+		color: var(--color-text-tertiary);
+		flex-shrink: 0;
+	}
+	.api-right {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+		min-width: 0;
+	}
+	.req-builder {
+		padding: 14px;
+		border-bottom: 0.5px solid var(--color-border-tertiary);
+		flex-shrink: 0;
+	}
+	.url-row {
+		display: flex;
+		gap: 6px;
+		margin-bottom: 10px;
+	}
+	.method-sel {
+		padding: 5px 8px;
+		border: 0.5px solid var(--color-border-secondary);
+		border-radius: var(--border-radius-md);
+		font-size: 11px;
+		font-weight: 500;
+		font-family: var(--font-mono, monospace);
+		color: #27500a;
+		background: #eaf3de;
+		width: 68px;
+		flex-shrink: 0;
+	}
+	.url-input {
+		flex: 1;
+		padding: 5px 10px;
+		border: 0.5px solid var(--color-border-secondary);
+		border-radius: var(--border-radius-md);
+		font-size: 11px;
+		font-family: var(--font-mono, monospace);
+		color: var(--color-text-primary);
+		background: var(--color-background-secondary);
+	}
+	.send-btn {
+		padding: 5px 14px;
+		background: #534ab7;
+		color: #fff;
+		border: none;
+		border-radius: var(--border-radius-md);
+		font-size: 11px;
+		font-weight: 500;
+		cursor: pointer;
+		flex-shrink: 0;
+	}
+	.req-tabs {
+		display: flex;
+		gap: 1px;
+		margin-bottom: 10px;
+	}
+	.req-tab {
+		padding: 4px 10px;
+		font-size: 11px;
+		border-radius: var(--border-radius-md);
+		cursor: pointer;
+		color: var(--color-text-secondary);
+	}
+	.req-tab.active {
+		background: var(--color-background-secondary);
+		color: var(--color-text-primary);
+		font-weight: 500;
+	}
+	.headers-table {
+		width: 100%;
+		font-size: 11px;
+	}
+	.headers-table td {
+		padding: 3px 4px;
+	}
+	.hkey {
+		font-family: var(--font-mono, monospace);
+		color: var(--color-text-secondary);
+		width: 110px;
+	}
+	.hval {
+		font-family: var(--font-mono, monospace);
+		color: #185fa5;
+	}
+	.response-panel {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		padding: 14px;
+		overflow: hidden;
+		min-width: 0;
+	}
+	.resp-header {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-bottom: 10px;
+		flex-shrink: 0;
+	}
+	.status-badge {
+		font-size: 11px;
+		font-weight: 500;
+		padding: 3px 8px;
+		border-radius: 4px;
+		font-family: var(--font-mono, monospace);
+	}
+	.s-200 {
+		background: #eaf3de;
+		color: #27500a;
+	}
+	.s-404 {
+		background: #faeeda;
+		color: #633806;
+	}
+	.s-500 {
+		background: #fcebeb;
+		color: #791f1f;
+	}
+	.resp-meta {
+		font-size: 10px;
+		color: var(--color-text-tertiary);
+		display: flex;
+		gap: 10px;
+	}
+	.resp-tabs {
+		display: flex;
+		gap: 1px;
+		margin-bottom: 8px;
+		flex-shrink: 0;
+	}
+	.resp-tab {
+		padding: 4px 10px;
+		font-size: 11px;
+		border-radius: var(--border-radius-md);
+		cursor: pointer;
+		color: var(--color-text-secondary);
+	}
+	.resp-tab.active {
+		background: var(--color-background-secondary);
+		color: var(--color-text-primary);
+		font-weight: 500;
+	}
+	.json-viewer {
+		flex: 1;
+		background: var(--color-background-secondary);
+		border-radius: var(--border-radius-md);
+		padding: 10px;
+		overflow-y: auto;
+		font-family: var(--font-mono, monospace);
+		font-size: 11px;
+		line-height: 1.6;
+	}
+	.jk {
+		color: #534ab7;
+	}
+	.jstr {
+		color: #1d9e75;
+	}
+	.jnum {
+		color: #ba7517;
+	}
+	.jbool {
+		color: #d85a30;
+	}
+	.jnull {
+		color: var(--color-text-tertiary);
+	}
+	.curl-bar {
+		margin-top: 10px;
+		background: var(--color-background-secondary);
+		border-radius: var(--border-radius-md);
+		padding: 7px 10px;
+		font-family: var(--font-mono, monospace);
+		font-size: 10px;
+		color: var(--color-text-secondary);
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		flex-shrink: 0;
+	}
+	.copy-btn {
+		font-size: 10px;
+		color: #534ab7;
+		cursor: pointer;
+		font-family: var(--font-sans, system-ui);
+		background: none;
+		border: none;
+		font-weight: 500;
+	}
+	.sandbox-view {
+		flex: 1;
+		display: flex;
+		overflow: hidden;
+	}
+	.sb-editor {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		border-right: 0.5px solid var(--color-border-tertiary);
+	}
+	.sb-header {
+		padding: 8px 12px;
+		border-bottom: 0.5px solid var(--color-border-tertiary);
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		background: var(--color-background-primary);
+		flex-shrink: 0;
+	}
+	.sb-label {
+		font-size: 11px;
+		color: var(--color-text-secondary);
+	}
+	.run-btn {
+		margin-left: auto;
+		padding: 4px 12px;
+		background: #1d9e75;
+		color: #fff;
+		border: none;
+		border-radius: var(--border-radius-md);
+		font-size: 11px;
+		font-weight: 500;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		gap: 4px;
+	}
+	.code-area {
+		flex: 1;
+		padding: 12px;
+		background: var(--color-background-secondary);
+		font-family: var(--font-mono, monospace);
+		font-size: 11px;
+		line-height: 1.7;
+		overflow-y: auto;
+	}
+	.tok-kw {
+		color: #534ab7;
+		font-weight: 500;
+	}
+	.tok-fn {
+		color: #185fa5;
+	}
+	.tok-str {
+		color: #1d9e75;
+	}
+	.tok-cmt {
+		color: var(--color-text-tertiary);
+	}
+	.tok-num {
+		color: #ba7517;
+	}
+	.sb-output {
+		width: 280px;
+		display: flex;
+		flex-direction: column;
+		flex-shrink: 0;
+	}
+	.out-header {
+		padding: 8px 12px;
+		border-bottom: 0.5px solid var(--color-border-tertiary);
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		background: var(--color-background-primary);
+		flex-shrink: 0;
+	}
+	.out-label {
+		font-size: 11px;
+		color: var(--color-text-secondary);
+	}
+	.dur-badge {
+		margin-left: auto;
+		font-size: 10px;
+		background: #eaf3de;
+		color: #27500a;
+		padding: 2px 6px;
+		border-radius: 4px;
+		font-family: var(--font-mono, monospace);
+	}
+	.console {
+		flex: 1;
+		background: #1a1b26;
+		padding: 12px;
+		overflow-y: auto;
+		font-family: var(--font-mono, monospace);
+		font-size: 11px;
+		line-height: 1.7;
+	}
+	.con-log {
+		color: #a9b1d6;
+	}
+	.con-out {
+		color: #9ece6a;
+	}
+	.con-warn {
+		color: #e0af68;
+	}
+	.con-err {
+		color: #f7768e;
+	}
+	.con-prompt {
+		color: #565f89;
+		margin-right: 6px;
+	}
+	.env-bar {
+		padding: 8px 10px;
+		border-top: 0.5px solid var(--color-border-tertiary);
+		background: var(--color-background-primary);
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		flex-shrink: 0;
+	}
+	.env-sel {
+		font-size: 10px;
+		padding: 3px 6px;
+		border: 0.5px solid var(--color-border-tertiary);
+		border-radius: 4px;
+		background: var(--color-background-secondary);
+		color: var(--color-text-secondary);
+	}
+	.env-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: #1d9e75;
+		flex-shrink: 0;
+	}
+</style>
+
+<h2 class="sr-only">
+	NeuroHub Dev Tools Engine mockup showing Snippets, Sandbox, and API Tester tabs
+</h2>
+
+<div class="app">
+	<div class="sidebar">
+		<div class="sicon" title="Dashboard">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+				<rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.4" />
+				<rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.4" />
+				<rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.4" />
+				<rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity="0.4" />
+			</svg>
+		</div>
+		<div class="sicon" title="Chat">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+				<path
+					d="M2 3a1 1 0 011-1h10a1 1 0 011 1v7a1 1 0 01-1 1H5l-3 2V3z"
+					fill="currentColor"
+					opacity="0.4"
+				/>
+			</svg>
+		</div>
+		<div class="sicon" title="Notes">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+				<rect x="2" y="1" width="12" height="14" rx="1.5" fill="currentColor" opacity="0.4" />
+				<path d="M5 5h6M5 8h4" stroke="white" stroke-width="1.2" stroke-linecap="round" />
+			</svg>
+		</div>
+		<div class="sicon active" title="Dev Tools">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+				<path
+					d="M5 4L2 8l3 4M11 4l3 4-3 4M9 2l-2 12"
+					stroke="currentColor"
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+		</div>
+		<div class="sdivider"></div>
+		<div class="sicon" title="Search">
+			<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+				<circle cx="6.5" cy="6.5" r="4" stroke="currentColor" stroke-width="1.4" opacity="0.5" />
+				<path
+					d="M10 10l3 3"
+					stroke="currentColor"
+					stroke-width="1.4"
+					stroke-linecap="round"
+					opacity="0.5"
+				/>
+			</svg>
+		</div>
+		<div class="savatar">AK</div>
+	</div>
+
+	<div class="left-panel">
+		<div class="panel-header">
+			<div class="panel-title">Workspace</div>
+			<div class="ws-badge">
+				<div class="ws-icon">NH</div>
+				<div>
+					<div class="ws-name">NeuroHub</div>
+				</div>
+			</div>
+		</div>
+		<div class="nav-section">
+			<div class="nav-label">Channels</div>
+			<div class="nav-item">
+				<div class="nav-dot green"></div>
+				<span># general</span>
+			</div>
+			<div class="nav-item">
+				<div class="nav-dot blue"></div>
+				<span># backend</span>
+				<span class="badge-count">3</span>
+			</div>
+			<div class="nav-item">
+				<div class="nav-dot amber"></div>
+				<span># frontend</span>
+			</div>
+		</div>
+		<div class="nav-section">
+			<div class="nav-label">Tools</div>
+			<div class="nav-item active">
+				<div class="nav-icon">
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+						<path
+							d="M3 2L1 6l2 4M9 2l2 4-2 4M7 1L5 11"
+							stroke="currentColor"
+							stroke-width="1.2"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</div>
+				<span>Dev tools</span>
+			</div>
+			<div class="nav-item">
+				<div class="nav-icon">
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+						<rect
+							x="1"
+							y="1"
+							width="10"
+							height="10"
+							rx="1.5"
+							stroke="currentColor"
+							stroke-width="1.2"
+							opacity="0.6"
+						/>
+						<path
+							d="M4 4h4M4 7h2"
+							stroke="currentColor"
+							stroke-width="1.2"
+							stroke-linecap="round"
+						/>
+					</svg>
+				</div>
+				<span>Notes</span>
+			</div>
+		</div>
+		<div class="nav-section">
+			<div class="nav-label">Members</div>
+			<div class="nav-item" style="gap: 6px">
+				<div
+					class="avatar-xs"
+					style="background: #534ab7; width: 18px; height: 18px; font-size: 9px"
+				>
+					AK
+				</div>
+				<span>you</span>
+				<div class="nav-dot green" style="margin-left: auto"></div>
+			</div>
+			<div class="nav-item" style="gap: 6px">
+				<div
+					class="avatar-xs"
+					style="background: #1d9e75; width: 18px; height: 18px; font-size: 9px"
+				>
+					JR
+				</div>
+				<span>jake_r</span>
+				<div class="nav-dot green" style="margin-left: auto"></div>
+			</div>
+			<div class="nav-item" style="gap: 6px">
+				<div
+					class="avatar-xs"
+					style="background: #d85a30; width: 18px; height: 18px; font-size: 9px"
+				>
+					ML
+				</div>
+				<span>mia_l</span>
+				<div
+					class="nav-dot"
+					style="margin-left: auto; background: var(--color-border-secondary)"
+				></div>
+			</div>
+		</div>
+	</div>
+
+	<div class="main" id="main">
+		<div class="topbar">
+			<div class="tab-bar">
+				<div class="tab active" onclick="showTab('snippets')">
+					<span class="tab-mono">{ }</span> Snippets
+				</div>
+				<div class="tab" onclick="showTab('sandbox')"><span>▶</span> Sandbox</div>
+				<div class="tab" onclick="showTab('api')"><span>⚡</span> API tester</div>
+			</div>
+			<div class="topbar-actions">
+				<div class="search-box">
+					<svg width="12" height="12" viewBox="0 0 12 12" fill="none" style="flex-shrink: 0">
+						<circle cx="5" cy="5" r="3.5" stroke="currentColor" stroke-width="1.2" />
+						<path
+							d="M8 8l2.5 2.5"
+							stroke="currentColor"
+							stroke-width="1.2"
+							stroke-linecap="round"
+						/>
+					</svg>
+					<span>Search snippets...</span>
+				</div>
+				<button
+					class="btn btn-primary"
+					onclick="sendPrompt('Help me add a new JavaScript snippet to the workspace')"
+				>
+					+ New snippet ↗
+				</button>
+			</div>
+		</div>
+
+		<div class="content">
+			<div id="tab-snippets" class="snippets-view">
+				<div class="filter-bar">
+					<div class="filter-section">
+						<div class="filter-label">Language</div>
+						<div class="filter-item sel">
+							<span>JavaScript</span><span class="f-count">12</span>
+						</div>
+						<div class="filter-item"><span>TypeScript</span><span class="f-count">8</span></div>
+						<div class="filter-item"><span>Python</span><span class="f-count">5</span></div>
+						<div class="filter-item"><span>Rust</span><span class="f-count">3</span></div>
+						<div class="filter-item"><span>Go</span><span class="f-count">2</span></div>
+						<div class="filter-item"><span>SQL</span><span class="f-count">6</span></div>
+						<div class="filter-item"><span>Shell</span><span class="f-count">4</span></div>
+					</div>
+					<div class="filter-section">
+						<div class="filter-label">Tags</div>
+						<span class="tag-pill">auth</span>
+						<span class="tag-pill" style="border-color: #afa9ec; color: #534ab7">utils</span>
+						<span class="tag-pill">api</span>
+						<span class="tag-pill">perf</span>
+						<span class="tag-pill">db</span>
+						<span class="tag-pill">types</span>
+					</div>
+					<div class="filter-section">
+						<div class="filter-label">Sort</div>
+						<div class="filter-item sel">Recent</div>
+						<div class="filter-item">Most starred</div>
+						<div class="filter-item">Most forked</div>
+					</div>
+				</div>
+
+				<div class="snippet-grid">
+					<div class="s-card" style="border-color: #afa9ec">
+						<div class="s-card-top">
+							<span class="lang-badge lang-ts">TS</span>
+							<div class="star-btn starred"><span class="star-icon">★</span><span>24</span></div>
+						</div>
+						<div class="s-title">Supabase typed client</div>
+						<div class="s-code-preview">
+							const supabase = createClient&lt;Database&gt;(url, key) type Tables =
+							Database['public']['Tables']
+						</div>
+						<div class="s-footer">
+							<div class="s-author">
+								<div class="avatar-xs" style="background: #534ab7">AK</div>
+								<span>you</span>
+							</div>
+							<div class="s-stats"><span>⑂ 3</span></div>
+						</div>
+					</div>
+
+					<div class="s-card">
+						<div class="s-card-top">
+							<span class="lang-badge lang-js">JS</span>
+							<div class="star-btn"><span class="star-icon">☆</span><span>11</span></div>
+						</div>
+						<div class="s-title">Debounce hook</div>
+						<div class="s-code-preview">
+							export function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t) t =
+							setTimeout(() => fn(...a), ms) } }
+						</div>
+						<div class="s-footer">
+							<div class="s-author">
+								<div class="avatar-xs" style="background: #1d9e75">JR</div>
+								<span>jake_r</span>
+							</div>
+							<div class="s-stats"><span class="fork-badge">forked</span></div>
+						</div>
+					</div>
+
+					<div class="s-card">
+						<div class="s-card-top">
+							<span class="lang-badge lang-py">PY</span>
+							<div class="star-btn"><span class="star-icon">☆</span><span>7</span></div>
+						</div>
+						<div class="s-title">JWT decode util</div>
+						<div class="s-desc">Decode and verify JWT tokens without a library dependency</div>
+						<div class="s-footer">
+							<div class="s-author">
+								<div class="avatar-xs" style="background: #d85a30">ML</div>
+								<span>mia_l</span>
+							</div>
+							<div class="s-stats"><span>⑂ 1</span></div>
+						</div>
+					</div>
+
+					<div class="s-card">
+						<div class="s-card-top">
+							<span class="lang-badge lang-sql">SQL</span>
+							<div class="star-btn starred"><span class="star-icon">★</span><span>19</span></div>
+						</div>
+						<div class="s-title">RLS policy template</div>
+						<div class="s-code-preview">
+							create policy "members_read" on table_name for select using (workspace_id =
+							auth.uid())
+						</div>
+						<div class="s-footer">
+							<div class="s-author">
+								<div class="avatar-xs" style="background: #534ab7">AK</div>
+								<span>you</span>
+							</div>
+							<div class="s-stats"><span>⑂ 6</span></div>
+						</div>
+					</div>
+
+					<div class="s-card">
+						<div class="s-card-top">
+							<span class="lang-badge lang-rust">RS</span>
+							<div class="star-btn"><span class="star-icon">☆</span><span>4</span></div>
+						</div>
+						<div class="s-title">Error handling pattern</div>
+						<div class="s-desc">
+							Idiomatic Result chaining with ? operator and custom error types
+						</div>
+						<div class="s-footer">
+							<div class="s-author">
+								<div class="avatar-xs" style="background: #1d9e75">JR</div>
+								<span>jake_r</span>
+							</div>
+							<div class="s-stats"></div>
+						</div>
+					</div>
+
+					<div class="s-card">
+						<div class="s-card-top">
+							<span class="lang-badge lang-go">GO</span>
+							<div class="star-btn"><span class="star-icon">☆</span><span>9</span></div>
+						</div>
+						<div class="s-title">HTTP middleware chain</div>
+						<div class="s-code-preview">
+							func Chain(h http.Handler, m ...Middleware) http.Handler { for i := len(m)-1; i >= 0;
+							i-- {...
+						</div>
+						<div class="s-footer">
+							<div class="s-author">
+								<div class="avatar-xs" style="background: #d85a30">ML</div>
+								<span>mia_l</span>
+							</div>
+							<div class="s-stats"><span>⑂ 2</span></div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div id="tab-sandbox" class="sandbox-view" style="display: none">
+				<div class="sb-editor">
+					<div class="sb-header">
+						<span
+							class="sb-label"
+							style="
+								font-family: var(--font-mono, monospace);
+								font-size: 10px;
+								background: var(--color-background-secondary);
+								padding: 2px 7px;
+								border-radius: 4px;
+								color: #ba7517;
+							"
+							>JavaScript</span
+						>
+						<span class="sb-label">sandbox</span>
+						<button class="run-btn">
+							<svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+								<path d="M2 1.5l6 3.5-6 3.5V1.5z" fill="white" />
+							</svg>
+							Run
+						</button>
+					</div>
+					<div class="code-area">
+						<span class="tok-cmt">// Fibonacci with memoization</span><br />
+						<span class="tok-kw">const</span> memo = <span class="tok-kw">new</span>
+						<span class="tok-fn">Map</span>();<br /><br />
+						<span class="tok-kw">function</span> <span class="tok-fn">fib</span>(n) {<br />
+						&nbsp;&nbsp;<span class="tok-kw">if</span> (n &lt;= <span class="tok-num">1</span>)
+						<span class="tok-kw">return</span> n;<br />
+						&nbsp;&nbsp;<span class="tok-kw">if</span> (memo.<span class="tok-fn">has</span>(n))
+						<span class="tok-kw">return</span> memo.<span class="tok-fn">get</span>(n);<br />
+						&nbsp;&nbsp;<span class="tok-kw">const</span> result = <span class="tok-fn">fib</span>(n
+						- <span class="tok-num">1</span>) + <span class="tok-fn">fib</span>(n -
+						<span class="tok-num">2</span>);<br />
+						&nbsp;&nbsp;memo.<span class="tok-fn">set</span>(n, result);<br />
+						&nbsp;&nbsp;<span class="tok-kw">return</span> result;<br />
+						}<br /><br />
+						<span class="tok-kw">for</span> (<span class="tok-kw">let</span> i =
+						<span class="tok-num">0</span>; i &lt;= <span class="tok-num">10</span>; i++) {<br />
+						&nbsp;&nbsp;console.<span class="tok-fn">log</span>(<span class="tok-str"
+							>`fib(${i})`</span
+						>, <span class="tok-fn">fib</span>(i));<br />
+						}<br /><br />
+						console.<span class="tok-fn">log</span>(<span class="tok-str">'done!'</span>);<br />
+					</div>
+				</div>
+				<div class="sb-output">
+					<div class="out-header">
+						<span class="out-label">output</span>
+						<span class="dur-badge">2ms</span>
+					</div>
+					<div class="console">
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(0) <span class="con-out">0</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(1) <span class="con-out">1</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(2) <span class="con-out">1</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(3) <span class="con-out">2</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(4) <span class="con-out">3</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(5) <span class="con-out">5</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(6) <span class="con-out">8</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(7) <span class="con-out">13</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(8) <span class="con-out">21</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(9) <span class="con-out">34</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span>fib(10) <span class="con-out">55</span>
+						</div>
+						<div class="con-log">
+							<span class="con-prompt">&gt;</span><span class="con-out">'done!'</span>
+						</div>
+					</div>
+					<div class="env-bar" style="justify-content: center; padding: 10px 12px">
+						<button
+							style="
+								font-size: 11px;
+								color: #534ab7;
+								background: #eeedfe;
+								border: none;
+								border-radius: var(--border-radius-md);
+								padding: 4px 10px;
+								cursor: pointer;
+							"
+						>
+							Load snippet
+						</button>
+						<button
+							style="
+								font-size: 11px;
+								color: var(--color-text-secondary);
+								background: var(--color-background-secondary);
+								border: none;
+								border-radius: var(--border-radius-md);
+								padding: 4px 10px;
+								cursor: pointer;
+								margin-left: 6px;
+							"
+						>
+							Clear
+						</button>
+					</div>
+				</div>
+			</div>
+
+			<div id="tab-api" class="api-view" style="display: none">
+				<div class="api-left">
+					<div class="api-history">
+						<div class="hist-label">Saved requests</div>
+						<div class="hist-item active">
+							<span class="method-badge m-get">GET</span>
+							<span class="hist-name">List users</span>
+							<span class="hist-time">2m</span>
+						</div>
+						<div class="hist-item">
+							<span class="method-badge m-post">POST</span>
+							<span class="hist-name">Create workspace</span>
+							<span class="hist-time">1h</span>
+						</div>
+						<div class="hist-item">
+							<span class="method-badge m-patch">PATCH</span>
+							<span class="hist-name">Update profile</span>
+							<span class="hist-time">3h</span>
+						</div>
+						<div class="hist-item">
+							<span class="method-badge m-del">DEL</span>
+							<span class="hist-name">Delete snippet</span>
+							<span class="hist-time">1d</span>
+						</div>
+						<div class="hist-item">
+							<span class="method-badge m-post">POST</span>
+							<span class="hist-name">Auth login</span>
+							<span class="hist-time">1d</span>
+						</div>
+						<div class="hist-item">
+							<span class="method-badge m-put">PUT</span>
+							<span class="hist-name">Upload avatar</span>
+							<span class="hist-time">2d</span>
+						</div>
+					</div>
+					<div class="env-bar">
+						<div class="env-dot"></div>
+						<select class="env-sel">
+							<option>Production</option>
+							<option>Staging</option>
+							<option>Local</option>
+						</select>
+						<button
+							style="
+								margin-left: auto;
+								font-size: 10px;
+								color: #534ab7;
+								background: none;
+								border: none;
+								cursor: pointer;
+							"
+						>
+							Edit vars
+						</button>
+					</div>
+				</div>
+				<div class="api-right">
+					<div class="req-builder">
+						<div class="url-row">
+							<select class="method-sel">
+								<option>GET</option>
+								<option>POST</option>
+								<option>PUT</option>
+								<option>PATCH</option>
+								<option>DELETE</option>
+							</select>
+							<input class="url-input" value="{{BASE_URL}}/rest/v1/users?select=*" readonly />
+							<button class="send-btn">Send</button>
+						</div>
+						<div class="req-tabs">
+							<div class="req-tab active">Headers</div>
+							<div class="req-tab">Body</div>
+							<div class="req-tab">Environments</div>
+						</div>
+						<table class="headers-table">
+							<tr>
+								<td class="hkey">apikey</td>
+								<td class="hval">{{ANON_KEY}}</td>
+							</tr>
+							<tr>
+								<td class="hkey">Authorization</td>
+								<td class="hval">Bearer {{ACCESS_TOKEN}}</td>
+							</tr>
+							<tr>
+								<td class="hkey">Content-Type</td>
+								<td class="hval">application/json</td>
+							</tr>
+							<tr>
+								<td class="hkey">Prefer</td>
+								<td class="hval">return=representation</td>
+							</tr>
+						</table>
+					</div>
+					<div class="response-panel">
+						<div class="resp-header">
+							<span class="status-badge s-200">200 OK</span>
+							<div class="resp-meta">
+								<span>142ms</span>
+								<span>1.2 KB</span>
+							</div>
+						</div>
+						<div class="resp-tabs">
+							<div class="resp-tab active">Body</div>
+							<div class="resp-tab">Headers</div>
+							<div class="resp-tab">Raw</div>
+						</div>
+						<div class="json-viewer">
+							[<br />
+							&nbsp;&nbsp;{<br />
+							&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"id"</span>:
+							<span class="jstr">"b3c4-d5e6-f7a8"</span>,<br />
+							&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"username"</span>:
+							<span class="jstr">"jake_r"</span>,<br />
+							&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"role"</span>:
+							<span class="jstr">"member"</span>,<br />
+							&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"created_at"</span>:
+							<span class="jstr">"2025-03-12T09:41:00Z"</span>,<br />
+							&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"star_count"</span>:
+							<span class="jnum">11</span>,<br />
+							&nbsp;&nbsp;&nbsp;&nbsp;<span class="jk">"active"</span>:
+							<span class="jbool">true</span><br />
+							&nbsp;&nbsp;},<br />
+							&nbsp;&nbsp;{ <span class="jk">"id"</span>:
+							<span class="jstr">"a1b2-c3d4-e5f6"</span>, <span class="jk">"username"</span>:
+							<span class="jstr">"mia_l"</span>, <span class="jk">"role"</span>:
+							<span class="jstr">"owner"</span>, ... }<br />
+							]
+						</div>
+						<div class="curl-bar">
+							<span>curl -X GET -H 'apikey: ...' '{{BASE_URL}}/rest/v1/users'</span>
+							<button class="copy-btn">Copy cURL</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	function showTab(name) {
+		['snippets', 'sandbox', 'api'].forEach((t) => {
+			document.getElementById('tab-' + t).style.display = t === name ? 'flex' : 'none';
+		});
+		document.querySelectorAll('.tab').forEach((el, i) => {
+			el.classList.toggle('active', ['snippets', 'sandbox', 'api'][i] === name);
+		});
+	}
+</script>

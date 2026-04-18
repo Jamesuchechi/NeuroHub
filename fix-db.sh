@@ -1,0 +1,4 @@
+sed -i 's/snippets: SnippetsTable;/snippets: { Row: SnippetsTable["Row"]; Insert: SnippetsTable["Insert"]; Update: SnippetsTable["Update"]; Relationships: []; };/g' src/lib/types/db.ts
+sed -i 's/snippet_stars: SnippetStarsTable;/snippet_stars: { Row: SnippetStarsTable["Row"]; Insert: SnippetStarsTable["Insert"]; Update: SnippetStarsTable["Update"]; Relationships: []; };/g' src/lib/types/db.ts
+sed -i 's/api_tests: ApiTestsTable;/api_tests: { Row: ApiTestsTable["Row"]; Insert: ApiTestsTable["Insert"]; Update: ApiTestsTable["Update"]; Relationships: []; };/g' src/lib/types/db.ts
+sed -i 's/api_environments: ApiEnvironmentsTable;/api_environments: { Row: ApiEnvironmentsTable["Row"]; Insert: ApiEnvironmentsTable["Insert"]; Update: ApiEnvironmentsTable["Update"]; Relationships: []; };/g' src/lib/types/db.ts
