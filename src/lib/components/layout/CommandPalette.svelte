@@ -7,13 +7,30 @@
 	import { goto } from '$app/navigation';
 	import Fuse from 'fuse.js';
 	import { onMount } from 'svelte';
+	import { supabase } from '$lib/services/supabase';
 
 	interface CommandItem {
 		name: string;
-		type: 'page' | 'feature' | 'action' | 'history';
+		type: 'page' | 'feature' | 'action' | 'history' | 'semantic';
 		href: string;
 		icon: string;
 		description?: string;
+		similarity?: number;
+	}
+
+	interface SemanticMessageResult {
+		id: string;
+		content: string;
+		channel_id: string;
+		user_id: string;
+		similarity: number;
+	}
+
+	interface SemanticNoteResult {
+		id: string;
+		title: string;
+		content_text: string;
+		similarity: number;
 	}
 
 	const { commandPaletteOpen } = $derived($uiStore);
@@ -115,10 +132,91 @@
 		})
 	);
 
-	let results = $derived.by(() => {
-		if (!query) return history.length > 0 ? history : allItems;
-		return fuse.search(query).map((r) => r.item);
+	let results = $state<CommandItem[]>([]);
+	let semanticResults = $state<CommandItem[]>([]);
+	let isSearchingSemantically = $state(false);
+
+	$effect(() => {
+		if (!query) {
+			results = history.length > 0 ? history : allItems;
+			semanticResults = [];
+			return;
+		}
+
+		results = fuse.search(query).map((r) => r.item);
+		performSemanticSearch(query);
 	});
+
+	let searchTimeout: ReturnType<typeof setTimeout>;
+	async function performSemanticSearch(q: string) {
+		if (q.length < 3 || !currentWorkspace) return;
+
+		clearTimeout(searchTimeout);
+		searchTimeout = setTimeout(async () => {
+			isSearchingSemantically = true;
+			try {
+				// 1. Generate Query Embedding via local API
+				const embedRes = await fetch('/api/ai/embed', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ text: q })
+				})
+					.then((r) => r.json())
+					.catch(() => null);
+
+				if (!embedRes?.embedding) return;
+				const embedding = embedRes.embedding;
+
+				// 2. Query Postgres Vector Functions
+				const [msgRes, noteRes] = await Promise.all([
+					supabase.rpc('match_messages', {
+						query_embedding: embedding,
+						match_threshold: 0.7,
+						match_count: 3,
+						p_workspace_id: currentWorkspace.id
+					}),
+					supabase.rpc('match_notes', {
+						query_embedding: embedding,
+						match_threshold: 0.7,
+						match_count: 3,
+						p_workspace_id: currentWorkspace.id
+					})
+				]);
+
+				const newSemantics: CommandItem[] = [];
+
+				((msgRes.data as unknown as SemanticMessageResult[]) || []).forEach((m) => {
+					newSemantics.push({
+						name: m.content.slice(0, 50),
+						type: 'semantic',
+						href: `/workspace/${currentWorkspace.slug}/chat/${m.channel_id}`,
+						icon: 'message',
+						description: `Message · ${Math.round(m.similarity * 100)}% match`,
+						similarity: m.similarity
+					});
+				});
+
+				((noteRes.data as unknown as SemanticNoteResult[]) || []).forEach((n) => {
+					newSemantics.push({
+						name: n.title,
+						type: 'semantic',
+						href: `/workspace/${currentWorkspace.slug}/notes/${n.id}`,
+						icon: 'book',
+						description: `Note · ${Math.round(n.similarity * 100)}% match`,
+						similarity: n.similarity
+					});
+				});
+
+				semanticResults = newSemantics.sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
+			} catch (e) {
+				console.error('Semantic search failed:', e);
+			} finally {
+				isSearchingSemantically = false;
+			}
+		}, 600);
+	}
+
+	const combinedResults = $derived([...results, ...semanticResults]);
 
 	// Reset index when query or results change
 	$effect(() => {
@@ -183,17 +281,17 @@
 
 		if (e.key === 'ArrowDown') {
 			e.preventDefault();
-			selectedIndex = (selectedIndex + 1) % results.length;
+			selectedIndex = (selectedIndex + 1) % combinedResults.length;
 		}
 
 		if (e.key === 'ArrowUp') {
 			e.preventDefault();
-			selectedIndex = (selectedIndex - 1 + results.length) % results.length;
+			selectedIndex = (selectedIndex - 1 + combinedResults.length) % combinedResults.length;
 		}
 
-		if (e.key === 'Enter' && results[selectedIndex]) {
+		if (e.key === 'Enter' && combinedResults[selectedIndex]) {
 			e.preventDefault();
-			executeCommand(results[selectedIndex]);
+			executeCommand(combinedResults[selectedIndex]);
 		}
 	}
 
@@ -256,7 +354,7 @@
 
 			<!-- Results List -->
 			<div class="scrollbar-none max-h-[60vh] overflow-y-auto p-2">
-				{#if results.length > 0}
+				{#if combinedResults.length > 0}
 					<div class="space-y-1">
 						{#if !query && history.length > 0}
 							<p class="px-3 py-2 text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
@@ -264,10 +362,11 @@
 							</p>
 						{/if}
 
-						{#each results as item, i (item.href + i)}
+						{#each combinedResults as item, i (item.href + i)}
 							<button
 								class="group flex w-full items-center gap-4 rounded-xl p-3 text-left transition-all
-									{i === selectedIndex ? 'bg-surface-dim ring-1 ring-stroke' : 'hover:bg-surface-dim/40'}"
+									{i === selectedIndex ? 'bg-surface-dim ring-1 ring-stroke' : 'hover:bg-surface-dim/40'}
+									{item.type === 'semantic' ? 'border-l-2 border-brand-orange/40 bg-brand-orange/5' : ''}"
 								onclick={() => executeCommand(item)}
 								onmouseenter={() => (selectedIndex = i)}
 							>
@@ -284,7 +383,15 @@
 									</svg>
 								</div>
 								<div class="flex-1 overflow-hidden">
-									<p class="text-sm leading-tight font-bold text-content">{item.name}</p>
+									<div class="flex items-center gap-2">
+										<p class="text-sm leading-tight font-bold text-content">{item.name}</p>
+										{#if item.type === 'semantic'}
+											<span
+												class="text-[9px] font-black tracking-tighter text-brand-orange uppercase"
+												>AI Result</span
+											>
+										{/if}
+									</div>
 									<p class="truncate text-[11px] text-content-dim">{item.description}</p>
 								</div>
 								{#if i === selectedIndex}
@@ -297,6 +404,15 @@
 								{/if}
 							</button>
 						{/each}
+
+						{#if isSearchingSemantically}
+							<div class="flex animate-pulse items-center gap-3 px-4 py-3 text-content-dim">
+								<div
+									class="h-4 w-4 animate-spin rounded-full border-2 border-brand-orange border-t-transparent"
+								></div>
+								<span class="text-xs italic">NeuroAI is scanning workspace meaning...</span>
+							</div>
+						{/if}
 					</div>
 				{:else}
 					<div class="py-12 text-center text-zinc-500">

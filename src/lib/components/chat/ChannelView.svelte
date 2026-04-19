@@ -4,9 +4,11 @@
 	import { uiStore } from '$lib/stores/uiStore';
 	import ChatMessage from './ChatMessage.svelte';
 	import MessageInput from './MessageInput.svelte';
+	import AiResponse from '../ai/AiResponse.svelte';
 	import ThreadView from './ThreadView.svelte';
 	import Skeleton from '../ui/Skeleton.svelte';
 	import { fade, slide } from 'svelte/transition';
+	import { aiStore } from '$lib/stores/aiStore.svelte';
 
 	let { channelId } = $props<{ channelId: string }>();
 
@@ -162,6 +164,18 @@
 						onDelete={(id) => chatStore.deleteMessage(id)}
 					/>
 				{/each}
+
+				{#if aiStore.isGenerating || aiStore.currentGeneration}
+					<div class="px-6">
+						<AiResponse
+							onAccept={(content) => {
+								chatStore.sendMessage(content);
+								aiStore.clearError();
+							}}
+							onCancel={() => aiStore.clearError()}
+						/>
+					</div>
+				{/if}
 
 				<!-- Typing Indicator -->
 				{#if typingCount > 0}

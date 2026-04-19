@@ -1,103 +1,124 @@
+import { streamText } from 'ai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
+import { createGroq } from '@ai-sdk/groq';
+import { createMistral } from '@ai-sdk/mistral';
 import { json } from '@sveltejs/kit';
-import https from 'https';
 import type { RequestHandler } from './$types';
 import { OPENROUTER_API_KEY, GROQ_API_KEY, MISTRAL_API_KEY } from '$env/static/private';
 
-export const POST: RequestHandler = async ({ request }) => {
-	const { prompt, profile = 'fast' } = await request.json();
+// Safe fetch with timeout
+const customFetch = async (url: string | Request | URL, options?: RequestInit) => {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-	const configs = {
-		intelligent: {
-			endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-			key: OPENROUTER_API_KEY,
-			model: 'anthropic/claude-3-haiku',
-			getHeaders: () => ({
-				'HTTP-Referer': 'https://neurohub.io',
-				'X-Title': 'NeuroHub'
-			})
-		},
-		stable: {
-			endpoint: 'https://api.mistral.ai/v1/chat/completions',
-			key: MISTRAL_API_KEY,
-			model: 'mistral-small-latest',
-			getHeaders: () => ({})
-		},
-		fast: {
-			endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-			key: GROQ_API_KEY,
-			model: 'llama-3.3-70b-versatile',
-			getHeaders: () => ({})
-		}
-	};
-
-	const selectedConfig = configs[profile as keyof typeof configs] || configs.fast;
-	const { endpoint, key, model } = selectedConfig;
-
-	const body = {
-		model,
-		messages: [{ role: 'user', content: prompt }]
-	};
-
-	return new Promise((resolveResult) => {
-		const url = new URL(endpoint);
-		const postData = JSON.stringify(body);
-
-		const req = https.request(
-			url,
-			{
-				method: 'POST',
-				headers: {
-					Authorization: `Bearer ${key}`,
-					'Content-Type': 'application/json',
-					'Content-Length': Buffer.byteLength(postData),
-					...(profile === 'intelligent' ? selectedConfig.getHeaders() : {})
-				},
-				timeout: 10000 // Handled cleanly by native https module
-			},
-			(res) => {
-				let data = '';
-				res.on('data', (chunk) => (data += chunk));
-				res.on('end', () => {
-					if (res.statusCode && res.statusCode >= 400) {
-						let errMessage = 'AI provider rejected the request';
-						try {
-							const parsed = JSON.parse(data);
-							errMessage = parsed.error?.message || errMessage;
-						} catch (_e) {
-							// Non-JSON response from API, use default error message
-						}
-						console.error(`AI Provider Error (${res.statusCode}):`, errMessage);
-						resolveResult(json({ error: errMessage }, { status: res.statusCode || 500 }));
-					} else {
-						try {
-							const parsed = JSON.parse(data);
-							resolveResult(
-								json({
-									content: parsed.choices[0].message.content,
-									model
-								})
-							);
-						} catch (e) {
-							console.error('AI JSON Parse Error:', e);
-							resolveResult(json({ error: 'Invalid JSON response' }, { status: 500 }));
-						}
-					}
-				});
-			}
-		);
-
-		req.on('error', (err) => {
-			console.error('AI API HTTPS Error:', err.message);
-			resolveResult(json({ error: 'Failed to query AI provider' }, { status: 500 }));
+	try {
+		return await fetch(url, {
+			...options,
+			signal: controller.signal
 		});
+	} finally {
+		clearTimeout(timeout);
+	}
+};
 
-		req.on('timeout', () => {
-			req.destroy();
-			console.error('AI API Timeout');
-			resolveResult(json({ error: 'AI provider timed out' }, { status: 500 }));
-		});
+// Initialize providers
+const openrouter = createOpenRouter({
+	apiKey: OPENROUTER_API_KEY,
+	fetch: customFetch
+});
 
-		req.write(postData);
-		req.end();
+const groq = createGroq({
+	apiKey: GROQ_API_KEY,
+	fetch: customFetch
+});
+
+const mistral = createMistral({
+	apiKey: MISTRAL_API_KEY,
+	fetch: customFetch
+});
+
+export const POST: RequestHandler = async ({ request, locals: { supabase, safeGetSession } }) => {
+	const { session } = await safeGetSession();
+	if (!session) {
+		return json({ error: 'Unauthorized' }, { status: 401 });
+	}
+
+	// 1. Rate Limit Check
+	const { data: allowed, error: limitError } = await supabase.rpc('check_ai_rate_limit', {
+		p_user_id: session.user.id
 	});
+
+	if (limitError || !allowed) {
+		return json({ error: 'Rate limit exceeded. Please wait a moment.' }, { status: 429 });
+	}
+
+	const { prompt, profile = 'fast', system_prompt, workspace_id } = await request.json();
+
+	// 2. Select Provider stack (Primary + Fallbacks)
+	const modelStack = [];
+	switch (profile) {
+		case 'intelligent':
+			modelStack.push(openrouter.chat('meta-llama/llama-3.3-70b-instruct:free'));
+			modelStack.push(mistral('mistral-large-latest'));
+			modelStack.push(groq('llama-3.3-70b-versatile'));
+			break;
+		case 'stable':
+			modelStack.push(mistral('mistral-small-latest'));
+			modelStack.push(groq('llama-3.3-70b-versatile'));
+			break;
+		case 'fast':
+		default:
+			modelStack.push(groq('llama-3.3-70b-versatile'));
+			modelStack.push(mistral('mistral-small-latest'));
+			break;
+	}
+
+	// 3. Robust Streaming with Fallback Loop
+	let lastError: unknown;
+	for (const model of modelStack) {
+		console.log(`[AI Attempt] Trying model: ${model.modelId}...`);
+		try {
+			const result = await streamText({
+				model,
+				maxRetries: 0, // Fail fast to our own fallback loop
+				system: system_prompt || 'You are NeuroAI, a high-performance developer assistant.',
+				messages: [{ role: 'user', content: prompt }],
+				onFinish: async (event) => {
+					try {
+						await supabase.from('ai_requests').insert({
+							user_id: session.user.id,
+							workspace_id: workspace_id || null,
+							model: event.response.modelId,
+							prompt_tokens: event.usage.inputTokens,
+							completion_tokens: event.usage.outputTokens,
+							total_tokens: event.usage.totalTokens,
+							feature: 'chat'
+						});
+					} catch (logErr) {
+						console.error('[AI Usage Log] Failed:', logErr);
+					}
+				}
+			});
+
+			// CRITICAL: Await the response headers to ensure connectivity.
+			// This will throw if the provider (e.g. OpenRouter) times out,
+			// allowing our 'catch' block to move to the next model.
+			await result.response;
+
+			return result.toTextStreamResponse();
+		} catch (err) {
+			const statusMsg = err instanceof Error ? err.message : String(err);
+			console.warn(`[AI Fallback] ${model.modelId} failed. Trying next...`, statusMsg);
+			lastError = err;
+			continue; // Attempt next model in stack
+		}
+	}
+
+	// If we get here, all models failed
+	console.error('[AI Chat] All providers failed:', lastError);
+	const errorMessage =
+		lastError instanceof Error
+			? lastError.message
+			: 'All AI intelligence services are currently unavailable.';
+	return json({ error: errorMessage }, { status: 500 });
 };

@@ -1,9 +1,13 @@
 <script lang="ts">
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { uiStore } from '$lib/stores/uiStore';
+	import SimilarNotes from '../ai/SimilarNotes.svelte';
+	import ContextPreview from '../ai/ContextPreview.svelte';
+	import { page } from '$app/state';
 
 	const { currentWorkspace } = $derived($workspaceStore);
 	const { contextPanelCollapsed } = $derived($uiStore);
+	const isNoteView = $derived(!!page.params.noteId);
 
 	function toggle() {
 		uiStore.setContextPanelCollapsed(!contextPanelCollapsed);
@@ -33,42 +37,43 @@
 	</div>
 
 	<!-- Content -->
-	<div class="flex-1 space-y-8 overflow-y-auto p-6">
+	<div class="scrollbar-hide flex-1 space-y-8 overflow-y-auto p-6">
 		<section>
-			<h3 class="mb-4 text-sm font-bold text-content">
-				Welcome to {currentWorkspace?.name || 'NeuroHub'}
+			<h3 class="mb-2 text-sm leading-tight font-bold text-content">
+				{currentWorkspace?.name || 'NeuroHub'}
 			</h3>
-			<p class="text-xs leading-relaxed text-content-dim">
-				This panel provides contextual information about your current workspace, including active
-				participants, recent documents, and AI-driven insights.
+			<p class="text-[11px] leading-relaxed text-content-dim">
+				Intelligence hub active. NeuroAI is monitoring workspace signals to provide real-time
+				support.
 			</p>
 		</section>
 
-		<section class="space-y-4">
-			<p class="text-[10px] font-bold tracking-wider text-content-dim uppercase">
+		<!-- AI Intelligence Section -->
+		<section class="space-y-6">
+			<ContextPreview />
+
+			{#if isNoteView}
+				<SimilarNotes />
+			{/if}
+		</section>
+
+		<!-- Metadata Placeholder for Phase 9 -->
+		<section class="opacity-50">
+			<p class="mb-3 text-[10px] font-bold tracking-wider text-content-dim uppercase">
 				Active participants
 			</p>
 			<div class="flex -space-x-2">
-				<!-- Mock presence for now -->
 				<div
-					class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface-dim bg-orange-500 text-[10px] font-bold text-black"
+					class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface-dim bg-orange-500/20 text-[10px] font-bold text-brand-orange"
 				>
 					JD
 				</div>
 				<div
 					class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface-dim bg-stroke text-[10px] font-bold text-content-dim"
 				>
-					+3
+					+1
 				</div>
 			</div>
-		</section>
-
-		<section class="rounded-xl border border-orange-500/10 bg-orange-500/5 p-4">
-			<h4 class="mb-2 text-xs font-bold text-orange-500">AI Context Builder</h4>
-			<p class="text-[11px] leading-snug text-content-dim">
-				The AI is currently monitoring the channel discussions to build a semantic index of your
-				project.
-			</p>
 		</section>
 	</div>
 </aside>

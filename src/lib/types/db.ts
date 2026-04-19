@@ -12,6 +12,7 @@ export type NotesTable = {
 		is_public: boolean;
 		created_at: string;
 		updated_at: string;
+		embedding: string | null;
 		is_pinned: boolean; // Added in local migration
 		share_token: string | null; // Added in local migration
 	};
@@ -228,6 +229,7 @@ export type Database = {
 					is_public: boolean;
 					created_at: string;
 					updated_at: string;
+					embedding: string | null;
 					is_pinned: boolean;
 					share_token: string | null;
 				};
@@ -242,6 +244,7 @@ export type Database = {
 					is_public?: boolean;
 					created_at?: string;
 					updated_at?: string;
+					embedding?: string | null;
 					is_pinned?: boolean;
 					share_token?: string | null;
 				};
@@ -256,6 +259,7 @@ export type Database = {
 					is_public?: boolean;
 					created_at?: string;
 					updated_at?: string;
+					embedding?: string | null;
 					is_pinned?: boolean;
 					share_token?: string | null;
 				};
@@ -386,6 +390,7 @@ export type Database = {
 					metadata: Json;
 					edited_at: string | null;
 					deleted_at: string | null;
+					embedding: string | null;
 					created_at: string;
 				};
 				Insert: {
@@ -789,6 +794,7 @@ export type Database = {
 					parent_id: string | null;
 					fork_count: number;
 					star_count: number;
+					embedding: string | null;
 					created_at: string;
 					updated_at: string;
 					fts: unknown;
@@ -951,6 +957,58 @@ export type Database = {
 					new_author_id: string;
 				};
 				Returns: string;
+			};
+			match_messages: {
+				Args: {
+					query_embedding: string;
+					match_threshold: number;
+					match_count: number;
+					p_workspace_id: string;
+				};
+				Returns: {
+					id: string;
+					content: string;
+					channel_id: string;
+					user_id: string;
+					similarity: number;
+				}[];
+			};
+			match_notes: {
+				Args: {
+					query_embedding: string;
+					match_threshold: number;
+					match_count: number;
+					p_workspace_id: string;
+				};
+				Returns: {
+					id: string;
+					title: string;
+					content_text: string;
+					similarity: number;
+				}[];
+			};
+			match_snippets: {
+				Args: {
+					query_embedding: string;
+					match_threshold: number;
+					match_count: number;
+					p_workspace_id: string;
+				};
+				Returns: {
+					id: string;
+					title: string;
+					code: string;
+					language: string;
+					similarity: number;
+				}[];
+			};
+			check_ai_rate_limit: {
+				Args: {
+					p_user_id: string;
+					p_window_minutes?: number;
+					p_max_requests?: number;
+				};
+				Returns: boolean;
 			};
 		};
 		Enums: {

@@ -1,7 +1,16 @@
+import net from 'net';
 import { createServerClient } from '@supabase/ssr';
 import { type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
 import { config } from '$lib/config';
+
+if (
+	typeof (net as { setDefaultAutoSelectFamily?: (v: boolean) => void })
+		.setDefaultAutoSelectFamily === 'function'
+) {
+	(net as { setDefaultAutoSelectFamily: (v: boolean) => void }).setDefaultAutoSelectFamily(false);
+}
+// ──────────────────────────────────────────────────────────────────────────────
 
 const authHandle: Handle = async ({ event, resolve }) => {
 	/**

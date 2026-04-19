@@ -5,6 +5,7 @@
 	import type { Language } from '$lib/types/devtools';
 	import { pendingSnippet, openInSandbox } from '$lib/stores/devToolsStore';
 	import { toast } from '$lib/stores/toastStore';
+	import { aiStore } from '$lib/stores/aiStore.svelte';
 
 	let {
 		mode = 'view',
@@ -116,6 +117,18 @@
 			if (mode !== 'view') handleSave();
 		}
 	}
+
+	async function aiSuggestTitle() {
+		if (!code.trim()) {
+			toast.show('Please write or paste code first', 'error');
+			return;
+		}
+		const suggestedTitle = await aiStore.suggestSnippetTitle(code, language);
+		if (suggestedTitle) {
+			title = suggestedTitle;
+			toast.show('Title suggested ✨', 'success');
+		}
+	}
 </script>
 
 <svelte:window onkeydown={onKeydown} />
@@ -152,13 +165,30 @@
 						>
 					{/if}
 				{:else}
-					<input
-						type="text"
-						bind:this={titleInput}
-						bind:value={title}
-						placeholder="Snippet title..."
-						class="placeholder:text-muted-foreground w-full min-w-0 flex-1 border-0 bg-transparent p-0 text-lg font-semibold focus:ring-0"
-					/>
+					<div class="flex flex-1 items-center gap-2">
+						<input
+							type="text"
+							bind:this={titleInput}
+							bind:value={title}
+							placeholder="Snippet title..."
+							class="placeholder:text-muted-foreground w-full min-w-0 flex-1 border-0 bg-transparent p-0 text-lg font-semibold focus:ring-0"
+						/>
+						<button
+							onclick={aiSuggestTitle}
+							disabled={aiStore.isGenerating}
+							class="rounded-lg p-1.5 text-brand-orange transition-all hover:bg-brand-orange/10 disabled:opacity-50"
+							title="✨ Suggest Title"
+						>
+							<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M13 10V3L4 14h7v7l9-11h-7z"
+								/>
+							</svg>
+						</button>
+					</div>
 				{/if}
 			</div>
 

@@ -14,6 +14,11 @@ type NoteUpdate = NotesTable['Update'] & {
 	share_token?: string | null;
 };
 
+export type SimilarNote = Note & {
+	similarity: number;
+	content_text: string;
+};
+
 interface NotesDB {
 	from(table: 'notes'): {
 		select(columns?: string): {
@@ -143,6 +148,7 @@ class NotesStore {
 	#currentNote = $state<Note | null>(null);
 	#backlinks = $state<Note[]>([]);
 	#versions = $state<NoteVersionsTable['Row'][]>([]);
+	#similarNotes = $state<SimilarNote[]>([]);
 	#isLoading = $state(false);
 	#isSaving = $state(false);
 	#isOffline = $state(false);
@@ -172,6 +178,9 @@ class NotesStore {
 	}
 	get error() {
 		return this.#error;
+	}
+	get similarNotes(): SimilarNote[] {
+		return this.#similarNotes;
 	}
 
 	#lastSnapshotText = '';
@@ -461,6 +470,48 @@ class NotesStore {
 			console.error('[NotesStore] searchNotes error:', err);
 		} finally {
 			this.#isLoading = false;
+		}
+	}
+
+	async findSimilarNotes(noteId: string, text: string, workspaceId: string) {
+		if (!text.trim()) return;
+
+		try {
+			// 1. Get embedding for the text
+			const embedRes = await fetch('/api/ai/embed', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text: text.slice(0, 5000) })
+			});
+
+			if (!embedRes.ok) throw new Error('Failed to get embedding');
+			const { embedding } = await embedRes.json();
+
+			// 2. Search for similar notes
+			const { data, error } = await supabase.rpc('match_notes', {
+				query_embedding: embedding,
+				match_threshold: 0.5,
+				match_count: 5,
+				p_workspace_id: workspaceId
+			});
+
+			if (error) throw error;
+
+			// 3. Filter out the current note and update state
+			this.#similarNotes = (
+				(data as Array<Note & { similarity: number; content_text: string }>) || []
+			)
+				.filter((n) => n.id !== noteId)
+				.map(
+					(n) =>
+						({
+							...n,
+							similarity: n.similarity,
+							content_text: n.content_text || ''
+						}) as SimilarNote
+				);
+		} catch (err) {
+			console.error('[NotesStore] findSimilarNotes error:', err);
 		}
 	}
 

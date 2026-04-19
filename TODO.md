@@ -320,51 +320,51 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Infrastructure
 
-- [ ] Create Supabase Edge Function `ai-chat` to proxy Openrouter/Groq/mistral (never expose keys to client)
-- [ ] Integrate Vercel AI SDK for streaming responses in SvelteKit
-- [ ] Build `src/lib/services/ai.ts` — unified AI client with error handling + retry
-- [ ] Rate limiting on Edge Function (per user: 20 req/min via Supabase Redis / Upstash)
-- [ ] AI usage logging table `ai_requests` (user_id, tokens_used, model, created_at)
+- [x] Create Supabase Edge Function `ai-chat` to proxy Openrouter/Groq/mistral (Migrated to SvelteKit /api/ai/chat)
+- [x] Integrate Vercel AI SDK for streaming responses in SvelteKit
+- [x] Build `src/lib/services/ai.ts` — unified AI client with error handling + retry
+- [x] Rate limiting on Edge Function (Migrated to SvelteKit rate limiting RPC)
+- [x] AI usage logging table `ai_requests` (user_id, tokens_used, model, created_at)
 
 ### Context Builder
 
-- [ ] Create `src/lib/utils/contextBuilder.ts`:
-  - Fetch last N messages from current channel
-  - Fetch recently edited notes (top 5 by recency)
-  - Fetch pinned snippets in workspace
-  - Prioritize by recency + manual relevance score
-  - Truncate to stay under 10k token budget
-  - Include workspace name + user's role as system context
-- [ ] Build context preview panel (show what AI "knows" before sending)
+- [x] Create `src/lib/utils/contextBuilder.ts`:
+  - [x] Fetch last N messages from current channel
+  - [x] Fetch recently edited notes (top 5 by recency)
+  - [x] Fetch pinned snippets in workspace
+  - [x] Prioritize by recency + manual relevance score
+  - [x] Truncate to stay under 10k token budget
+  - [x] Include workspace name + user's role as system context
+- [x] Build context preview panel (Implemented in Right Sidebar / ContextPanel)
 
 ### AI Chat Commands
 
-- [ ] Build slash command parser in `MessageInput.svelte`
-- [ ] `/summarize` — summarize last 50 messages in channel
-- [ ] `/explain [code]` — explain selected code snippet
-- [ ] `/review [snippet-id]` — code review a snippet
-- [ ] `/todo` — extract action items from recent messages
-- [ ] `/draft [topic]` — draft a note on a topic using channel context
-- [ ] `/translate [lang]` — translate message to another language
-- [ ] `/ask [question]` — ask AI anything with workspace context injected
+- [x] Build slash command parser in `MessageInput.svelte`
+- [x] `/summarize` — summarize last 50 messages in channel
+- [x] `/explain [code]` — explain selected code snippet
+- [x] `/review [snippet-id]` — code review a snippet
+- [x] `/todo` — extract action items from recent messages
+- [x] `/draft [topic]` — draft a note on a topic using channel context
+- [x] `/translate [lang]` — translate message to another language
+- [x] `/ask [question]` — ask AI anything with workspace context injected
 
 ### AI Inline Features
 
-- [ ] "AI Continue" button in note editor (extend current paragraph)
-- [ ] "AI Improve" button (grammar + clarity rewrite)
-- [ ] Auto-tag suggestion for notes and snippets (AI suggests tags on save)
-- [ ] Smart snippet title suggestion from code content
-- [ ] Build AI response component with streaming (token-by-token render)
-- [ ] Show thinking/loading state with animated dots
+- [x] "AI Continue" button in note editor (extend current paragraph)
+- [x] "AI Improve" button (grammar + clarity rewrite)
+- [x] Auto-tag suggestion for notes and snippets (AI suggests tags on save)
+- [x] Smart snippet title suggestion from code content
+- [x] Build AI response component with streaming (token-by-token render)
+- [x] Show thinking/loading state with animated dots
 
 ### Semantic Search (pgvector)
 
-- [ ] Enable `pgvector` extension in Supabase
-- [ ] Add `embedding vector(1536)` column to `messages`, `notes`, `snippets`
-- [ ] Supabase Edge Function to generate embeddings on INSERT (OpenAI `text-embedding-3-small`)
-- [ ] Build semantic search API endpoint
-- [ ] Integrate into command palette search (`cmd+K`)
-- [ ] "Similar notes" panel in note sidebar
+- [x] Enable `pgvector` extension in Supabase
+- [x] Add `embedding vector(1536)` column to `messages`, `notes`, `snippets`
+- [x] Supabase Webhook to generate embeddings on INSERT (Replaced Deno Edge Function)
+- [x] Build semantic search API endpoint
+- [x] Integrate into command palette search (`cmd+K`)
+- [x] "Similar notes" panel in note sidebar (Implemented in Right Sidebar / ContextPanel)
 
 ---
 
@@ -427,7 +427,6 @@ Prism.js          Supabase Edge Fns      Streaming responses
 - [ ] Image lazy loading + blur placeholder for avatars/attachments
 - [ ] Supabase cursor-based pagination for all lists (no offset pagination)
 - [ ] Cache workspace metadata in Svelte stores (avoid redundant fetches)
-- [ ] Setup TanStack Query (`@tanstack/svelte-query`) for server state management
 
 ### Accessibility
 
@@ -486,9 +485,6 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 **Target: Week 9**
 
-- [ ] Integrate Sentry (error tracking — frontend + Edge Functions)
-- [ ] Integrate PostHog (product analytics — page views, feature usage)
-- [ ] Custom Sentry context: workspace_id, user_role on every error
 - [ ] Setup Supabase dashboard alerts (high DB CPU, edge function errors)
 - [ ] Create internal `health` endpoint for uptime monitoring
 - [ ] Log AI token usage per workspace for cost tracking
@@ -621,4 +617,4 @@ src/
 
 ---
 
-_Last updated: Phase 5 Complete — Knowledge Engine Stabilized_
+_Last updated: Phase 7 Completed — Robust AI Layer Solidified_

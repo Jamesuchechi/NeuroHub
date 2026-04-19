@@ -3,6 +3,10 @@
 	import { fly } from 'svelte/transition';
 	import Button from '../ui/Button.svelte';
 	import EmojiPicker from './EmojiPicker.svelte';
+	import { workspaceStore } from '$lib/stores/workspaceStore';
+	import { contextBuilder } from '$lib/utils/contextBuilder';
+	import { toast } from '$lib/stores/toastStore';
+	import { aiStore } from '$lib/stores/aiStore.svelte';
 
 	let {
 		channelId,
@@ -20,7 +24,55 @@
 	let showEmojiPicker = $state(false);
 	let typingTimeout: ReturnType<typeof setTimeout> | undefined;
 
+	// Slash Commands State
+	const commands = [
+		{ id: 'summarize', name: 'Summarize', description: 'Summarize last 50 messages', icon: '📝' },
+		{ id: 'ask', name: 'Ask', description: 'Ask AI with workspace context', icon: '❓' },
+		{ id: 'explain', name: 'Explain', description: 'Explain code in this channel', icon: '💡' },
+		{ id: 'review', name: 'Review', description: 'Review code snippets', icon: '🔍' },
+		{ id: 'todo', name: 'Extract Todos', description: 'Find action items in chat', icon: '✅' },
+		{ id: 'draft', name: 'Draft Note', description: 'Draft a note from chat context', icon: '✍️' },
+		{ id: 'translate', name: 'Translate', description: 'Translate last message', icon: '🌐' }
+	];
+
+	let showCommands = $state(false);
+	let selectedCommandIndex = $state(0);
+	const filteredCommands = $derived(
+		content.startsWith('/')
+			? commands.filter((c) => c.id.includes(content.toLowerCase().slice(1)))
+			: []
+	);
+
+	async function handleKeydown(e: KeyboardEvent) {
+		if (showCommands && filteredCommands.length > 0) {
+			if (e.key === 'ArrowDown') {
+				e.preventDefault();
+				selectedCommandIndex = (selectedCommandIndex + 1) % filteredCommands.length;
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault();
+				selectedCommandIndex =
+					(selectedCommandIndex - 1 + filteredCommands.length) % filteredCommands.length;
+			} else if (e.key === 'Enter' || e.key === 'Tab') {
+				e.preventDefault();
+				executeCommand(filteredCommands[selectedCommandIndex]);
+			} else if (e.key === 'Escape') {
+				showCommands = false;
+			}
+			return;
+		}
+
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			if (typingTimeout) clearTimeout(typingTimeout);
+			chatStore.setTyping(channelId, false);
+			await send();
+		}
+	}
+
 	function handleInput() {
+		showCommands = content.startsWith('/');
+		if (showCommands) selectedCommandIndex = 0;
+
 		if (typingTimeout) clearTimeout(typingTimeout);
 		chatStore.setTyping(channelId, true);
 		typingTimeout = setTimeout(() => {
@@ -28,12 +80,50 @@
 		}, 3000);
 	}
 
-	async function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Enter' && !e.shiftKey) {
-			e.preventDefault();
-			if (typingTimeout) clearTimeout(typingTimeout);
-			chatStore.setTyping(channelId, false);
-			await send();
+	async function executeCommand(command: (typeof commands)[0]) {
+		const workspaceId = $workspaceStore.currentWorkspace?.id;
+		if (!workspaceId) return;
+
+		const query = content.replace(/^\/[a-zA-Z]+\s*/, '').trim();
+		content = '';
+		showCommands = false;
+		isSubmitting = true;
+
+		try {
+			const context = await contextBuilder.buildWorkspaceContext(workspaceId, channelId);
+			const contextStr = contextBuilder.formatContextToString(context);
+
+			let prompt = '';
+			let systemPrompt = `You are NeuroAI, a high-performance developer assistant. Use the following workspace context to answer accurately:\n\n${contextStr}`;
+
+			if (command.id === 'summarize') {
+				prompt =
+					'Please provide a concise summary of the recent chat activity, highlighting the main topics and decisions.';
+			} else if (command.id === 'ask') {
+				prompt = query || 'How can I help you today with this workspace?';
+			} else if (command.id === 'explain') {
+				prompt = 'Identify any code blocks in the recent messages and explain them clearly.';
+			} else if (command.id === 'review') {
+				prompt =
+					'Perform a brief code review for any code shared in the recent chat history. Focus on potential bugs and improvements.';
+			} else if (command.id === 'todo') {
+				prompt =
+					'Analyze the recent messages and extract a list of action items or TODOs mentioned by the team.';
+			} else if (command.id === 'draft') {
+				const topic = query || 'the current discussion';
+				prompt = `Draft a comprehensive knowledge entry (note) based on the recent chat discussion about ${topic}. Format as clean semantic HTML.`;
+			} else if (command.id === 'translate') {
+				const lang = query || 'English';
+				prompt = `Translate the last few messages in the chat to ${lang}.`;
+			}
+
+			// We use aiStore to handle the generation state which the UI can listen to
+			await aiStore.generateCustom(prompt, systemPrompt);
+		} catch (err) {
+			console.error('[SlashCommand] Error:', err);
+			toast.show('AI Command failed', 'error');
+		} finally {
+			isSubmitting = false;
 		}
 	}
 
@@ -60,6 +150,36 @@
 		? 'bg-surface-dim/80 shadow-lg ring-1 ring-brand-orange/30'
 		: ''}"
 >
+	{#if showCommands && filteredCommands.length > 0}
+		<div
+			transition:fly={{ y: 20, duration: 300 }}
+			class="absolute bottom-full left-0 mb-2 w-72 overflow-hidden rounded-xl border border-stroke bg-surface-dim shadow-2xl"
+		>
+			<div class="border-b border-stroke bg-surface/50 px-3 py-2">
+				<span class="text-[10px] font-black tracking-widest text-content-dim uppercase"
+					>AI Commands</span
+				>
+			</div>
+			<div class="p-1">
+				{#each filteredCommands as cmd, i (cmd.id)}
+					<button
+						onclick={() => executeCommand(cmd)}
+						class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {i ===
+						selectedCommandIndex
+							? 'bg-brand-orange/10 text-brand-orange'
+							: 'text-content-dim hover:bg-surface'}"
+					>
+						<span class="text-lg">{cmd.icon}</span>
+						<div class="flex flex-col">
+							<span class="text-xs font-bold">/{cmd.id}</span>
+							<span class="text-[10px] opacity-60">{cmd.description}</span>
+						</div>
+					</button>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
 	<div class="flex items-end gap-3">
 		<!-- Emoji/Plus placeholder -->
 		<button

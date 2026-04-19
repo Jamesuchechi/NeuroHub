@@ -1,6 +1,6 @@
 export type AIModel = 'intelligent' | 'fast' | 'stable';
 
-interface AIResponse {
+export interface AIResponse {
 	content: string;
 	model: string;
 	error?: string;
@@ -8,26 +8,63 @@ interface AIResponse {
 
 export const aiService = {
 	/**
-	 * Client-side bridge to the secure AI API route.
+	 * Securely calls the internal SvelteKit AI Chat API with streaming support.
 	 */
-	async chat(prompt: string, profile: AIModel = 'fast'): Promise<AIResponse> {
+	async *streamChat(
+		prompt: string,
+		profile: AIModel = 'fast',
+		systemPrompt?: string,
+		workspaceId?: string
+	) {
+		const response = await fetch('/api/ai/chat', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				prompt,
+				profile,
+				system_prompt: systemPrompt,
+				workspace_id: workspaceId
+			})
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(errorData.error || `AI Request Failed: ${response.statusText}`);
+		}
+
+		const reader = response.body?.getReader();
+		const decoder = new TextDecoder();
+
+		if (!reader) throw new Error('No body in AI response');
+
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) break;
+
+			const chunk = decoder.decode(value);
+			if (chunk) yield chunk;
+		}
+	},
+
+	/**
+	 * Non-streaming chat convenience method.
+	 */
+	async chat(
+		prompt: string,
+		profile: AIModel = 'fast',
+		systemPrompt?: string,
+		workspaceId?: string
+	): Promise<AIResponse> {
 		try {
-			const response = await fetch('/api/ai/chat', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ prompt, profile })
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to query AI');
+			let fullContent = '';
+			for await (const chunk of this.streamChat(prompt, profile, systemPrompt, workspaceId)) {
+				fullContent += chunk;
 			}
-
-			return await response.json();
+			return { content: fullContent, model: profile };
 		} catch (err) {
-			console.error('aiService error:', err);
+			console.error('aiService.chat error:', err);
 			return {
 				content: '',
 				model: 'error',
@@ -37,52 +74,22 @@ export const aiService = {
 	},
 
 	/**
-	 * Simulates code execution by using AI to predict stdout/stderr.
+	 * Simulate execution prediction using the AI proxy.
 	 */
-	async simulateExecution(
-		code: string,
-		language: string
-	): Promise<{ stdout: string; stderr: string; error: string | null }> {
-		const prompt = `
-      You are a high-performance code execution engine called "NeuroAI Runner". 
-      Your task is to ARBITRARILY and ACCURATELY simulate the execution of the following code.
-      
-      Language: ${language}
-      Code:
-      \`\`\`${language}
-      ${code}
-      \`\`\`
-      
-      Instructions:
-      1. Predict the exact standard output (stdout) and standard error (stderr) if this code were to be run in a real environment.
-      2. If there are syntax errors or runtime errors, put the diagnostic message in "stderr".
-      3. Return ONLY a JSON object in the following format:
-         {
-           "stdout": "string",
-           "stderr": "string",
-           "error": "null or string message if execution failed completely"
-         }
-      
-      Output ONLY the JSON. No preamble, no explanation.
-    `;
+	async simulateExecution(code: string, language: string) {
+		const systemPrompt = `You are a high-performance code execution engine called "NeuroAI Runner". 
+Predict stdout/stderr for the given code. Return ONLY a JSON object: {"stdout": "...", "stderr": "...", "error": null}`;
 
-		const result = await this.chat(prompt, 'fast');
+		const prompt = `Language: ${language}\nCode:\n${code}`;
+		const result = await this.chat(prompt, 'fast', systemPrompt);
 
-		if (result.error) {
-			return { stdout: '', stderr: '', error: result.error };
-		}
+		if (result.error) return { stdout: '', stderr: '', error: result.error };
 
 		try {
-			// Extract JSON from response (clean up markdown if any)
 			const jsonStr = result.content.replace(/```json|```/g, '').trim();
 			return JSON.parse(jsonStr);
 		} catch (_err) {
-			console.error('Failed to parse AI execution output:', result.content);
-			return {
-				stdout: result.content, // Fallback to raw content as stdout
-				stderr: '',
-				error: 'AI returned non-JSON output, but provided simulation text.'
-			};
+			return { stdout: result.content, stderr: '', error: 'Parse error' };
 		}
 	}
 };
