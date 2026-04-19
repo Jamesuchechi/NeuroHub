@@ -13,6 +13,11 @@ export interface WorkspaceContext {
 	pinnedSnippets: { title: string; code: string }[];
 }
 
+export interface SemanticContextResult {
+	contextString: string;
+	references: { id: string; title: string }[];
+}
+
 interface MessageRecord {
 	content: string;
 	profiles: { username: string } | null;
@@ -26,6 +31,13 @@ interface NoteRecord {
 interface SnippetRecord {
 	title: string;
 	code: string;
+}
+
+interface SemanticNoteResult {
+	id: string;
+	title: string;
+	content_text: string;
+	similarity: number;
 }
 
 export const contextBuilder = {
@@ -74,6 +86,61 @@ export const contextBuilder = {
 	},
 
 	/**
+	 * Performs a semantic similarity search and returns the formatted context
+	 * STRING only (backward compatible). For source references use
+	 * findSemanticContextWithRefs instead.
+	 */
+	async findSemanticContext(query: string, workspaceId: string): Promise<string> {
+		const result = await this.findSemanticContextWithRefs(query, workspaceId);
+		return result.contextString;
+	},
+
+	async findSemanticContextWithRefs(
+		query: string,
+		workspaceId: string
+	): Promise<SemanticContextResult> {
+		const empty: SemanticContextResult = { contextString: '', references: [] };
+		if (!query.trim()) return empty;
+
+		try {
+			// 1. Embed the user's query
+			const embedRes = await fetch('/api/ai/embed', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ text: query.slice(0, 2000) })
+			});
+
+			if (!embedRes.ok) return empty;
+			const { embedding } = await embedRes.json();
+			if (!embedding) return empty;
+
+			// 2. Cosine similarity search against the notes vector index
+			const { data, error } = await supabase.rpc('match_notes', {
+				query_embedding: embedding,
+				match_threshold: 0.45,
+				match_count: 3,
+				p_workspace_id: workspaceId
+			});
+
+			if (error || !data || (data as SemanticNoteResult[]).length === 0) return empty;
+
+			const notes = data as SemanticNoteResult[];
+			const references = notes.map((n) => ({ id: n.id, title: n.title }));
+
+			// 3. Format for system prompt injection
+			let contextString = '## Semantically Relevant Workspace Notes\n\n';
+			for (const note of notes) {
+				const snippet = (note.content_text || '').slice(0, 700);
+				contextString += `### ${note.title}\n${snippet}${snippet.length >= 700 ? '…' : ''}\n\n`;
+			}
+
+			return { contextString, references };
+		} catch {
+			return empty;
+		}
+	},
+
+	/**
 	 * Formats workspace context into a single string for the system prompt.
 	 */
 	formatContextToString(context: WorkspaceContext): string {
@@ -97,12 +164,10 @@ export const contextBuilder = {
 			});
 		}
 
-		// Rough estimate: truncate to ~8000 words (which is roughly 10k tokens)
 		const words = prompt.split(/\s+/);
 		if (words.length > 8000) {
 			return words.slice(0, 8000).join(' ') + '... [Context Truncated]';
 		}
-
 		return prompt;
 	}
 };

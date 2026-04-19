@@ -52,7 +52,19 @@ export const POST: RequestHandler = async ({ request, locals: { supabase, safeGe
 		return json({ error: 'Rate limit exceeded. Please wait a moment.' }, { status: 429 });
 	}
 
-	const { prompt, profile = 'fast', system_prompt, workspace_id } = await request.json();
+	const {
+		prompt,
+		profile = 'fast',
+		system_prompt,
+		workspace_id,
+		context_string
+	} = await request.json();
+
+	// Build a rich system prompt — inject workspace RAG context when available
+	const baseSystem = system_prompt || 'You are NeuroAI, a high-performance developer assistant.';
+	const fullSystem = context_string
+		? `${baseSystem}\n\n## Workspace Context\n${context_string}`
+		: baseSystem;
 
 	// 2. Select Provider stack (Primary + Fallbacks)
 	const modelStack = [];
@@ -81,7 +93,7 @@ export const POST: RequestHandler = async ({ request, locals: { supabase, safeGe
 			const result = await streamText({
 				model,
 				maxRetries: 0, // Fail fast to our own fallback loop
-				system: system_prompt || 'You are NeuroAI, a high-performance developer assistant.',
+				system: fullSystem,
 				messages: [{ role: 'user', content: prompt }],
 				onFinish: async (event) => {
 					try {

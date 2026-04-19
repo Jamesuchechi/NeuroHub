@@ -9,12 +9,15 @@ export interface AIResponse {
 export const aiService = {
 	/**
 	 * Securely calls the internal SvelteKit AI Chat API with streaming support.
+	 * Accepts an optional contextString (RAG output) and AbortSignal.
 	 */
 	async *streamChat(
 		prompt: string,
 		profile: AIModel = 'fast',
 		systemPrompt?: string,
-		workspaceId?: string
+		workspaceId?: string,
+		contextString?: string,
+		signal?: AbortSignal
 	) {
 		const response = await fetch('/api/ai/chat', {
 			method: 'POST',
@@ -25,8 +28,10 @@ export const aiService = {
 				prompt,
 				profile,
 				system_prompt: systemPrompt,
-				workspace_id: workspaceId
-			})
+				workspace_id: workspaceId,
+				context_string: contextString
+			}),
+			signal
 		});
 
 		if (!response.ok) {

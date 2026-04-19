@@ -13,9 +13,10 @@ export const POST: RequestHandler = async ({ request, locals: { safeGetSession }
 	}
 
 	try {
-		// We use OpenRouter or direct OpenAI for embeddings
-		// OpenRouter often proxies OpenAI embedding models
-		const response = await fetch('https://api.openai.com/v1/embeddings', {
+		// OpenRouter proxies OpenAI-compatible embedding models via its own endpoint.
+		// Using the OpenRouter key against api.openai.com won't work — it must go to
+		// openrouter.ai/api/v1/embeddings.
+		const response = await fetch('https://openrouter.ai/api/v1/embeddings', {
 			method: 'POST',
 			headers: {
 				Authorization: `Bearer ${OPENROUTER_API_KEY}`,
@@ -23,7 +24,7 @@ export const POST: RequestHandler = async ({ request, locals: { safeGetSession }
 			},
 			body: JSON.stringify({
 				input: text,
-				model: 'text-embedding-3-small'
+				model: 'openai/text-embedding-3-small'
 			})
 		});
 
