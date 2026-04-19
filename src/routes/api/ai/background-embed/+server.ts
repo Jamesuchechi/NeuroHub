@@ -4,20 +4,19 @@ import { env } from '$env/dynamic/private';
 import { createClient } from '@supabase/supabase-js';
 import { config } from '$lib/config';
 
-// Use service role client for background updates to bypass RLS if needed,
-// but we'll use a dedicated client to be safe.
-const supabaseAdmin = createClient(
-	config.public.supabaseUrl,
-	process.env.SUPABASE_SERVICE_ROLE_KEY || '', // Need service role for background updates
-	{
-		auth: {
-			autoRefreshToken: false,
-			persistSession: false
-		}
-	}
-);
-
 export const POST: RequestHandler = async ({ request }) => {
+	// Initialize admin client inside the handler to avoid module-load time issues during build
+	const supabaseAdmin = createClient(
+		config.public.supabaseUrl,
+		process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+		{
+			auth: {
+				autoRefreshToken: false,
+				persistSession: false
+			}
+		}
+	);
+
 	// 1. Verify Webhook Secret
 	const authHeader = request.headers.get('Authorization');
 	if (authHeader !== `Bearer ${env.AI_WEBHOOK_SECRET}`) {

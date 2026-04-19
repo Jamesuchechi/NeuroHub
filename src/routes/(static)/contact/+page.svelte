@@ -33,8 +33,13 @@
 				<div>
 					<h3 class="mb-2 text-xs font-black tracking-widest text-zinc-600 uppercase">Social</h3>
 					<div class="mt-2 flex gap-4">
-						<a href="#" class="font-bold text-zinc-400 hover:text-white">Twitter</a>
-						<a href="#" class="font-bold text-zinc-400 hover:text-white">GitHub</a>
+						<a href="https://x.com/neurohub" class="font-bold text-zinc-400 hover:text-white"
+							>Twitter</a
+						>
+						<a
+							href="https://github.com/Jamesuchechi/NeuroHub"
+							class="font-bold text-zinc-400 hover:text-white">GitHub</a
+						>
 					</div>
 				</div>
 			</div>

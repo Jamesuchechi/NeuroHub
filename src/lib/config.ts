@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { building } from '$app/environment';
 import {
 	PUBLIC_SUPABASE_URL,
 	PUBLIC_SUPABASE_ANON_KEY,
@@ -19,16 +20,12 @@ const envSchema = z.object({
 	})
 });
 
-/**
- * Parsed and validated application configuration.
- * Safe to import in both client and server code.
- */
 export const config = envSchema.parse({
 	public: {
-		supabaseUrl: PUBLIC_SUPABASE_URL,
-		supabaseAnonKey: PUBLIC_SUPABASE_ANON_KEY,
-		cloudinaryCloudName: PUBLIC_CLOUDINARY_CLOUD_NAME,
-		siteUrl: PUBLIC_SITE_URL
+		supabaseUrl: PUBLIC_SUPABASE_URL || (building ? 'https://build-dummy.supabase.co' : ''),
+		supabaseAnonKey: PUBLIC_SUPABASE_ANON_KEY || (building ? 'build-dummy-key' : ''),
+		cloudinaryCloudName: PUBLIC_CLOUDINARY_CLOUD_NAME || (building ? 'build-dummy' : ''),
+		siteUrl: PUBLIC_SITE_URL || (building ? 'https://build-dummy.dev' : '')
 	}
 });
 
