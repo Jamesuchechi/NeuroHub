@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { EditorView, basicSetup } from 'codemirror';
-	import { EditorState } from '@codemirror/state';
+	import { EditorState, Compartment } from '@codemirror/state';
 	import { oneDark } from '@codemirror/theme-one-dark';
 
 	import { javascript } from '@codemirror/lang-javascript';
@@ -50,6 +50,9 @@
 
 	let editorDiv: HTMLDivElement;
 	let view: EditorView;
+	let languageCompartment = new Compartment();
+	let readonlyCompartment = new Compartment();
+	let themeCompartment = new Compartment();
 
 	function getLangExtension(lang: Language) {
 		if (lang === 'python') return python();
@@ -87,10 +90,9 @@
 		});
 	}
 
-	function createView(currentCode: string, currentLang: Language, isReadonly: boolean) {
+	function createView(initialCode: string, initialLang: Language, isReadonly: boolean) {
 		if (view) view.destroy();
 
-		// Check dark mode
 		let isDark = false;
 		if (typeof document !== 'undefined') {
 			isDark = document.documentElement.classList.contains('dark');
@@ -98,29 +100,29 @@
 
 		const extensions = [
 			basicSetup,
-			getLangExtension(currentLang),
+			languageCompartment.of(getLangExtension(initialLang)),
+			readonlyCompartment.of(EditorState.readOnly.of(isReadonly)),
+			themeCompartment.of(isDark ? oneDark : []),
 			EditorView.updateListener.of((update) => {
 				if (update.docChanged) {
 					const newDoc = update.state.doc.toString();
-					code = newDoc;
-					onchange?.(newDoc);
+					// Prevent redundant updates that might move cursor or lose focus
+					if (newDoc !== code) {
+						untrack(() => {
+							code = newDoc;
+							onchange?.(newDoc);
+						});
+					}
 				}
+			}),
+			EditorView.theme({
+				'&': { minHeight },
+				'.cm-scroller': { overflow: 'auto' }
 			})
 		];
 
-		if (isDark) {
-			extensions.push(oneDark);
-		}
-
-		extensions.push(EditorState.readOnly.of(isReadonly));
-		extensions.push(
-			EditorView.theme({
-				'&': { minHeight }
-			})
-		);
-
 		const state = EditorState.create({
-			doc: currentCode,
+			doc: initialCode,
 			extensions
 		});
 
@@ -135,7 +137,12 @@
 
 		// Observe theme changes
 		const observer = new MutationObserver(() => {
-			createView(code, language, readonly);
+			if (view) {
+				const isDark = document.documentElement.classList.contains('dark');
+				view.dispatch({
+					effects: themeCompartment.reconfigure(isDark ? oneDark : [])
+				});
+			}
 		});
 		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
@@ -146,14 +153,25 @@
 	});
 
 	$effect(() => {
-		// Re-create view when language or readonly change
+		// Update language extension without destroying the view
 		if (view) {
-			createView(code, language, readonly);
+			view.dispatch({
+				effects: languageCompartment.reconfigure(getLangExtension(language))
+			});
 		}
 	});
 
 	$effect(() => {
-		// If code is updated externally
+		// Update readonly state without destroying the view
+		if (view) {
+			view.dispatch({
+				effects: readonlyCompartment.reconfigure(EditorState.readOnly.of(readonly))
+			});
+		}
+	});
+
+	$effect(() => {
+		// If code is updated externally, sync it
 		if (view && code !== view.state.doc.toString()) {
 			view.dispatch({
 				changes: { from: 0, to: view.state.doc.length, insert: code }

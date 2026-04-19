@@ -2,7 +2,7 @@ import { writable } from 'svelte/store';
 import type { Language, SnippetView, SnippetSort } from '$lib/types/devtools';
 
 // Active tab
-export type DevTab = 'snippets' | 'sandbox' | 'api' | 'json';
+export type DevTab = 'snippets' | 'sandbox' | 'api' | 'json' | 'toolkit';
 export const activeTab = writable<DevTab>('snippets');
 
 // Snippets browser state
@@ -27,6 +27,39 @@ export const openSnippetId = writable<string | null>(null);
 
 // Star state (local optimistic)
 export const starredIds = writable<Set<string>>(new Set());
+
+// Tab Management
+export const openSnippetTabs = writable<string[]>([]);
+export const activeSnippetId = writable<string | null>(null);
+
+// Sidebar Layout
+export const devSidebarWidth = writable<number>(250);
+export const devSidebarCollapsed = writable<boolean>(false);
+export const sandboxPanelWidth = writable<number>(50);
+
+export function openInTab(id: string) {
+	openSnippetTabs.update((tabs) => {
+		if (!tabs.includes(id)) {
+			return [...tabs, id];
+		}
+		return tabs;
+	});
+	activeSnippetId.set(id);
+	activeTab.set('snippets');
+}
+
+export function closeTab(id: string) {
+	openSnippetTabs.update((tabs) => {
+		const next = tabs.filter((t) => t !== id);
+		activeSnippetId.update((current) => {
+			if (current === id) {
+				return next[next.length - 1] || null;
+			}
+			return current;
+		});
+		return next;
+	});
+}
 
 export function toggleStarLocal(id: string) {
 	starredIds.update((set) => {
@@ -69,4 +102,5 @@ export function openCreateSnippet(data: {
 	pendingSnippet.set(data);
 	activeTab.set('snippets');
 	openSnippetId.set('new'); // Trigger modal opening in create mode
+	activeSnippetId.set('new'); // Also set as active tab if using tabbed view
 }

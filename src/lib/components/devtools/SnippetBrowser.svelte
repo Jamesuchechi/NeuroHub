@@ -1,137 +1,76 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import {
-		snippetFilters,
-		starredIds,
-		openSnippetId,
-		toggleStarLocal
-	} from '$lib/stores/devToolsStore';
+	import { activeSnippetId, starredIds, toggleStarLocal } from '$lib/stores/devToolsStore';
 	import { snippetService } from '$lib/services/snippets';
-	import SnippetCard from './SnippetCard.svelte';
-	import SnippetModal from './SnippetModal.svelte';
 	import { authStore } from '$lib/stores/authStore';
 	import { toast } from '$lib/stores/toastStore';
 	import type { SnippetsTable } from '$lib/types/db';
+	import type { Language } from '$lib/types/devtools';
+	import { fade } from 'svelte/transition';
 
-	let { workspaceId, initialSnippets = [] } = $props<{
-		workspaceId: string;
-		initialSnippets?: (SnippetsTable['Row'] & {
-			author?: { username: string | null; avatar_url: string | null };
-			parent?: { id: string; title: string };
-		})[];
-	}>();
+	import SnippetTabs from './SnippetTabs.svelte';
+	import SnippetEditor from './SnippetEditor.svelte';
+	import LanguageSelector from './LanguageSelector.svelte';
 
-	let snippets = $state<
-		(SnippetsTable['Row'] & {
-			author?: { username: string | null; avatar_url: string | null };
-			parent?: { id: string; title: string };
-		})[]
-	>([]);
-
-	$effect(() => {
-		snippets = [...initialSnippets];
-	});
-	let loading = $state(false);
-	let hasMore = $state(true);
-	let searchTimeout: ReturnType<typeof setTimeout> | undefined;
-
-	let modalMode = $state<'create' | 'edit' | 'view'>('view');
-	let editingSnippet = $state<
-		| (Partial<SnippetsTable['Row']> & {
-				author?: { username: string | null; avatar_url: string | null };
-				parent?: { id: string; title: string };
-		  })
-		| null
-	>(null);
+	let { workspaceId } = $props<{ workspaceId: string }>();
 
 	let user = $derived($authStore.user);
 
-	// Derive active snippet from ID
-	let activeSnippet = $derived(
-		$openSnippetId ? snippets.find((s) => s.id === $openSnippetId) : null
-	);
+	let snippetData = $state<SnippetsTable['Row'] | null>(null);
+	let loading = $state(false);
+	let isSaving = $state(false);
 
-	async function loadSnippets(reset = false) {
+	// Form state for active snippet
+	let title = $state('');
+	let description = $state('');
+	let code = $state('');
+	let language = $state<Language>('javascript');
+	let tags = $state<string[]>([]);
+	let visibility = $state<'workspace' | 'public'>('workspace');
+
+	async function loadActiveSnippet(id: string) {
+		if (id === 'new') {
+			snippetData = null;
+			title = 'New Snippet';
+			description = '';
+			code = '';
+			language = 'javascript';
+			tags = [];
+			visibility = 'workspace';
+			return;
+		}
+
 		loading = true;
 		try {
-			const cursor = reset ? undefined : snippets[snippets.length - 1]?.created_at;
-			const res = await snippetService.list(workspaceId, {
-				language: $snippetFilters.language || undefined,
-				tags: $snippetFilters.tags.length > 0 ? $snippetFilters.tags : undefined,
-				authorId: $snippetFilters.authorId || undefined,
-				search: $snippetFilters.search || undefined,
-				sort: $snippetFilters.sort,
-				limit: 20,
-				cursor
-			});
+			const res = await snippetService.getById(id);
 			if (res.data) {
-				snippets = reset ? res.data : [...snippets, ...res.data];
-				hasMore = res.data.length === 20;
+				snippetData = res.data;
+				title = res.data.title;
+				description = res.data.description || '';
+				code = res.data.code;
+				language = res.data.language as Language;
+				tags = res.data.tags || [];
+				visibility = res.data.visibility as 'workspace' | 'public';
 			}
 		} catch {
-			toast.show('Failed to load snippets', 'error');
+			toast.show('Failed to load snippet', 'error');
 		}
 		loading = false;
 	}
 
-	function handleSearchInput(e: Event) {
-		const target = e.target as HTMLInputElement;
-		$snippetFilters.search = target.value;
-		clearTimeout(searchTimeout);
-		searchTimeout = setTimeout(() => {
-			loadSnippets(true);
-		}, 300);
-	}
-
-	async function handleStar(id: string) {
+	async function handleSave() {
 		if (!user) return;
-		toggleStarLocal(id);
-
-		// Update local count optimistically
-		snippets = snippets.map((s) => {
-			if (s.id === id) {
-				return {
-					...s,
-					star_count: $starredIds.has(id) ? s.star_count + 1 : Math.max(0, s.star_count - 1)
-				};
-			}
-			return s;
-		});
-
+		isSaving = true;
 		try {
-			await snippetService.toggleStar(id, user.id);
-		} catch {
-			// Revert optimistic
-			toggleStarLocal(id);
-			toast.show('Failed to star snippet', 'error');
-		}
-	}
+			const data = {
+				title,
+				description,
+				code,
+				language,
+				tags,
+				visibility
+			};
 
-	async function handleFork(id: string) {
-		if (!user) return;
-		try {
-			const res = await snippetService.fork(id, user.id, workspaceId);
-			if (res.data) {
-				toast.show('Snippet forked successfully!', 'success');
-				// Refresh or prepend
-				snippets = [res.data, ...snippets];
-			}
-		} catch {
-			toast.show('Failed to fork snippet', 'error');
-		}
-	}
-
-	function handleCopy(code: string) {
-		navigator.clipboard.writeText(code);
-		toast.show('Copied to clipboard', 'success');
-	}
-
-	async function handleSaveModal(
-		data: Omit<SnippetsTable['Insert'], 'workspace_id' | 'author_id'>
-	) {
-		if (!user) return;
-		try {
-			if (modalMode === 'create') {
+			if ($activeSnippetId === 'new') {
 				const res = await snippetService.create({
 					workspace_id: workspaceId,
 					author_id: user.id,
@@ -139,226 +78,256 @@
 				});
 				if (res.data) {
 					toast.show('Snippet created', 'success');
-					snippets = [res.data, ...snippets];
+					// Replace 'new' tab with the actual ID
+					import('$lib/stores/devToolsStore').then(({ openInTab, closeTab }) => {
+						closeTab('new');
+						openInTab(res.data.id);
+					});
 				}
-			} else if (modalMode === 'edit' && editingSnippet?.id) {
-				const snippetId = editingSnippet.id;
-				const res = await snippetService.update(snippetId, data);
+			} else if ($activeSnippetId) {
+				const res = await snippetService.update($activeSnippetId, data);
 				if (res.data) {
 					toast.show('Snippet updated', 'success');
-					snippets = snippets.map((s) => (s.id === snippetId ? { ...s, ...res.data } : s));
+					snippetData = { ...snippetData, ...res.data };
 				}
 			}
-			$openSnippetId = null;
-			editingSnippet = null;
 		} catch {
-			toast.show('Failed to save snippet', 'error');
+			toast.show('Failed to save changes', 'error');
+		}
+		isSaving = false;
+	}
+
+	async function handleStar() {
+		if (!$activeSnippetId || $activeSnippetId === 'new' || !user) return;
+		toggleStarLocal($activeSnippetId);
+		try {
+			await snippetService.toggleStar($activeSnippetId, user.id);
+		} catch {
+			toggleStarLocal($activeSnippetId);
+			toast.show('Failed to star snippet', 'error');
 		}
 	}
-
-	function openCreateModal() {
-		editingSnippet = {
-			title: '',
-			code: '',
-			language: 'javascript',
-			description: '',
-			tags: [],
-			visibility: 'workspace'
-		};
-		modalMode = 'create';
-		$openSnippetId = 'new';
-	}
-
-	function openViewModal(snippet: SnippetsTable['Row']) {
-		modalMode = 'view';
-		$openSnippetId = snippet.id;
-	}
-
-	// Handle scroll for infinite load
-	function handleScroll(e: Event) {
-		const el = e.target as HTMLElement;
-		if (el.scrollHeight - el.scrollTop - el.clientHeight < 200 && !loading && hasMore) {
-			loadSnippets(false);
-		}
-	}
-
-	onMount(() => {
-		if (user) {
-			snippetService.getStarredIds(user.id, workspaceId).then((ids) => {
-				$starredIds = new Set(ids);
-			});
-		}
-	});
 
 	$effect(() => {
-		// Re-fetch when sort changes
-		const _sort = $snippetFilters.sort;
-		if (typeof window !== 'undefined') {
-			loadSnippets(true);
+		if ($activeSnippetId) {
+			loadActiveSnippet($activeSnippetId);
+		} else {
+			snippetData = null;
 		}
 	});
+
+	function handleCopy() {
+		navigator.clipboard.writeText(code);
+		toast.show('Code copied', 'success');
+	}
 </script>
 
-<div class="flex h-full flex-col pt-4">
-	<!-- Top Bar -->
-	<div class="mb-4 flex shrink-0 items-center justify-between gap-4 px-6">
-		<div class="relative max-w-md flex-1">
-			<svg
-				class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-				></path></svg
-			>
-			<input
-				type="text"
-				class="bg-muted/50 border-border focus:ring-primary w-full rounded-lg border py-2 pr-4 pl-9 text-sm focus:ring-1 focus:outline-none"
-				placeholder="Search snippets..."
-				value={$snippetFilters.search}
-				oninput={handleSearchInput}
-			/>
-		</div>
+<div class="flex h-full flex-col overflow-hidden bg-surface">
+	<SnippetTabs />
 
-		<div class="flex items-center gap-2">
-			<select
-				bind:value={$snippetFilters.sort}
-				class="bg-card border-border focus:border-primary rounded-lg border px-3 py-2 text-sm outline-none"
-			>
-				<option value="recent">Recently Added</option>
-				<option value="stars">Most Starred</option>
-				<option value="forks">Most Forked</option>
-			</select>
+	<div class="flex-1 overflow-hidden">
+		{#if $activeSnippetId}
+			<div class="flex h-full flex-col overflow-hidden">
+				<!-- Header / Metadata Area -->
+				<div class="no-print border-b border-stroke bg-surface-dim/30 px-6 py-4">
+					<div class="flex items-start justify-between gap-4">
+						<div class="flex flex-1 flex-col gap-2">
+							<input
+								bind:value={title}
+								class="w-full bg-transparent text-xl font-bold text-content outline-none placeholder:text-content-dim/30"
+								placeholder="Snippet Title"
+							/>
+							<input
+								bind:value={description}
+								class="w-full bg-transparent text-sm text-content-dim outline-none placeholder:text-content-dim/20"
+								placeholder="Add a description..."
+							/>
+						</div>
 
-			<div class="bg-muted/50 border-border flex rounded-lg border p-1">
-				<button
-					class="rounded p-1.5 {$snippetFilters.view === 'grid'
-						? 'bg-background text-foreground shadow-sm'
-						: 'text-muted-foreground hover:text-foreground'}"
-					onclick={() => ($snippetFilters.view = 'grid')}
-					aria-label="Grid view"
-				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-						></path></svg
-					>
-				</button>
-				<button
-					class="rounded p-1.5 {$snippetFilters.view === 'list'
-						? 'bg-background text-foreground shadow-sm'
-						: 'text-muted-foreground hover:text-foreground'}"
-					onclick={() => ($snippetFilters.view = 'list')}
-					aria-label="List view"
-				>
-					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M4 6h16M4 12h16M4 18h16"
-						></path></svg
-					>
-				</button>
-			</div>
+						<div class="flex items-center gap-2">
+							<button
+								class="flex h-9 items-center gap-2 rounded-lg border border-stroke bg-surface px-4 text-sm font-medium text-content-dim transition-colors hover:bg-surface-dim hover:text-content"
+								onclick={handleCopy}
+							>
+								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-1 4h.01M9 16h.01"
+									/>
+								</svg>
+								Copy
+							</button>
 
-			<button
-				class="bg-primary text-primary-foreground hover:bg-primary/90 flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition"
-				onclick={openCreateModal}
-			>
-				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-					><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"
-					></path></svg
-				>
-				New Snippet
-			</button>
-		</div>
-	</div>
+							<button
+								class="flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-bold text-white transition-all hover:bg-orange-600 disabled:opacity-50"
+								onclick={handleSave}
+								disabled={isSaving}
+							>
+								{#if isSaving}
+									<div
+										class="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"
+									></div>
+								{:else}
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+										/>
+									</svg>
+								{/if}
+								Save
+							</button>
+						</div>
+					</div>
 
-	<!-- Content -->
-	<div class="flex-1 overflow-y-auto px-6 pb-6" onscroll={handleScroll}>
-		{#if snippets.length === 0 && !loading}
-			<div
-				class="text-muted-foreground flex h-full flex-col items-center justify-center py-20 text-center"
-			>
-				<svg class="mb-4 h-16 w-16 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-					/></svg
-				>
-				<h3 class="text-foreground mb-1 text-lg font-semibold">No snippets found</h3>
-				<p class="mb-6 max-w-sm text-sm">
-					Create your first code snippet to start building your team's knowledge library.
-				</p>
-				<button
-					class="border-border bg-card hover:bg-muted text-foreground rounded-lg border px-4 py-2 text-sm font-medium shadow-sm transition"
-					onclick={openCreateModal}
-				>
-					Create Snippet
-				</button>
+					<div class="mt-4 flex items-center gap-6 border-t border-stroke pt-4">
+						<div class="flex items-center gap-2">
+							<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase"
+								>Language</span
+							>
+							<LanguageSelector bind:value={language} />
+						</div>
+
+						<div class="flex items-center gap-2">
+							<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase"
+								>Visibility</span
+							>
+							<select
+								bind:value={visibility}
+								class="bg-transparent text-xs font-medium text-content-dim outline-none"
+							>
+								<option value="workspace">Workspace</option>
+								<option value="public">Public</option>
+							</select>
+						</div>
+
+						{#if $activeSnippetId !== 'new'}
+							<button
+								class="ml-auto flex items-center gap-1.5 text-xs transition-colors {$starredIds.has(
+									$activeSnippetId
+								)
+									? 'text-orange-500'
+									: 'text-content-dim hover:text-content'}"
+								onclick={handleStar}
+							>
+								<svg
+									class="h-4 w-4"
+									fill={$starredIds.has($activeSnippetId) ? 'currentColor' : 'none'}
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+									/>
+								</svg>
+								{$starredIds.has($activeSnippetId) ? 'Starred' : 'Star'}
+							</button>
+						{/if}
+					</div>
+				</div>
+
+				<!-- Editor Area -->
+				<div class="flex-1 overflow-hidden bg-surface">
+					{#if loading}
+						<div class="flex h-full items-center justify-center">
+							<div
+								class="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent"
+							></div>
+						</div>
+					{:else}
+						<SnippetEditor
+							bind:code
+							{language}
+							class="h-full rounded-none border-none"
+							minHeight="100%"
+						/>
+					{/if}
+				</div>
 			</div>
 		{:else}
-			<div
-				class={$snippetFilters.view === 'grid'
-					? 'grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
-					: 'flex flex-col gap-3'}
-			>
-				{#each snippets as snippet (snippet.id)}
-					<SnippetCard
-						{snippet}
-						isStarred={$starredIds.has(snippet.id)}
-						view={$snippetFilters.view}
-						onclick={() => openViewModal(snippet)}
-						oncopy={handleCopy}
-						onfork={handleFork}
-						onstar={handleStar}
-					/>
-				{/each}
+			<!-- Empty State / Welcome Screen -->
+			<div class="flex h-full flex-col items-center justify-center p-12 text-center" in:fade>
+				<div
+					class="mb-8 flex h-24 w-24 items-center justify-center rounded-3xl bg-surface-dim shadow-2xl"
+				>
+					<svg
+						class="h-12 w-12 text-orange-500"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1"
+							d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+						/>
+					</svg>
+				</div>
+				<h2 class="mb-2 text-2xl font-bold text-content">DevHub Workbench</h2>
+				<p class="mb-8 max-w-sm text-content-dim">
+					Select a snippet from the sidebar or press <kbd
+						class="mx-1 rounded bg-surface-dim px-1.5 py-0.5 font-mono text-content-dim">Cmd+K</kbd
+					> to find tools and resources.
+				</p>
 
-				{#if loading}
-					{#each Array(4) as _, i (i)}
-						<div
-							class="border-border bg-card flex h-40 animate-pulse flex-col gap-3 rounded-xl border p-4"
-						>
-							<div class="bg-muted h-5 w-2/3 rounded"></div>
-							<div class="bg-muted h-4 w-full rounded"></div>
-							<div class="bg-muted h-4 w-4/5 rounded"></div>
-							<div class="bg-muted mt-auto h-6 w-1/3 rounded"></div>
+				<div class="grid w-full max-w-lg grid-cols-2 gap-4">
+					<button
+						class="flex flex-col items-start gap-3 rounded-xl border border-stroke bg-surface-dim/50 p-6 text-left transition-all hover:border-stroke hover:bg-surface-dim"
+						onclick={() =>
+							import('$lib/stores/devToolsStore').then(({ openInTab }) => openInTab('new'))}
+					>
+						<div class="rounded-lg bg-orange-500/10 p-2 text-orange-500">
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 4v16m8-8H4"
+								/>
+							</svg>
 						</div>
-					{/each}
-				{/if}
+						<div>
+							<p class="font-bold text-content">New Snippet</p>
+							<p class="text-xs text-content-dim">Create a reusable code block</p>
+						</div>
+					</button>
+
+					<button
+						class="flex flex-col items-start gap-3 rounded-xl border border-stroke bg-surface-dim/50 p-6 text-left transition-all hover:border-stroke hover:bg-surface-dim"
+						onclick={() =>
+							import('$lib/stores/devToolsStore').then(({ activeTab }) => activeTab.set('api'))}
+					>
+						<div class="rounded-lg bg-blue-500/10 p-2 text-blue-500">
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M13 10V3L4 14h7v7l9-11h-7z"
+								/>
+							</svg>
+						</div>
+						<div>
+							<p class="font-bold text-content">API Tester</p>
+							<p class="text-xs text-content-dim">Debug and test HTTP requests</p>
+						</div>
+					</button>
+				</div>
 			</div>
 		{/if}
 	</div>
 </div>
 
-{#if $openSnippetId}
-	<SnippetModal
-		mode={modalMode}
-		snippet={activeSnippet || editingSnippet || undefined}
-		currentUserId={user?.id}
-		isStarred={$starredIds.has($openSnippetId)}
-		onclose={() => {
-			$openSnippetId = null;
-			editingSnippet = null;
-		}}
-		onsave={handleSaveModal}
-		onedit={() => {
-			editingSnippet = { ...activeSnippet };
-			modalMode = 'edit';
-		}}
-		oncopy={handleCopy}
-		onfork={handleFork}
-		onstar={handleStar}
-	/>
-{/if}
+<style>
+	:global(.cm-editor) {
+		font-size: 14px !important;
+	}
+</style>

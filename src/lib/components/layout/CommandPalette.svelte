@@ -75,6 +75,27 @@
 						description: 'Reusable code blocks'
 					},
 					{
+						name: 'API Workbench',
+						type: 'feature',
+						href: `/workspace/${currentWorkspace.slug}/snippets?tab=api`,
+						icon: 'zap',
+						description: 'Test and debug APIs'
+					},
+					{
+						name: 'Code Sandbox',
+						type: 'feature',
+						href: `/workspace/${currentWorkspace.slug}/snippets?tab=sandbox`,
+						icon: 'play',
+						description: 'Interactive code scratchpad'
+					},
+					{
+						name: 'JSON Utility',
+						type: 'feature',
+						href: `/workspace/${currentWorkspace.slug}/snippets?tab=json`,
+						icon: 'database',
+						description: 'Format and inspect JSON'
+					},
+					{
 						name: 'Workspace Settings',
 						type: 'page',
 						href: `/workspace/${currentWorkspace.slug}/settings`,
@@ -139,7 +160,20 @@
 			if (item.name === 'Invite Members') uiStore.setInviteModalOpen(true);
 			close();
 		} else {
-			goto(resolve(item.href as unknown as '/'));
+			const targetHref = resolve(item.href as unknown as '/');
+
+			// If it's a devtool tab, we might want to update the store directly if already on page
+			if (item.href.includes('?tab=')) {
+				const url = new URL(item.href, window.location.origin);
+				const tab = url.searchParams.get('tab');
+				if (tab) {
+					import('$lib/stores/devToolsStore').then(({ activeTab }) => {
+						activeTab.set(tab as 'snippets' | 'api' | 'sandbox' | 'json');
+					});
+				}
+			}
+
+			goto(targetHref);
 			close();
 		}
 	}
@@ -173,7 +207,11 @@
 		book: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
 		code: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
 		settings:
-			'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
+			'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
+		zap: 'M13 10V3L4 14h7v7l9-11h-7z',
+		play: 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z',
+		database:
+			'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4'
 	};
 </script>
 
@@ -234,7 +272,7 @@
 								onmouseenter={() => (selectedIndex = i)}
 							>
 								<div
-									class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400 transition-colors group-hover:bg-zinc-800 group-hover:text-brand-orange"
+									class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400 transition-colors group-hover:bg-zinc-800 group-hover:text-brand-orange"
 								>
 									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path

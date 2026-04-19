@@ -9,6 +9,7 @@
 		fixedSide?: 'left' | 'right';
 		onResize?: (size: number) => void;
 		disabled?: boolean;
+		sizeUnit?: 'px' | '%';
 		left: Snippet;
 		right: Snippet;
 	}
@@ -21,6 +22,7 @@
 		fixedSide = 'left',
 		onResize,
 		disabled = false,
+		sizeUnit = 'px',
 		left,
 		right
 	}: Props = $props();
@@ -51,9 +53,11 @@
 		let newSize: number;
 
 		if (type === 'horizontal') {
-			newSize = fixedSide === 'left' ? e.clientX - rect.left : rect.right - e.clientX;
+			const pxSize = fixedSide === 'left' ? e.clientX - rect.left : rect.right - e.clientX;
+			newSize = sizeUnit === '%' ? (pxSize / rect.width) * 100 : pxSize;
 		} else {
-			newSize = fixedSide === 'left' ? e.clientY - rect.top : rect.bottom - e.clientY;
+			const pxSize = fixedSide === 'left' ? e.clientY - rect.top : rect.bottom - e.clientY;
+			newSize = sizeUnit === '%' ? (pxSize / rect.height) * 100 : pxSize;
 		}
 
 		if (newSize >= minSize && newSize <= maxSize) {
@@ -71,7 +75,7 @@
 		};
 	});
 	function handleKeydown(e: KeyboardEvent) {
-		const step = 20;
+		const step = sizeUnit === '%' ? 2 : 20;
 		if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
 			const newSize = Math.max(minSize, currentSize - step);
 			currentSize = newSize;
@@ -93,8 +97,8 @@
 	<div
 		style={fixedSide === 'left'
 			? type === 'horizontal'
-				? `width: ${currentSize}px`
-				: `height: ${currentSize}px`
+				? `width: ${currentSize}${sizeUnit}`
+				: `height: ${currentSize}${sizeUnit}`
 			: 'flex: 1'}
 		class="split-pane-panel relative h-full min-h-0 min-w-0 overflow-hidden"
 	>
@@ -125,8 +129,8 @@
 	<div
 		style={fixedSide === 'right'
 			? type === 'horizontal'
-				? `width: ${currentSize}px`
-				: `height: ${currentSize}px`
+				? `width: ${currentSize}${sizeUnit}`
+				: `height: ${currentSize}${sizeUnit}`
 			: 'flex: 1'}
 		class="split-pane-panel h-full min-h-0 min-w-0 overflow-hidden"
 	>

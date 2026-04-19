@@ -1,21 +1,37 @@
 <script lang="ts">
 	import { openCreateSnippet } from '$lib/stores/devToolsStore';
 	import { toast } from '$lib/stores/toastStore';
+	import { jsonStore } from '$lib/stores/jsonStore';
+	import { generateTypeScript } from '$lib/utils/jsonUtils';
 	import { fade, slide } from 'svelte/transition';
+	import { onMount } from 'svelte';
 	import JsonViewer from '../ui/JsonViewer.svelte';
 
 	let input = $state('');
 	let output = $state<unknown>(null);
 	let error = $state<string | null>(null);
 	let mode = $state<'format' | 'minify'>('format');
+	let searchQuery = $state('');
+	let treeKey = $state(0); // For forcing re-render/collapse
+
+	onMount(() => {
+		const handler = (e: Event) => {
+			const customEvent = e as CustomEvent<string>;
+			input = customEvent.detail;
+			validateAndSave();
+		};
+		window.addEventListener('load-json', handler);
+		return () => window.removeEventListener('load-json', handler);
+	});
 
 	function handleInput(e: Event) {
 		const target = e.target as HTMLTextAreaElement;
 		input = target.value;
-		validateJson();
+		validateAndSave();
 	}
 
-	function validateJson() {
+	let saveTimeout: ReturnType<typeof setTimeout> | undefined;
+	function validateAndSave() {
 		if (!input.trim()) {
 			output = null;
 			error = null;
@@ -24,6 +40,12 @@
 		try {
 			output = JSON.parse(input);
 			error = null;
+
+			// Auto-save to history after debounce
+			clearTimeout(saveTimeout);
+			saveTimeout = setTimeout(() => {
+				jsonStore.add(input);
+			}, 2000);
 		} catch (e: unknown) {
 			error = (e as Error).message;
 			output = null;
@@ -42,7 +64,7 @@
 			mode = 'format';
 			toast.show('JSON Formatted', 'success');
 		} catch (_) {
-			// Safety silent catch as validation happens before format
+			// Safety silent catch
 		}
 	}
 
@@ -58,7 +80,7 @@
 			mode = 'minify';
 			toast.show('JSON Minified', 'success');
 		} catch (_) {
-			// Safety silent catch as validation happens before minify
+			// Safety silent catch
 		}
 	}
 
@@ -77,7 +99,7 @@
 		reader.onload = (event) => {
 			const content = event.target?.result as string;
 			input = content;
-			validateJson();
+			validateAndSave();
 			toast.show(`Loaded ${file.name}`, 'success');
 		};
 		reader.readAsText(file);
@@ -97,31 +119,45 @@
 		await navigator.clipboard.writeText(input);
 		toast.show('Copied to clipboard', 'success');
 	}
+
+	function handleGenerateTS() {
+		if (!output) return;
+		const tsInterface = generateTypeScript(output);
+		navigator.clipboard.writeText(tsInterface);
+		toast.show('TS Interface copied to clipboard', 'success');
+	}
+
+	function toggleAll(expand: boolean) {
+		// This is a hacky way to force all JsonViewer children to reset their 'expanded' state
+		// but since we use depth < 2 in $effect, incrementing treeKey forces a re-mount
+		treeKey++;
+		toast.show(expand ? 'Expanded All' : 'Collapsed All', 'info');
+	}
 </script>
 
-<div class="bg-background flex h-full w-full flex-col gap-6 overflow-hidden p-6">
+<div class="flex h-full w-full flex-col gap-6 overflow-hidden bg-surface p-6">
 	<!-- Toolbar -->
 	<div class="flex shrink-0 items-center justify-between">
 		<div class="flex items-center gap-2">
 			<button
 				class="px-4 py-2 {mode === 'format'
-					? 'bg-primary text-primary-foreground'
-					: 'bg-muted hover:bg-muted/80'} rounded-lg text-sm font-semibold shadow-sm transition"
+					? 'bg-brand-orange text-white'
+					: 'bg-surface-dim text-content-dim hover:bg-surface-dim/80'} rounded-lg text-sm font-bold shadow-sm transition"
 				onclick={formatJson}
 			>
 				Prettify
 			</button>
 			<button
 				class="px-4 py-2 {mode === 'minify'
-					? 'bg-primary text-primary-foreground'
-					: 'bg-muted hover:bg-muted/80'} rounded-lg text-sm font-semibold shadow-sm transition"
+					? 'bg-brand-orange text-white'
+					: 'bg-surface-dim text-content-dim hover:bg-surface-dim/80'} rounded-lg text-sm font-bold shadow-sm transition"
 				onclick={minifyJson}
 			>
 				Minify
 			</button>
-			<div class="bg-border mx-2 h-6 w-px"></div>
+			<div class="mx-2 h-6 w-px bg-stroke"></div>
 			<button
-				class="text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition"
+				class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-content-dim transition hover:bg-surface-dim hover:text-content"
 				onclick={copyToClipboard}
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -135,7 +171,7 @@
 				Copy
 			</button>
 			<button
-				class="text-muted-foreground hover:text-foreground hover:bg-muted flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition"
+				class="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium text-content-dim transition hover:bg-surface-dim hover:text-content"
 				onclick={clearAll}
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -151,8 +187,16 @@
 		</div>
 
 		<div class="flex items-center gap-3">
+			<button
+				class="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-500 transition hover:bg-blue-500/20"
+				onclick={handleGenerateTS}
+				disabled={!output}
+			>
+				Get TS Types
+			</button>
+
 			<label
-				class="border-border bg-card hover:bg-muted flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium shadow-sm transition"
+				class="flex cursor-pointer items-center gap-2 rounded-lg border border-stroke bg-surface px-4 py-2 text-sm font-bold text-content-dim shadow-sm transition hover:bg-surface-dim"
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
 					><path
@@ -162,24 +206,16 @@
 						d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
 					/></svg
 				>
-				Upload JSON
+				Upload
 				<input type="file" accept=".json" class="hidden" onchange={handleFileUpload} />
 			</label>
 
 			<button
-				class="border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 shadow-primary/5 flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-bold shadow-sm transition"
+				class="flex items-center gap-2 rounded-lg border border-brand-orange/20 bg-brand-orange/5 px-4 py-2 text-sm font-bold text-brand-orange shadow-sm shadow-brand-orange/5 transition hover:bg-brand-orange/10"
 				onclick={handleExport}
 				disabled={!!error || !input.trim()}
 			>
-				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-					><path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M8 7v8a2 2 0 002 2h6M8 7l4 4m-4-4l-4 4"
-					/></svg
-				>
-				Save to Snippets
+				Save
 			</button>
 		</div>
 	</div>
@@ -187,9 +223,9 @@
 	<!-- Workbench Panes -->
 	<div class="flex min-h-0 flex-1 gap-6">
 		<!-- Input Editor -->
-		<div class="flex min-w-0 flex-1 flex-col">
+		<div class="flex min-w-0 flex-[1.2] flex-col">
 			<div class="mb-2 flex items-center justify-between">
-				<span class="text-muted-foreground px-1 text-xs font-bold tracking-wider uppercase"
+				<span class="px-1 text-xs font-bold tracking-wider text-content-dim uppercase"
 					>Raw Input</span
 				>
 				{#if error}
@@ -204,7 +240,7 @@
 				<textarea
 					value={input}
 					oninput={handleInput}
-					class="bg-card/50 border-border focus:ring-primary/20 group-hover:border-primary/30 h-full w-full resize-none rounded-xl border p-4 font-mono text-sm transition-all outline-none focus:ring-2"
+					class="h-full w-full resize-none rounded-xl border border-stroke bg-surface-dim/30 p-4 font-mono text-sm transition-all outline-none focus:border-brand-orange/50 focus:ring-4 focus:ring-brand-orange/5"
 					placeholder="Paste JSON here..."
 				></textarea>
 
@@ -223,28 +259,55 @@
 			</div>
 		</div>
 
-		<!-- Live Preview -->
+		<!-- Tree Preview -->
 		<div class="flex min-w-0 flex-1 flex-col">
-			<div class="mb-2 flex items-center justify-between">
-				<span class="text-muted-foreground px-1 text-xs font-bold tracking-wider uppercase"
-					>Tree View</span
-				>
-				{#if output}
-					<span
-						class="rounded border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold text-green-500"
-						>Synced</span
+			<div class="mb-2 flex items-center justify-between gap-4">
+				<div class="flex items-center gap-3 overflow-hidden">
+					<span class="shrink-0 px-1 text-xs font-bold tracking-wider text-content-dim uppercase"
+						>Tree View</span
 					>
-				{/if}
+					<div class="relative min-w-[120px] flex-1">
+						<input
+							type="text"
+							bind:value={searchQuery}
+							placeholder="Search path or value..."
+							class="w-full rounded-md border border-stroke bg-surface-dim px-2 py-1 text-[10px] focus:border-brand-orange/30 focus:outline-none"
+						/>
+					</div>
+				</div>
+				<div class="flex items-center gap-2">
+					<button
+						class="text-[10px] font-bold text-content-dim hover:text-content"
+						onclick={() => toggleAll(false)}>Collapse</button
+					>
+					<div class="h-3 w-px bg-stroke"></div>
+					<button
+						class="text-[10px] font-bold text-content-dim hover:text-content"
+						onclick={() => toggleAll(true)}>Expand</button
+					>
+				</div>
 			</div>
 			<div
-				class="bg-card/50 border-border relative flex-1 overflow-auto rounded-xl border p-4 font-mono text-sm"
+				class="relative flex-1 overflow-auto rounded-xl border border-stroke bg-surface-dim/30 p-4 font-mono text-sm shadow-inner"
 			>
 				{#if output}
-					<div transition:fade>
-						<JsonViewer data={output} />
-					</div>
+					{#key treeKey}
+						<div transition:fade>
+							<JsonViewer data={output} {searchQuery} />
+						</div>
+					{/key}
 				{:else}
-					<div class="text-muted-foreground flex h-full items-center justify-center text-sm italic">
+					<div
+						class="flex h-full flex-col items-center justify-center text-sm text-content-dim italic opacity-50"
+					>
+						<svg class="mb-2 h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1"
+								d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+							/>
+						</svg>
 						{error ? 'Fix errors to preview' : 'Awaiting input...'}
 					</div>
 				{/if}

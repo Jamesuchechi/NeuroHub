@@ -34,5 +34,55 @@ export const aiService = {
 				error: err instanceof Error ? err.message : 'Unknown AI error'
 			};
 		}
+	},
+
+	/**
+	 * Simulates code execution by using AI to predict stdout/stderr.
+	 */
+	async simulateExecution(
+		code: string,
+		language: string
+	): Promise<{ stdout: string; stderr: string; error: string | null }> {
+		const prompt = `
+      You are a high-performance code execution engine called "NeuroAI Runner". 
+      Your task is to ARBITRARILY and ACCURATELY simulate the execution of the following code.
+      
+      Language: ${language}
+      Code:
+      \`\`\`${language}
+      ${code}
+      \`\`\`
+      
+      Instructions:
+      1. Predict the exact standard output (stdout) and standard error (stderr) if this code were to be run in a real environment.
+      2. If there are syntax errors or runtime errors, put the diagnostic message in "stderr".
+      3. Return ONLY a JSON object in the following format:
+         {
+           "stdout": "string",
+           "stderr": "string",
+           "error": "null or string message if execution failed completely"
+         }
+      
+      Output ONLY the JSON. No preamble, no explanation.
+    `;
+
+		const result = await this.chat(prompt, 'fast');
+
+		if (result.error) {
+			return { stdout: '', stderr: '', error: result.error };
+		}
+
+		try {
+			// Extract JSON from response (clean up markdown if any)
+			const jsonStr = result.content.replace(/```json|```/g, '').trim();
+			return JSON.parse(jsonStr);
+		} catch (_err) {
+			console.error('Failed to parse AI execution output:', result.content);
+			return {
+				stdout: result.content, // Fallback to raw content as stdout
+				stderr: '',
+				error: 'AI returned non-JSON output, but provided simulation text.'
+			};
+		}
 	}
 };

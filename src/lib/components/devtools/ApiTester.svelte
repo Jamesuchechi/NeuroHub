@@ -1,11 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { apiTestService, generateCurl, interpolateEnvVars } from '$lib/services/apiTester';
+	import { apiHistoryStore } from '$lib/stores/apiHistoryStore';
 	import type { HttpMethod, ApiResponse } from '$lib/types/devtools';
-	import {
-		activeApiTestId,
-		activeEnvironmentId,
-		openCreateSnippet
-	} from '$lib/stores/devToolsStore';
+	import { activeApiTestId, activeEnvironmentId } from '$lib/stores/devToolsStore';
 	import { authStore } from '$lib/stores/authStore';
 	import { toast } from '$lib/stores/toastStore';
 	import { formatBytes } from '$lib/utils/formatBytes';
@@ -44,7 +42,7 @@
 	let body = $state('');
 	let name = $state('');
 
-	let requestTab = $state<'headers' | 'body' | 'env'>('headers');
+	let requestTab = $state<'headers' | 'body' | 'variables'>('headers');
 	let responseTab = $state<'body' | 'headers' | 'raw'>('body');
 
 	// Response Viewer State
@@ -142,9 +140,38 @@
 
 		response = (test.last_response as unknown as ApiResponse) || null;
 		processResponseBody();
-
-		$activeApiTestId = test.id;
 	}
+
+	// Reactive loading when activeApiTestId changes
+	$effect(() => {
+		if ($activeApiTestId) {
+			const test = history.find((h) => h.id === $activeApiTestId);
+			if (test) {
+				loadTest(test);
+			}
+		} else {
+			resetBuilder();
+		}
+	});
+
+	onMount(() => {
+		const handler = (e: Event) => {
+			const detail = (e as CustomEvent).detail;
+			if (detail) {
+				method = detail.method;
+				url = detail.url;
+				name = detail.name;
+				// Reset headers/body for history loads to keep it clean
+				headers = [{ key: '', value: '' }];
+				body = '';
+				response = null;
+			} else {
+				resetBuilder();
+			}
+		};
+		window.addEventListener('load-api-request', handler);
+		return () => window.removeEventListener('load-api-request', handler);
+	});
 
 	// If a new request is made, switch context
 	function resetBuilder() {
@@ -203,7 +230,16 @@
 			response = data as ApiResponse;
 			processResponseBody();
 
-			// Auto-save response if it belongs to a saved test
+			// Auto-record to local history
+			apiHistoryStore.add({
+				method,
+				url,
+				workspaceId,
+				status: response.status,
+				statusText: response.statusText
+			});
+
+			// Auto-save response if it belongs to a saved cloud test
 			if ($activeApiTestId) {
 				apiTestService.saveResponse($activeApiTestId, response!).catch(() => {});
 				history = history.map((h) =>
@@ -222,6 +258,16 @@
 				duration_ms: 0,
 				size_bytes: 0
 			};
+
+			// Still record failed requests to history
+			apiHistoryStore.add({
+				method,
+				url,
+				workspaceId,
+				status: 0,
+				statusText: 'Failed'
+			});
+
 			toast.show('Proxy request failed', 'error');
 		}
 
@@ -310,352 +356,257 @@
 	}
 </script>
 
-<div class="flex h-full overflow-hidden">
-	<!-- Right Panels: Builder & Viewer -->
-	<div class="flex min-w-0 flex-1 flex-col">
-		<div class="border-border bg-card flex h-14 items-center justify-between border-b px-4">
-			<div class="flex items-center gap-3">
-				<button
-					class="text-muted-foreground hover:text-foreground md:hidden"
-					onclick={() => (showHistory = !showHistory)}
-					aria-label="Toggle history sidebar"
-				>
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M4 6h16M4 12h16M4 18h16"
-						></path></svg
+<div class="flex h-full flex-col overflow-hidden bg-surface">
+	<div class="scrollbar-thin flex-1 overflow-y-auto p-6">
+		<div class="mx-auto max-w-4xl space-y-6">
+			<!-- URL Bar -->
+			<div class="rounded-lg border border-stroke bg-surface-dim/30 p-4 shadow-sm">
+				<div class="flex items-center gap-3">
+					<button
+						class="text-content-dim hover:text-content md:hidden"
+						onclick={() => (showHistory = !showHistory)}
+						aria-label="Toggle history sidebar"
 					>
-				</button>
-				<span class="font-semibold">{name || 'Untitled Request'}</span>
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 6h16M4 12h16M4 18h16"
+							></path></svg
+						>
+					</button>
+					<span class="font-bold text-content">{name || 'Untitled Request'}</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<button
+						class="rounded border border-stroke bg-surface px-3 py-1.5 text-xs font-bold text-content transition hover:bg-surface-dim"
+						onclick={handleCopyCurl}>Copy cURL</button
+					>
+					<button
+						class="rounded border border-stroke bg-surface px-3 py-1.5 text-xs font-bold text-content transition hover:bg-surface-dim"
+						onclick={handleSaveRequest}>Save</button
+					>
+				</div>
 			</div>
-			<div class="flex items-center gap-2">
-				<button
-					class="border-border bg-card hover:bg-muted rounded border px-3 py-1.5 text-sm font-medium transition"
-					onclick={handleCopyCurl}>Copy cURL</button
-				>
-				<button
-					class="border-border bg-card hover:bg-muted rounded border px-3 py-1.5 text-sm font-medium transition"
-					onclick={handleSaveRequest}>Save</button
-				>
-			</div>
-		</div>
 
-		<!-- URL Bar -->
-		<div class="bg-muted/20 border-border flex gap-2 border-b p-4">
-			<select
-				bind:value={method}
-				class="bg-card border-border focus:ring-primary w-28 rounded border px-3 py-2 font-mono text-sm font-bold outline-none focus:ring-1"
-			>
-				{#each ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as m (m)}
-					<option value={m}>{m}</option>
-				{/each}
-			</select>
+			<div class="flex gap-2">
+				<div class="relative shrink-0">
+					<select
+						bind:value={method}
+						class="h-10 min-w-[100px] appearance-none rounded-md border border-stroke bg-surface px-3 text-xs font-bold text-content outline-none focus:border-brand-orange/50"
+					>
+						{#each ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as m (m)}
+							<option value={m}>{m}</option>
+						{/each}
+					</select>
+				</div>
 
-			<div class="relative flex-1">
 				<input
+					type="text"
 					bind:value={url}
-					class="bg-background border-border focus:ring-primary w-full rounded border px-4 py-2 font-mono text-sm outline-none focus:ring-1"
-					placeholder={'https://api.example.com/v1/users/{{USER_ID}}'}
+					placeholder="https://api.example.com/v1/resource"
+					class="h-10 flex-1 rounded-md border border-stroke bg-surface px-4 text-sm text-content outline-none placeholder:text-content-dim/30 focus:border-brand-orange/50"
 				/>
-			</div>
 
-			<button
-				class="flex w-24 items-center justify-center rounded bg-blue-600 font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:opacity-50"
-				onclick={sendRequest}
-				disabled={isSending || !url}
-			>
-				{#if isSending}
-					<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"
-						><circle
-							class="opacity-25"
-							cx="12"
-							cy="12"
-							r="10"
-							stroke="currentColor"
-							stroke-width="4"
-						></circle><path
-							class="opacity-75"
-							fill="currentColor"
-							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-						></path></svg
-					>
-				{:else}
-					Send
-				{/if}
-			</button>
-		</div>
-
-		<!-- Panels (Split Top/Bottom) -->
-		<div class="flex flex-1 flex-col overflow-hidden" style="display: flex;">
-			<!-- Request Config -->
-			<div class="border-border bg-card flex min-h-0 flex-[0.8] flex-col border-b">
-				<div class="border-border flex overflow-x-auto border-b">
-					<button
-						class="border-b-2 px-4 py-2 text-sm font-medium {requestTab === 'headers'
-							? 'border-primary text-foreground'
-							: 'text-muted-foreground hover:text-foreground border-transparent'}"
-						onclick={() => (requestTab = 'headers')}
-						>Headers ({headers.filter((h) => h.key).length})</button
-					>
-					<button
-						class="border-b-2 px-4 py-2 text-sm font-medium {requestTab === 'body'
-							? 'border-primary text-foreground'
-							: 'text-muted-foreground hover:text-foreground border-transparent'}"
-						onclick={() => (requestTab = 'body')}>Body</button
-					>
-					<button
-						class="border-b-2 px-4 py-2 text-sm font-medium {requestTab === 'env'
-							? 'border-primary text-foreground'
-							: 'text-muted-foreground hover:text-foreground border-transparent'}"
-						onclick={() => (requestTab = 'env')}>Variables ({Object.keys(envVars).length})</button
-					>
-				</div>
-
-				<div class="flex-1 overflow-y-auto p-4">
-					{#if requestTab === 'headers'}
-						<div class="flex flex-col gap-2">
-							{#each headers as header, i (i)}
-								<div class="flex items-center gap-2">
-									<input
-										type="text"
-										placeholder="Key (e.g. Authorization)"
-										bind:value={header.key}
-										class="bg-background border-border focus:ring-primary flex-1 rounded border px-3 py-1.5 font-mono text-sm outline-none focus:ring-1"
-									/>
-									<input
-										type="text"
-										placeholder={'Value (e.g. Bearer {{TOKEN}})'}
-										bind:value={header.value}
-										class="bg-background border-border focus:ring-primary flex-[1.5] rounded border px-3 py-1.5 font-mono text-sm outline-none focus:ring-1"
-									/>
-									<button
-										class="text-muted-foreground rounded p-1.5 hover:text-red-500"
-										onclick={() => removeHeaderRow(i)}
-										aria-label="Remove header row"
-									>
-										<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-											><path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M6 18L18 6M6 6l12 12"
-											></path></svg
-										>
-									</button>
-								</div>
-							{/each}
-							<button
-								class="text-primary mt-2 flex w-fit items-center gap-1 text-sm font-medium hover:underline"
-								onclick={addHeaderRow}
-							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 4v16m8-8H4"
-									></path></svg
-								> Add Header
-							</button>
-						</div>
-					{:else if requestTab === 'body'}
-						<textarea
-							bind:value={body}
-							class="bg-background border-border focus:ring-primary h-full min-h-[150px] w-full rounded border p-3 font-mono text-sm outline-none focus:ring-1"
-							placeholder="Enter JSON or plain text body here..."
-						></textarea>
-					{:else if requestTab === 'env'}
-						<div class="mb-4 flex items-center gap-4">
-							<span class="text-sm font-medium">Environment:</span>
-							<select
-								bind:value={$activeEnvironmentId}
-								class="bg-card border-border rounded border px-3 py-1 text-sm outline-none"
-							>
-								<option value={null}>No Environment</option>
-								{#each environments as e (e.id)}
-									<option value={e.id}>{e.name}</option>
-								{/each}
-							</select>
-							<button
-								class="text-primary text-xs font-medium hover:underline"
-								onclick={startCreateEnv}>+ New</button
-							>
-							{#if activeEnv}
-								<button
-									class="text-primary text-xs font-medium hover:underline"
-									onclick={startEditEnv}>Edit</button
-								>
-							{/if}
-						</div>
-
-						{#if activeEnv}
-							<div class="grid grid-cols-2 gap-2">
-								{#each Object.entries(envVars) as [k, v] (k)}
-									<div
-										class="bg-muted border-border/50 truncate rounded border px-3 py-2 font-mono text-xs"
-									>
-										<span class="text-primary font-bold">{k}</span> =
-										<span class="text-muted-foreground">{v}</span>
-									</div>
-								{/each}
-							</div>
-						{:else}
-							<p class="text-muted-foreground text-sm italic">
-								Select an environment to view variables.
-							</p>
-						{/if}
+				<button
+					class="h-10 rounded-md bg-brand-orange px-6 text-sm font-bold text-white shadow-lg shadow-brand-orange/10 transition-all hover:bg-orange-600 disabled:opacity-50"
+					onclick={sendRequest}
+					disabled={isSending || !url}
+				>
+					{#if isSending}
+						<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"
+							><circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							></circle><path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							></path></svg
+						>
+					{:else}
+						Send
 					{/if}
-				</div>
+				</button>
 			</div>
 
-			<!-- Response Viewer -->
-			<div class="bg-background flex min-h-0 flex-[1.2] flex-col">
-				<div class="border-border bg-muted/20 flex items-center justify-between border-b px-4">
-					<div class="flex h-full gap-1">
+			<!-- Tabs -->
+			<div class="flex border-b border-stroke">
+				{#each ['headers', 'body', 'variables'] as const as tab (tab)}
+					<button
+						class="px-4 py-2 text-xs font-bold tracking-widest uppercase transition-colors {requestTab ===
+						tab
+							? 'border-b-2 border-brand-orange text-brand-orange'
+							: 'text-content-dim hover:text-content'}"
+						onclick={() => (requestTab = tab)}
+					>
+						{tab}
+					</button>
+				{/each}
+			</div>
+
+			<!-- Tab Content -->
+			<div class="min-h-[200px] rounded-xl border border-stroke bg-surface-dim/10 p-4 shadow-sm">
+				{#if requestTab === 'headers'}
+					<div class="space-y-2">
+						{#each headers as header, i (i)}
+							<div class="flex items-center gap-2">
+								<input
+									type="text"
+									placeholder="Key"
+									bind:value={header.key}
+									class="flex-1 rounded border border-stroke bg-surface px-3 py-1.5 text-xs text-content outline-none"
+								/>
+								<input
+									type="text"
+									placeholder="Value"
+									bind:value={header.value}
+									class="flex-1 rounded border border-stroke bg-surface px-3 py-1.5 text-xs text-content outline-none"
+								/>
+								<button
+									class="p-1.5 text-content-dim hover:text-red-500"
+									onclick={() => removeHeaderRow(i)}
+									aria-label="Remove header row"
+								>
+									<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										></path></svg
+									>
+								</button>
+							</div>
+						{/each}
 						<button
-							class="border-b-2 px-4 py-2 text-sm font-medium {responseTab === 'body'
-								? 'border-primary text-foreground'
-								: 'text-muted-foreground hover:text-foreground border-transparent'}"
-							onclick={() => (responseTab = 'body')}>Response Body</button
+							class="text-xs font-bold text-brand-orange hover:text-orange-600"
+							onclick={addHeaderRow}
 						>
+							+ Add Header
+						</button>
+					</div>
+				{:else if requestTab === 'body'}
+					<textarea
+						bind:value={body}
+						class="h-[200px] w-full rounded-lg border border-stroke bg-surface p-3 font-mono text-xs text-content outline-none"
+						placeholder="Enter JSON or plain text body here..."
+					></textarea>
+				{:else if requestTab === 'variables'}
+					<div class="mb-4 flex items-center gap-4">
+						<span class="text-xs font-bold text-content">Environment:</span>
+						<select
+							bind:value={$activeEnvironmentId}
+							class="rounded border border-stroke bg-surface px-3 py-1 text-xs text-content outline-none"
+						>
+							<option value={null}>No Environment</option>
+							{#each environments as e (e.id)}
+								<option value={e.id}>{e.name}</option>
+							{/each}
+						</select>
 						<button
-							class="border-b-2 px-4 py-2 text-sm font-medium {responseTab === 'headers'
-								? 'border-primary text-foreground'
-								: 'text-muted-foreground hover:text-foreground border-transparent'}"
-							onclick={() => (responseTab = 'headers')}>Headers</button
+							class="text-xs font-bold text-brand-orange hover:underline"
+							onclick={startCreateEnv}>+ New</button
 						>
-						<button
-							class="border-b-2 px-4 py-2 text-sm font-medium {responseTab === 'raw'
-								? 'border-primary text-foreground'
-								: 'text-muted-foreground hover:text-foreground border-transparent'}"
-							onclick={() => (responseTab = 'raw')}>Raw</button
-						>
+						{#if activeEnv}
+							<button
+								class="text-xs font-bold text-brand-orange hover:underline"
+								onclick={startEditEnv}>Edit</button
+							>
+						{/if}
 					</div>
 
-					{#if response}
-						<div class="flex items-center gap-4">
-							<div class="flex items-center gap-3 font-mono text-xs">
-								<span
-									class="rounded px-1.5 py-0.5 font-bold {response.status >= 200 &&
-									response.status < 300
-										? 'bg-green-500/10 text-green-500'
-										: response.status === 0
-											? 'bg-red-500/10 text-red-500'
-											: response.status >= 400
-												? 'bg-orange-500/10 text-orange-500'
-												: 'bg-blue-500/10 text-blue-500'}"
+					{#if activeEnv}
+						<div class="grid grid-cols-2 gap-2">
+							{#each Object.entries(envVars) as [k, v] (k)}
+								<div
+									class="truncate rounded border border-stroke bg-surface-dim px-3 py-2 font-mono text-xs"
 								>
-									{response.status}
-									{response.statusText}
-								</span>
-								<span class="text-muted-foreground">{response.duration_ms} ms</span>
-								<span class="text-muted-foreground">{formatBytes(response.size_bytes)}</span>
-							</div>
-
-							<button
-								class="text-primary bg-primary/5 flex items-center gap-1 rounded px-2 py-1 text-xs font-semibold hover:underline"
-								onclick={() =>
-									openCreateSnippet({
-										code: response!.body,
-										language: parsedJsonBody !== null ? 'json' : 'markdown',
-										title: `Response: ${history.find((h) => h.id === $activeApiTestId)?.name || 'API Response'}`
-									})}
-							>
-								<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M8 7v8a2 2 0 002 2h6M8 7l4 4m-4-4l-4 4"
-									/></svg
-								>
-								Save to Snippets
-							</button>
-						</div>
-					{/if}
-				</div>
-
-				<div class="flex-1 overflow-y-auto p-4 font-mono text-sm">
-					{#if !response}
-						<div class="text-muted-foreground flex h-full items-center justify-center italic">
-							Send a request to see the response...
-						</div>
-					{:else if responseTab === 'body'}
-						{#if parsedJsonBody !== null}
-							<div class="bg-card border-border overflow-x-auto rounded border p-4">
-								<JsonViewer data={parsedJsonBody} />
-							</div>
-						{:else}
-							<pre
-								class="bg-card border-border text-foreground overflow-x-auto rounded border p-4 whitespace-pre-wrap">{response.body}</pre>
-						{/if}
-					{:else if responseTab === 'headers'}
-						<div class="grid grid-cols-1 gap-1">
-							{#each Object.entries(response.headers) as [hk, hv] (hk)}
-								<div class="border-border/50 flex border-b px-2 py-1.5">
-									<span class="text-primary w-1/3 font-semibold">{hk}</span>
-									<span class="text-foreground/80 w-2/3 truncate">{hv}</span>
+									<span class="font-bold text-brand-orange">{k}</span> =
+									<span class="text-content-dim">{v}</span>
 								</div>
 							{/each}
 						</div>
 					{:else}
-						<pre
-							class="bg-card border-border text-foreground overflow-x-auto rounded border p-4">{response.body}</pre>
+						<p class="text-xs text-content-dim italic">Select an environment to view variables.</p>
 					{/if}
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Left Panel: History Sidebar -->
-	{#if showHistory}
-		<div
-			class="border-border bg-muted/10 hidden h-full w-64 max-w-[250px] shrink-0 flex-col border-l md:flex"
-		>
-			<div
-				class="border-border flex items-center justify-between border-b p-3 text-sm font-semibold"
-			>
-				History
-				<button class="text-primary text-xs hover:underline" onclick={resetBuilder}>+ New</button>
-			</div>
-			<div class="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
-				{#each history as req (req.id)}
-					<button
-						class="hover:bg-muted flex items-center gap-2 rounded p-2 text-left text-xs transition {req.id ===
-						$activeApiTestId
-							? 'bg-muted ring-border shadow-sm ring-1'
-							: ''}"
-						onclick={() => loadTest(req)}
-					>
-						<span
-							class="w-10 shrink-0 font-mono font-bold {['GET', 'HEAD'].includes(req.method)
-								? 'text-blue-500'
-								: ['POST', 'PUT', 'PATCH'].includes(req.method)
-									? 'text-green-500'
-									: 'text-red-500'}"
-						>
-							{req.method}
-						</span>
-						<span class="flex-1 truncate font-medium">{req.name}</span>
-					</button>
-				{/each}
-				{#if history.length === 0}
-					<p class="text-muted-foreground w-full p-2 text-center text-xs italic">
-						No saved requests
-					</p>
 				{/if}
 			</div>
+
+			<!-- Response Section -->
+			{#if response}
+				<div class="space-y-4 pt-6">
+					<div class="flex items-center justify-between border-b border-stroke pb-2">
+						<h3 class="text-sm font-bold tracking-widest text-content uppercase">Response</h3>
+						<div class="flex items-center gap-4 font-mono text-xs">
+							<span
+								class={response.status >= 200 && response.status < 300
+									? 'text-brand-green'
+									: 'text-red-400'}
+							>
+								{response.status}
+								{response.statusText}
+							</span>
+							<span class="text-content-dim">{response.duration_ms}ms</span>
+							<span class="text-content-dim">{formatBytes(response.size_bytes)}</span>
+						</div>
+					</div>
+
+					<div class="overflow-hidden rounded-xl border border-stroke bg-surface shadow-sm">
+						<div class="flex border-b border-stroke bg-surface-dim/30">
+							<button
+								class="px-4 py-2 text-[10px] font-bold tracking-widest uppercase {responseTab ===
+								'body'
+									? 'bg-surface text-brand-orange'
+									: 'text-content-dim'}"
+								onclick={() => (responseTab = 'body')}>Body</button
+							>
+							<button
+								class="px-4 py-2 text-[10px] font-bold tracking-widest uppercase {responseTab ===
+								'headers'
+									? 'bg-surface text-brand-orange'
+									: 'text-content-dim'}"
+								onclick={() => (responseTab = 'headers')}>Headers</button
+							>
+						</div>
+
+						<div class="p-4">
+							{#if responseTab === 'body'}
+								{#if parsedJsonBody !== null}
+									<JsonViewer data={parsedJsonBody} />
+								{:else}
+									<pre
+										class="font-mono text-xs whitespace-pre-wrap text-content-dim">{response.body}</pre>
+								{/if}
+							{:else}
+								<div class="space-y-1">
+									{#each Object.entries(response.headers) as [hk, hv] (hk)}
+										<div
+											class="flex items-start gap-4 border-b border-stroke/50 py-1 text-xs last:border-0"
+										>
+											<span class="w-32 shrink-0 font-bold text-content-dim">{hk}</span>
+											<span class="font-mono break-all text-content">{hv}</span>
+										</div>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
+				</div>
+			{/if}
 		</div>
-	{/if}
+	</div>
 </div>
 
 <!-- Environment Management Modal -->
 {#if isEditingEnv}
 	<div
-		class="bg-background/80 fixed inset-0 z-60 flex items-center justify-center p-4 backdrop-blur-sm"
+		class="fixed inset-0 z-60 flex items-center justify-center bg-surface/80 p-4 backdrop-blur-sm"
 		onclick={() => (isEditingEnv = false)}
 		onkeydown={(e) => e.key === 'Escape' && (isEditingEnv = false)}
 		role="button"
@@ -663,23 +614,23 @@
 		aria-label="Close modal"
 	>
 		<div
-			class="bg-card border-border flex w-full max-w-lg flex-col overflow-hidden rounded-xl border shadow-2xl"
+			class="flex w-full max-w-lg flex-col overflow-hidden rounded-xl border border-stroke bg-surface shadow-2xl"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 			role="dialog"
 			aria-modal="true"
 			tabindex="0"
 		>
-			<div class="border-border bg-muted/20 flex items-center justify-between border-b px-6 py-4">
+			<div class="border-b border-stroke bg-surface-dim/20 px-6 py-4">
 				<input
 					bind:value={editingEnvName}
-					class="w-full border-0 bg-transparent p-0 text-lg font-semibold focus:ring-0"
+					class="w-full border-0 bg-transparent p-0 text-lg font-semibold text-content focus:ring-0"
 					placeholder="Environment Name"
 				/>
 			</div>
 
 			<div class="max-h-[60vh] overflow-y-auto p-6">
-				<h4 class="text-muted-foreground mb-4 text-xs font-semibold tracking-wider uppercase">
+				<h4 class="mb-4 text-xs font-semibold tracking-wider text-content-dim uppercase">
 					Variables
 				</h4>
 				<div class="flex flex-col gap-3">
@@ -697,15 +648,15 @@
 										envVars = next;
 									}
 								}}
-								class="bg-background border-border focus:ring-primary flex-1 rounded border px-3 py-1.5 font-mono text-sm outline-none focus:ring-1"
+								class="flex-1 rounded border border-stroke bg-surface px-3 py-1.5 font-mono text-sm text-content outline-none"
 							/>
 							<input
 								type="text"
 								bind:value={envVars[k]}
-								class="bg-background border-border focus:ring-primary flex-1 rounded border px-3 py-1.5 font-mono text-sm outline-none focus:ring-1"
+								class="flex-1 rounded border border-stroke bg-surface px-3 py-1.5 font-mono text-sm text-content outline-none"
 							/>
 							<button
-								class="text-muted-foreground p-1.5 hover:text-red-500"
+								class="p-1.5 text-content-dim hover:text-red-500"
 								onclick={() => {
 									const next = { ...envVars };
 									delete next[k];

@@ -48,22 +48,22 @@
 		if (familyTeal.includes(lang)) return 'bg-teal-500/20 text-teal-600 dark:text-teal-400';
 		if (familyGreen.includes(lang)) return 'bg-green-500/20 text-green-600 dark:text-green-400';
 		if (familyCoral.includes(lang)) return 'bg-orange-500/20 text-orange-600 dark:text-orange-400';
-		return 'bg-muted text-foreground';
+		return 'bg-surface-dim text-content';
 	}
 </script>
 
 <div class="group relative">
 	<div
-		class="bg-muted/50 hover:bg-muted border-border flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1.5 transition-all duration-200 {disabled
+		class="flex cursor-pointer items-center gap-2 rounded-lg border border-stroke bg-surface-dim/50 px-3 py-1.5 transition-all duration-200 hover:bg-surface-dim {disabled
 			? 'pointer-events-none opacity-50'
 			: ''}"
 	>
 		<div class="h-2 w-2 rounded-full {getBadgeColor(value).replace('/20', '')}"></div>
-		<span class="text-xs font-semibold whitespace-nowrap">
+		<span class="text-xs font-semibold whitespace-nowrap text-content">
 			{LANGUAGES.find((l) => l.value === value)?.label || value}
 		</span>
 		<svg
-			class="text-muted-foreground group-hover:text-foreground h-3 w-3 transition-colors"
+			class="h-3 w-3 text-content-dim transition-colors group-hover:text-content"
 			fill="none"
 			viewBox="0 0 24 24"
 			stroke="currentColor"
@@ -74,13 +74,13 @@
 
 	<select
 		{disabled}
-		class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+		class="absolute inset-0 h-full w-full cursor-pointer bg-surface text-content opacity-0"
 		{value}
 		onchange={handleChange}
 		aria-label="Select language"
 	>
 		{#each LANGUAGES as lang (lang.value)}
-			<option value={lang.value}>{lang.label}</option>
+			<option value={lang.value} class="bg-surface text-content">{lang.label}</option>
 		{/each}
 	</select>
 </div>

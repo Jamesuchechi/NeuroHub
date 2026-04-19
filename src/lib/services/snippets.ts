@@ -18,7 +18,7 @@ export const snippetService = {
 	) {
 		let query = supabase
 			.from('snippets')
-			.select('*, author:profiles(id, username, avatar_url), parent:snippets(id, title)')
+			.select('*, author:profiles(id, username, avatar_url), parent:parent_id(id, title)')
 			.eq('workspace_id', workspaceId)
 			.order(
 				opts?.sort === 'stars'
@@ -42,7 +42,9 @@ export const snippetService = {
 	async getById(id: string) {
 		return supabase
 			.from('snippets')
-			.select('*, author:profiles(id, username, avatar_url), parent:snippets(id, title, author_id)')
+			.select(
+				'*, author:profiles(id, username, avatar_url), parent:parent_id(id, title, author_id)'
+			)
 			.eq('id', id)
 			.single();
 	},
