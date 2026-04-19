@@ -2,6 +2,7 @@
 	import { aiService } from '$lib/services/ai';
 	import { fade } from 'svelte/transition';
 	import { toast } from '$lib/stores/toastStore';
+	import SafeMarkdown from '../../ui/SafeMarkdown.svelte';
 
 	let cronExpression = $state('*/15 * * * *');
 	let explanation = $state<string | null>(null);
@@ -11,8 +12,29 @@
 		if (!cronExpression) return;
 		isAnalyzing = true;
 		explanation = null;
+
+		const now = new Date();
+		const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		const localTime = now.toLocaleString('en-US', {
+			weekday: 'long',
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric',
+			hour: 'numeric',
+			minute: 'numeric',
+			second: 'numeric'
+		});
+
 		try {
-			const prompt = `Translate this Cron expression into a human-readable, friendly sentence: \`${cronExpression}\`. Also, list the next 3 times it would run starting from now. Keep it professional and precise.`;
+			const prompt = `Translate this Cron expression into a human-readable, friendly sentence: \`${cronExpression}\`. 
+			
+IMPORTANT CONTEXT:
+- Current Device Time: ${localTime}
+- User Timezone: ${timezone}
+
+Please provide the next 3 specific run times based on this EXACT current time. 
+Use GitHub Flavored Markdown for formatting (bolding, lists). Keep it professional and precise.`;
+
 			const response = await aiService.chat(prompt);
 			if (response.error) throw new Error(response.error);
 			explanation = response.content;
@@ -105,7 +127,7 @@
 		<div class="space-y-4">
 			{#if explanation}
 				<div class="prose prose-sm leading-relaxed font-medium text-zinc-300 prose-invert" in:fade>
-					{explanation}
+					<SafeMarkdown content={explanation} />
 				</div>
 			{:else if isAnalyzing}
 				<div class="space-y-4 pt-4" in:fade>

@@ -2,6 +2,7 @@
 	import { aiService } from '$lib/services/ai';
 	import { fade } from 'svelte/transition';
 	import { toast } from '$lib/stores/toastStore';
+	import SafeMarkdown from '../../ui/SafeMarkdown.svelte';
 
 	let pattern = $state('');
 	let flags = $state('g');
@@ -24,14 +25,14 @@
 		let match;
 
 		// Reset lastIndex for global regex
-		regex.lastIndex = 0;
+		if (regex) regex.lastIndex = 0;
 
-		if (flags.includes('g')) {
+		if (flags.includes('g') && regex) {
 			while ((match = regex.exec(testString)) !== null) {
 				results.push(match);
 				if (match.index === regex.lastIndex) regex.lastIndex++; // Prevent infinite loops
 			}
-		} else {
+		} else if (regex) {
 			match = regex.exec(testString);
 			if (match) results.push(match);
 		}
@@ -43,7 +44,15 @@
 		isAnalyzing = true;
 		aiExplanation = null;
 		try {
-			const prompt = `Explain this regular expression in plain English, step by step: \`/${pattern}/${flags}\`. Focus on what it matches and any special constraints.`;
+			const prompt = `Explain this regular expression in plain English, step by step: \`/${pattern}/${flags}\`. 
+			
+Please focus on what it matches and any special constraints. 
+Use GitHub Flavored Markdown for formatting:
+- **Bold** key terms or groups.
+- Use inline code (\`text\`) for character patterns.
+- Use bullet points for steps.
+Keep the explanation professional and structured.`;
+
 			const response = await aiService.chat(prompt);
 			if (response.error) throw new Error(response.error);
 			aiExplanation = response.content;
@@ -164,7 +173,7 @@
 			<div class="space-y-4">
 				{#if aiExplanation}
 					<div class="prose prose-sm leading-relaxed text-content-dim prose-invert" in:fade>
-						{aiExplanation}
+						<SafeMarkdown content={aiExplanation} />
 					</div>
 				{:else if isAnalyzing}
 					<div class="space-y-3" in:fade>
