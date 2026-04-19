@@ -368,24 +368,24 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 8 — Search & Discovery
+## Phase 8 — Search & Discovery [COMPLETE]
 
 **Target: Week 6–7**
 
 ### Full-Text Search
 
-- [ ] Configure Postgres `tsvector` indexes on messages, notes, snippets
-- [ ] Build search API endpoint (`/api/search?q=&workspace=`)
-- [ ] Build search results UI (grouped by type: messages, notes, snippets)
-- [ ] Highlight matched terms in results
-- [ ] Search filters (date range, author, type, channel)
+- [x] Configure Postgres `tsvector` indexes on messages, notes, snippets
+- [x] Build search API endpoint (`/api/workspace/[slug]/search`)
+- [x] Build search results UI (grouped by type: messages, notes, snippets)
+- [x] Highlight matched terms in results
+- [x] Search filters (date range, author, type, channel)
 
 ### Global Search UI
 
-- [ ] Integrate search into command palette
-- [ ] Dedicated `/workspace/[slug]/search` page for advanced search
-- [ ] Search history (recent searches stored in localStorage)
-- [ ] Keyboard navigation through results
+- [x] Integrate search into command palette
+- [x] Dedicated `/workspace/[slug]/search` page for advanced search
+- [x] Search history (recent searches stored in localStorage)
+- [x] Keyboard navigation through results
 
 ---
 

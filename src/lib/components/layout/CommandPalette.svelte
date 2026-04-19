@@ -11,11 +11,25 @@
 
 	interface CommandItem {
 		name: string;
-		type: 'page' | 'feature' | 'action' | 'history' | 'semantic';
+		type: 'page' | 'feature' | 'action' | 'history' | 'semantic' | 'keyword';
 		href: string;
 		icon: string;
 		description?: string;
 		similarity?: number;
+	}
+
+	interface SearchResult {
+		id: string;
+		result_type: 'message' | 'note' | 'snippet';
+		title: string;
+		preview: string;
+		author_name: string;
+		author_avatar: string;
+		workspace_name: string;
+		channel_name?: string;
+		channel_id?: string;
+		created_at: string;
+		rank: number;
 	}
 
 	interface SemanticMessageResult {
@@ -42,7 +56,7 @@
 	let history = $state<CommandItem[]>([]);
 
 	// Static base commands
-	const baseItems: CommandItem[] = [
+	const baseItems = $derived<CommandItem[]>([
 		{
 			name: 'Go to Dashboard',
 			type: 'page',
@@ -63,8 +77,15 @@
 			href: '#',
 			icon: 'users',
 			description: 'Add new people to this workspace'
+		},
+		{
+			name: 'Advanced Search',
+			type: 'page',
+			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/search` : '#',
+			icon: 'search',
+			description: 'Detailed workspace-wide discovery'
 		}
-	];
+	]);
 
 	// Workspace-specific commands
 	const workspaceItems = $derived<CommandItem[]>(
@@ -134,7 +155,9 @@
 
 	let results = $state<CommandItem[]>([]);
 	let semanticResults = $state<CommandItem[]>([]);
+	let keywordResults = $state<CommandItem[]>([]);
 	let isSearchingSemantically = $state(false);
+	let isSearchingKeywords = $state(false);
 
 	$effect(() => {
 		if (!query) {
@@ -145,9 +168,52 @@
 
 		results = fuse.search(query).map((r) => r.item);
 		performSemanticSearch(query);
+		performKeywordSearch(query);
 	});
 
 	let searchTimeout: ReturnType<typeof setTimeout>;
+	let keywordTimeout: ReturnType<typeof setTimeout>;
+
+	async function performKeywordSearch(q: string) {
+		if (q.length < 2 || !currentWorkspace) {
+			keywordResults = [];
+			return;
+		}
+
+		clearTimeout(keywordTimeout);
+		keywordTimeout = setTimeout(async () => {
+			isSearchingKeywords = true;
+			try {
+				const res = await fetch(
+					`/api/workspace/${currentWorkspace.slug}/search?q=${encodeURIComponent(q)}&limit=5`
+				);
+				const data = await res.json();
+
+				if (data.results) {
+					keywordResults = data.results.map((r: SearchResult) => ({
+						name: r.title,
+						type: 'keyword',
+						href:
+							r.result_type === 'message'
+								? `/workspace/${currentWorkspace.slug}/chat/${r.channel_id}`
+								: r.result_type === 'note'
+									? `/workspace/${currentWorkspace.slug}/notes/${r.id}`
+									: `/workspace/${currentWorkspace.slug}/snippets`,
+						icon:
+							r.result_type === 'message' ? 'message' : r.result_type === 'note' ? 'book' : 'code',
+						description: `${r.result_type.toUpperCase()} · ${r.preview
+							.replace(/<mark>/g, '')
+							.replace(/<\/mark>/g, '')
+							.slice(0, 60)}...`
+					}));
+				}
+			} catch (e) {
+				console.error('Keyword search failed:', e);
+			} finally {
+				isSearchingKeywords = false;
+			}
+		}, 300);
+	}
 	async function performSemanticSearch(q: string) {
 		if (q.length < 3 || !currentWorkspace) return;
 
@@ -216,7 +282,7 @@
 		}, 600);
 	}
 
-	const combinedResults = $derived([...results, ...semanticResults]);
+	const combinedResults = $derived([...results, ...keywordResults, ...semanticResults]);
 
 	// Reset index when query or results change
 	$effect(() => {
@@ -309,7 +375,8 @@
 		zap: 'M13 10V3L4 14h7v7l9-11h-7z',
 		play: 'M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z',
 		database:
-			'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4'
+			'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
+		search: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
 	};
 </script>
 
@@ -357,7 +424,7 @@
 				{#if combinedResults.length > 0}
 					<div class="space-y-1">
 						{#if !query && history.length > 0}
-							<p class="px-3 py-2 text-[10px] font-bold tracking-widest text-zinc-600 uppercase">
+							<p class="px-3 py-2 text-[10px] font-bold tracking-widest text-content-dim uppercase">
 								Recent Results
 							</p>
 						{/if}
@@ -366,12 +433,13 @@
 							<button
 								class="group flex w-full items-center gap-4 rounded-xl p-3 text-left transition-all
 									{i === selectedIndex ? 'bg-surface-dim ring-1 ring-stroke' : 'hover:bg-surface-dim/40'}
-									{item.type === 'semantic' ? 'border-l-2 border-brand-orange/40 bg-brand-orange/5' : ''}"
+									{item.type === 'semantic' ? 'border-l-2 border-brand-orange/40 bg-brand-orange/5' : ''}
+									{item.type === 'keyword' ? 'border-l-2 border-brand-blue/40 bg-brand-blue/5' : ''}"
 								onclick={() => executeCommand(item)}
 								onmouseenter={() => (selectedIndex = i)}
 							>
 								<div
-									class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-900 text-zinc-400 transition-colors group-hover:bg-zinc-800 group-hover:text-brand-orange"
+									class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-stroke/50 bg-surface-dim text-content-dim transition-colors group-hover:bg-surface-dim/80 group-hover:text-brand-orange"
 								>
 									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 										<path
@@ -388,7 +456,11 @@
 										{#if item.type === 'semantic'}
 											<span
 												class="text-[9px] font-black tracking-tighter text-brand-orange uppercase"
-												>AI Result</span
+												>AI Match</span
+											>
+										{:else if item.type === 'keyword'}
+											<span class="text-[9px] font-black tracking-tighter text-brand-blue uppercase"
+												>Found in Content</span
 											>
 										{/if}
 									</div>
@@ -404,6 +476,15 @@
 								{/if}
 							</button>
 						{/each}
+
+						{#if isSearchingKeywords}
+							<div class="flex animate-pulse items-center gap-3 px-4 py-3 text-content-dim">
+								<div
+									class="h-4 w-4 animate-spin rounded-full border-2 border-brand-blue border-t-transparent"
+								></div>
+								<span class="text-xs italic">Scanning workspace index...</span>
+							</div>
+						{/if}
 
 						{#if isSearchingSemantically}
 							<div class="flex animate-pulse items-center gap-3 px-4 py-3 text-content-dim">
@@ -434,17 +515,17 @@
 
 			<!-- Footer Tips -->
 			<div
-				class="flex items-center justify-between border-t border-zinc-900 bg-zinc-900/30 px-4 py-3 text-[10px] text-zinc-500"
+				class="flex items-center justify-between border-t border-stroke bg-surface-dim/30 px-4 py-3 text-[10px] text-content-dim"
 			>
 				<div class="flex gap-4">
 					<span class="flex items-center gap-1.5"
-						><kbd class="rounded border border-zinc-800 bg-zinc-900 px-1 py-0.5">↑↓</kbd> navigate</span
+						><kbd class="rounded border border-stroke bg-surface-dim px-1 py-0.5">↑↓</kbd> navigate</span
 					>
 					<span class="flex items-center gap-1.5"
-						><kbd class="rounded border border-zinc-800 bg-zinc-900 px-1 py-0.5">↵</kbd> select</span
+						><kbd class="rounded border border-stroke bg-surface-dim px-1 py-0.5">↵</kbd> select</span
 					>
 					<span class="flex items-center gap-1.5"
-						><kbd class="rounded border border-zinc-800 bg-zinc-900 px-1 py-0.5">esc</kbd> close</span
+						><kbd class="rounded border border-stroke bg-surface-dim px-1 py-0.5">esc</kbd> close</span
 					>
 				</div>
 				<div class="flex items-center gap-1">

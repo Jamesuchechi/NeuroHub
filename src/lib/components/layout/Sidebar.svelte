@@ -61,6 +61,11 @@
 			name: 'Snippets',
 			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/snippets` : '#',
 			icon: 'code'
+		},
+		{
+			name: 'Search',
+			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/search` : '#',
+			icon: 'search'
 		}
 	]);
 
@@ -256,6 +261,7 @@
 		<!-- Search Shortcut -->
 		<div class="mb-6">
 			<button
+				onclick={() => uiStore.setCommandPaletteOpen(true)}
 				class="flex w-full items-center gap-3 rounded-xl border border-stroke bg-surface-dim/50 px-4 py-2.5 text-content-dim transition-all hover:border-stroke hover:bg-surface-dim"
 			>
 				<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -408,6 +414,15 @@
 										stroke-linejoin="round"
 										stroke-width="1.5"
 										d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+									/>
+								</svg>
+							{:else if link.icon === 'search'}
+								<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="1.5"
+										d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 									/>
 								</svg>
 							{/if}
