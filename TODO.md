@@ -437,7 +437,7 @@ Prism.js          Supabase Edge Fns      Streaming responses
 - [ ] Reduced-motion support (`prefers-reduced-motion`)
 
 ### Mobile Responsiveness
-
+- [ ] Make it responsive(Add mobile view on all pages)
 - [ ] Collapsible sidebar on mobile (drawer pattern)
 - [ ] Touch-friendly message input
 - [ ] Swipe-to-reply gesture on messages
