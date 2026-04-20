@@ -6,6 +6,7 @@
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { uiStore } from '$lib/stores/uiStore';
 	import ShortcutsModal from '$lib/components/layout/ShortcutsModal.svelte';
+	import InviteModal from '$lib/components/workspace/InviteModal.svelte';
 	import ToastContainer from '$lib/components/ui/ToastContainer.svelte';
 
 	let { children } = $props();
@@ -78,3 +79,4 @@
 
 <ToastContainer />
 <ShortcutsModal isOpen={shortcutsOpen} onClose={() => (shortcutsOpen = false)} />
+<InviteModal />

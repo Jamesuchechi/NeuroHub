@@ -1,7 +1,13 @@
 import { supabase } from './supabase';
 import type { Json } from '$lib/types/db';
 
-export type NotificationType = 'mention' | 'reply' | 'invite_accepted' | 'share' | 'ai_complete';
+export type NotificationType =
+	| 'mention'
+	| 'reply'
+	| 'workspace_invite'
+	| 'invite_accepted'
+	| 'share'
+	| 'ai_complete';
 
 export interface NotificationPayload {
 	message_id?: string;
@@ -21,17 +27,13 @@ export const notificationService = {
 		actorId: string | null,
 		payload: NotificationPayload
 	) {
-		const { data, error } = await supabase
-			.from('notifications')
-			.insert({
-				user_id: userId,
-				workspace_id: workspaceId,
-				type,
-				actor_id: actorId,
-				payload
-			})
-			.select()
-			.single();
+		const { data, error } = await supabase.rpc('create_notification', {
+			p_user_id: userId,
+			p_workspace_id: workspaceId,
+			p_type: type,
+			p_actor_id: actorId,
+			p_payload: payload
+		});
 
 		if (error) {
 			console.error('[notificationService] Failed to create notification:', error);

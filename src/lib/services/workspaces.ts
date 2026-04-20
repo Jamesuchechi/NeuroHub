@@ -163,63 +163,59 @@ export const workspacesService = {
 	},
 
 	async getInvite(token: string) {
-		const { data, error } = await db
-			.from('workspace_invites')
-			.select('*, workspace:workspaces(*)')
-			.eq('token', token)
-			.single();
+		const { data, error } = await supabase.rpc('get_invite_details', {
+			p_token: token
+		});
 
 		if (error) throw error;
-		return data as Database['public']['Tables']['workspace_invites']['Row'] & {
+		return data as unknown as Database['public']['Tables']['workspace_invites']['Row'] & {
 			workspace: Workspace;
 		};
 	},
 
 	async acceptInvite(token: string, userId: string): Promise<Workspace> {
-		// 1. Get invite details
-		const invite = await this.getInvite(token);
-
-		if (new Date(invite.expires_at) < new Date()) {
-			throw new Error('Invitation has expired');
-		}
-
-		// 2. Add member
-		const { error: memError } = await db.from('workspace_members').insert({
-			workspace_id: invite.workspace_id,
-			user_id: userId,
-			role: invite.role
+		// 1. Call secure RPC to handle verification and join logic
+		const { data, error } = await supabase.rpc('accept_workspace_invite', {
+			p_token: token,
+			p_user_id: userId
 		});
 
-		if (memError) throw memError;
+		if (error) {
+			console.error('[workspacesService] Failed to accept invite:', error);
+			throw error;
+		}
 
-		// 3. Mark invite as used
-		const { error: updateError } = await db
-			.from('workspace_invites')
-			.update({ used_at: new Date().toISOString() })
-			.eq('token', token);
+		const workspace = data as unknown as Workspace;
 
-		if (updateError) throw updateError;
-
-		// 4. Notify workspace owner
+		// 2. Notify workspace owner (optional/non-blocking)
 		try {
-			if (invite.workspace.owner_id) {
+			if (workspace.owner_id) {
 				const { notificationService } = await import('./notificationService');
 				await notificationService.createNotification(
-					invite.workspace.owner_id,
-					invite.workspace_id,
+					workspace.owner_id,
+					workspace.id,
 					'invite_accepted',
 					userId,
 					{
-						workspace_name: invite.workspace.name,
-						workspace_slug: invite.workspace.slug
+						workspace_name: workspace.name,
+						workspace_slug: workspace.slug
 					}
 				);
 			}
 		} catch (err) {
 			console.error('[workspacesService] Failed to notify owner of accepted invite:', err);
-			// Don't fail the whole process if notification fails
 		}
 
-		return invite.workspace;
+		return workspace;
+	},
+	async searchProfiles(query: string) {
+		const { data, error } = await supabase
+			.from('profiles')
+			.select('id, username, avatar_url, full_name')
+			.or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+			.limit(5);
+
+		if (error) throw error;
+		return data;
 	}
 };

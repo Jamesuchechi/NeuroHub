@@ -199,8 +199,13 @@ export class ChatStore {
 		try {
 			const olderMessages = await chatService.getMessages(channelId, 50, oldestMessage.id);
 			if (olderMessages.length > 0) {
-				// Prepend older messages
-				this.messages = [...olderMessages, ...this.messages];
+				// Filter out any messages that might already have arrived via realtime
+				const existingIds = new SvelteSet(this.messages.map((m) => m.id));
+				const uniqueOlder = olderMessages.filter((m) => !existingIds.has(m.id));
+
+				if (uniqueOlder.length > 0) {
+					this.messages = [...uniqueOlder, ...this.messages];
+				}
 			}
 		} catch (err) {
 			console.error('[ChatStore] Load more messages failed:', err);
@@ -243,11 +248,18 @@ export class ChatStore {
 				content,
 				options
 			);
-			// Replace optimistic message
-			this.messages = this.messages.map((m) => (m.id === tempId ? realMessage : m));
+
+			// Race condition check: If realtime already added this message, just remove the temp one
+			const alreadyExists = this.messages.some((m) => m.id === realMessage.id);
+			if (alreadyExists) {
+				this.messages = this.messages.filter((m) => m.id !== tempId);
+			} else {
+				// Otherwise, replace optimistic message with the real one
+				this.messages = this.messages.map((m) => (m.id === tempId ? realMessage : m));
+			}
 		} catch (err) {
 			console.error('[ChatStore] Send message failed:', err);
-			// Rollback
+			// Rollback temp message on failure
 			this.messages = this.messages.filter((m) => m.id !== tempId);
 		}
 	}
@@ -405,6 +417,9 @@ export class ChatStore {
 				.select('username, avatar_url')
 				.eq('id', record.user_id)
 				.single();
+
+			// SECURE DOUBLE-CHECK: Re-verify message doesn't exist after the await
+			if (this.messages.some((m) => m.id === record.id)) return;
 
 			const fullMessage = { ...record, user: user || undefined } as Message;
 			this.messages = [...this.messages, fullMessage];

@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import { supabase } from '$lib/services/supabase';
-	import { authStore } from '$lib/stores/authStore';
 	import { goto } from '$app/navigation';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -63,7 +62,7 @@
 		loading = true;
 		error = '';
 
-		const { data, error: err } = await supabase.auth.signUp({
+		const { error: err } = await supabase.auth.signUp({
 			email,
 			password,
 			options: {
@@ -81,8 +80,8 @@
 			error = err.message;
 			loading = false;
 		} else {
-			authStore.setSession(data.session);
-			goto(resolve('/dashboard' as unknown as '/'));
+			// Redirect to verification page instead of dashboard
+			goto(resolve(`/verify-email?email=${encodeURIComponent(email)}` as unknown as '/'));
 		}
 	}
 </script>

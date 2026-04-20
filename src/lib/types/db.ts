@@ -1130,6 +1130,29 @@ export type Database = {
 				};
 				Returns: boolean;
 			};
+			create_notification: {
+				Args: {
+					p_user_id: string;
+					p_workspace_id: string | null;
+					p_type: string;
+					p_actor_id: string | null;
+					p_payload: Json;
+				};
+				Returns: string;
+			};
+			accept_workspace_invite: {
+				Args: {
+					p_token: string;
+					p_user_id: string;
+				};
+				Returns: Json;
+			};
+			get_invite_details: {
+				Args: {
+					p_token: string;
+				};
+				Returns: Json;
+			};
 		};
 		Enums: {
 			user_role: 'owner' | 'member' | 'guest';

@@ -6,6 +6,9 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
+	import { authStore } from '$lib/stores/authStore';
+	import { workspacesService } from '$lib/services/workspaces';
+	import Button from '../ui/Button.svelte';
 
 	let { notification } = $props<{ notification: Notification }>();
 
@@ -46,12 +49,45 @@
 		goto(resolve(targetUrl as unknown as '/'));
 	}
 
+	async function handleAccept(e: MouseEvent) {
+		e.stopPropagation();
+		const payload = notification.payload;
+		const user = $authStore.user;
+		if (payload.invite_token && user) {
+			try {
+				await workspacesService.acceptInvite(payload.invite_token as string, user.id);
+				await notificationStore.delete(notification.id);
+				import('$lib/stores/toastStore').then((m) =>
+					m.toast.show(`Joined ${payload.workspace_name}`, 'success')
+				);
+				goto(resolve(`/workspace/${payload.workspace_slug}` as unknown as '/'));
+			} catch (err) {
+				console.error('[NotificationItem] Failed to accept invite:', err);
+				import('$lib/stores/toastStore').then((m) =>
+					m.toast.show('Failed to accept invite', 'error')
+				);
+			}
+		}
+	}
+
+	async function handleDecline(e: MouseEvent) {
+		e.stopPropagation();
+		try {
+			await notificationStore.delete(notification.id);
+			import('$lib/stores/toastStore').then((m) => m.toast.show('Invitation declined', 'info'));
+		} catch (err) {
+			console.error('[NotificationItem] Failed to decline invite:', err);
+		}
+	}
+
 	const config = $derived.by(() => {
 		switch (notification.type) {
 			case 'mention':
 				return { icon: '@', color: 'text-brand-orange', label: 'mentioned you' };
 			case 'reply':
 				return { icon: '↩️', color: 'text-brand-blue', label: 'replied to you' };
+			case 'workspace_invite':
+				return { icon: '📩', color: 'text-brand-orange', label: 'invited you to join' };
 			case 'invite_accepted':
 				return { icon: '🤝', color: 'text-brand-green', label: 'joined workspace' };
 			default:
@@ -112,6 +148,27 @@
 			<p class="mt-1 text-[11px] text-content-dim/60">
 				In <span class="font-bold text-brand-orange">{notification.payload.workspace_name}</span>
 			</p>
+		{/if}
+
+		{#if notification.type === 'workspace_invite'}
+			<div class="mt-3 flex gap-2">
+				<Button
+					size="sm"
+					variant="primary"
+					class="h-7 w-auto px-4 py-0 text-[10px] shadow-neon-orange"
+					onclick={handleAccept}
+				>
+					Accept
+				</Button>
+				<Button
+					size="sm"
+					variant="secondary"
+					class="h-7 w-auto px-4 py-0 text-[10px]"
+					onclick={handleDecline}
+				>
+					Decline
+				</Button>
+			</div>
 		{/if}
 	</div>
 

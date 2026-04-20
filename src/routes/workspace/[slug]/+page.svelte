@@ -99,7 +99,9 @@
 						Settings
 					</div>
 				</Button>
-				<Button variant="primary">Invite Team</Button>
+				<Button variant="primary" onclick={() => uiStore.setInviteModalOpen(true)}
+					>Invite Team</Button
+				>
 			</div>
 		</div>
 
@@ -250,7 +252,12 @@
 							</div>
 						{/each}
 					</div>
-					<Button variant="secondary" class="mt-8 w-full">View All Members</Button>
+					<Button
+						variant="secondary"
+						class="mt-8 w-full"
+						onclick={() => window.open(`/workspace/${workspace.slug}/members`, '_self')}
+						>View All Members</Button
+					>
 				</div>
 			{:else}
 				<button

@@ -24,8 +24,12 @@
 		});
 
 		if (err) {
-			error = err.message;
-			loading = false;
+			if (err.message.toLowerCase().includes('email not confirmed')) {
+				goto(resolve(`/verify-email?email=${encodeURIComponent(email)}` as unknown as '/'));
+			} else {
+				error = err.message;
+				loading = false;
+			}
 		} else {
 			authStore.setSession(data.session);
 			goto(resolve('/dashboard' as unknown as '/'));
