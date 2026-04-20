@@ -196,9 +196,29 @@ export const workspacesService = {
 		const { error: updateError } = await db
 			.from('workspace_invites')
 			.update({ used_at: new Date().toISOString() })
-			.eq('id', invite.id);
+			.eq('token', token);
 
 		if (updateError) throw updateError;
+
+		// 4. Notify workspace owner
+		try {
+			if (invite.workspace.owner_id) {
+				const { notificationService } = await import('./notificationService');
+				await notificationService.createNotification(
+					invite.workspace.owner_id,
+					invite.workspace_id,
+					'invite_accepted',
+					userId,
+					{
+						workspace_name: invite.workspace.name,
+						workspace_slug: invite.workspace.slug
+					}
+				);
+			}
+		} catch (err) {
+			console.error('[workspacesService] Failed to notify owner of accepted invite:', err);
+			// Don't fail the whole process if notification fails
+		}
 
 		return invite.workspace;
 	}

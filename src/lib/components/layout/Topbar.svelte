@@ -5,6 +5,19 @@
 	import ThemeToggle from '../ui/ThemeToggle.svelte';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { uiStore } from '$lib/stores/uiStore';
+	import { notificationStore } from '$lib/stores/notificationStore.svelte';
+	import NotificationDropdown from '../notifications/NotificationDropdown.svelte';
+	import { onMount, onDestroy } from 'svelte';
+
+	let showNotifications = $state(false);
+
+	onMount(() => {
+		notificationStore.init();
+	});
+
+	onDestroy(() => {
+		notificationStore.cleanup();
+	});
 
 	const currentWorkspace = $derived($workspaceStore.currentWorkspace);
 	const { contextPanelCollapsed } = $derived($uiStore);
@@ -60,25 +73,44 @@
 
 	<!-- Right: Actions -->
 	<div class="flex items-center gap-4">
-		<button
-			class="relative rounded-full p-2 text-content-dim transition-all hover:bg-surface-dim hover:text-content"
-			aria-label="Notifications"
-		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="1.5"
-					d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-				/>
-			</svg>
-			<span class="absolute top-2 right-2 flex h-2 w-2">
-				<span
-					class="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"
-				></span>
-				<span class="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
-			</span>
-		</button>
+		<div class="relative">
+			<button
+				onclick={() => (showNotifications = !showNotifications)}
+				class="relative rounded-full p-2 transition-all hover:bg-surface-dim {showNotifications
+					? 'bg-surface-dim text-brand-orange'
+					: 'text-content-dim hover:text-content'}"
+				aria-label="Notifications"
+			>
+				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1.5"
+						d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+					/>
+				</svg>
+
+				{#if notificationStore.unreadCount > 0}
+					<span class="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+						<span
+							class="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-orange opacity-75"
+						></span>
+						<span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-orange"></span>
+					</span>
+				{/if}
+			</button>
+
+			{#if showNotifications}
+				<div
+					class="fixed inset-0 z-40"
+					onclick={() => (showNotifications = false)}
+					aria-hidden="true"
+				></div>
+				<div class="absolute top-full right-0 z-50 mt-2 w-80">
+					<NotificationDropdown onclose={() => (showNotifications = false)} />
+				</div>
+			{/if}
+		</div>
 
 		<ThemeToggle />
 

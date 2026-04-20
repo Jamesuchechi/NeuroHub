@@ -125,6 +125,79 @@ export const chatService = {
 			.single();
 
 		if (error) throw error;
+		if (!data) throw new Error('Failed to create message');
+
+		// --- Notification Triggers ---
+		try {
+			const { notificationService } = await import('./notificationService');
+			const { data: channel } = await supabase
+				.from('channels')
+				.select('workspace_id, name')
+				.eq('id', channelId)
+				.single();
+
+			if (channel) {
+				const workspaceId = channel.workspace_id;
+
+				// 1. Handle Mentions (@username)
+				const mentions = content.match(/@(\w+)/g);
+				if (mentions) {
+					const usernames = mentions.map((m) => m.slice(1));
+					const { data: profiles } = await supabase
+						.from('profiles')
+						.select('id, username')
+						.in('username', usernames);
+
+					if (profiles) {
+						for (const profile of profiles) {
+							if (profile.id !== userId) {
+								await notificationService.createNotification(
+									profile.id,
+									workspaceId,
+									'mention',
+									userId,
+									{
+										message_id: data.id,
+										channel_id: channelId,
+										channel_name: channel.name,
+										preview: content.slice(0, 100)
+									}
+								);
+							}
+						}
+					}
+				}
+
+				// 2. Handle Thread Replies
+				if (options.parentId) {
+					const { data: parentMsg } = await supabase
+						.from('messages')
+						.select('user_id')
+						.eq('id', options.parentId)
+						.single();
+
+					if (parentMsg && parentMsg.user_id !== userId) {
+						await notificationService.createNotification(
+							parentMsg.user_id,
+							workspaceId,
+							'reply',
+							userId,
+							{
+								message_id: data.id,
+								channel_id: channelId,
+								channel_name: channel.name,
+								preview: content.slice(0, 100),
+								parent_id: options.parentId
+							}
+						);
+					}
+				}
+			}
+		} catch (err) {
+			console.error('[chatService] Notification trigger failed:', err);
+			// Don't block message sending if notification fails
+		}
+
 		return data as Message;
 	},
 

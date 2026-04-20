@@ -4,13 +4,13 @@
 	import { page } from '$app/state';
 	import { authStore } from '$lib/stores/authStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
-	import { uiStore } from '$lib/stores/uiStore';
 	import { goto } from '$app/navigation';
 	import { workspacesService } from '$lib/services/workspaces';
 	import { slugify } from '$lib/utils/slugify';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import { supabase } from '$lib/services/supabase';
 	import Modal from '$lib/components/ui/Modal.svelte';
 
 	let activeTab = $state('general');
@@ -24,10 +24,20 @@
 	let deleteConfirm = $state('');
 	let showDeleteModal = $state(false);
 
-	const { currentWorkspace, members, userRole } = $derived($workspaceStore);
+	// Notification Preferences State
+	let preferences = $state({
+		mentions_enabled: true,
+		replies_enabled: true,
+		invites_enabled: true,
+		ai_completions_enabled: true
+	});
+	let loadingPrefs = $state(true);
+	let savingPrefs = $state(false);
+
+	const { currentWorkspace, userRole } = $derived($workspaceStore);
 	const session = $derived($authStore.session);
 
-	async function loadWorkspace() {
+	async function loadSettings() {
 		const slugParam = page.params.slug;
 		if (!session?.user || !slugParam) return;
 
@@ -38,12 +48,60 @@
 				name = currentWorkspace.name;
 				slug = currentWorkspace.slug;
 				description = currentWorkspace.description || '';
+				await fetchNotificationPreferences();
 			}
 		} catch (err) {
 			console.error(err);
 			goto(resolve('/dashboard'));
 		} finally {
 			loading = false;
+		}
+	}
+
+	async function fetchNotificationPreferences() {
+		if (!currentWorkspace || !session?.user) return;
+		loadingPrefs = true;
+		try {
+			const { data } = await supabase
+				.from('notification_preferences')
+				.select('*')
+				.eq('user_id', session.user.id)
+				.eq('workspace_id', currentWorkspace.id)
+				.single();
+
+			if (data) {
+				preferences = {
+					mentions_enabled: data.mentions_enabled,
+					replies_enabled: data.replies_enabled,
+					invites_enabled: data.invites_enabled,
+					ai_completions_enabled: data.ai_completions_enabled
+				};
+			}
+		} catch (_err) {
+			console.warn('Notification preferences not found, using defaults.');
+		} finally {
+			loadingPrefs = false;
+		}
+	}
+
+	async function saveNotificationPreferences() {
+		if (!currentWorkspace || !session?.user) return;
+		savingPrefs = true;
+		try {
+			const { error } = await supabase.from('notification_preferences').upsert({
+				user_id: session.user.id,
+				workspace_id: currentWorkspace.id,
+				...preferences
+			});
+			if (error) throw error;
+			import('$lib/stores/toastStore').then((m) => m.toast.show('Preferences updated', 'success'));
+		} catch (err) {
+			console.error(err);
+			import('$lib/stores/toastStore').then((m) =>
+				m.toast.show('Failed to save preferences', 'error')
+			);
+		} finally {
+			savingPrefs = false;
 		}
 	}
 
@@ -82,23 +140,6 @@
 		}
 	}
 
-	async function handleRoleChange(userId: string, newRole: 'owner' | 'member' | 'guest') {
-		try {
-			await workspaceStore.updateMemberRole(userId, newRole);
-		} catch (err) {
-			console.error(err);
-		}
-	}
-
-	async function handleRemoveMember(userId: string) {
-		if (!confirm('Are you sure you want to remove this member?')) return;
-		try {
-			await workspaceStore.removeMember(userId);
-		} catch (err) {
-			console.error(err);
-		}
-	}
-
 	async function handleDeleteWorkspace() {
 		if (deleteConfirm !== currentWorkspace?.name) return;
 		try {
@@ -109,14 +150,14 @@
 		}
 	}
 
-	onMount(loadWorkspace);
+	onMount(loadSettings);
 </script>
 
-<div class="min-h-screen bg-black p-8 text-white md:p-16">
+<div class="min-h-screen bg-surface p-8 text-content md:p-16">
 	<div class="mx-auto max-w-4xl">
 		<button
 			onclick={() => goto(resolve(`/workspace/${page.params.slug}`))}
-			class="mb-8 flex items-center gap-2 text-sm font-medium text-zinc-500 transition-colors hover:text-white"
+			class="mb-8 flex items-center gap-2 text-sm font-medium text-content-dim transition-colors hover:text-content"
 		>
 			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path
@@ -137,41 +178,43 @@
 				class="rounded-2xl"
 			/>
 			<div>
-				<h1 class="mb-1 text-3xl font-black">{currentWorkspace?.name}</h1>
-				<p class="text-sm text-zinc-500">Manage your workspace settings, members, and privacy.</p>
+				<h1 class="mb-1 text-3xl font-black text-content">{currentWorkspace?.name}</h1>
+				<p class="text-sm text-content-dim">
+					Manage your workspace settings, members, and privacy.
+				</p>
 			</div>
 		</div>
 
 		<!-- Tabs -->
-		<div class="mb-10 flex gap-8 border-b border-zinc-900">
+		<div class="mb-10 flex gap-8 border-b border-stroke">
 			<button
 				onclick={() => (activeTab = 'general')}
 				class="relative pb-4 text-sm font-bold transition-all {activeTab === 'general'
-					? 'text-white'
-					: 'text-zinc-500 hover:text-zinc-300'}"
+					? 'text-content'
+					: 'text-content-dim hover:text-content'}"
 			>
 				General
 				{#if activeTab === 'general'}
-					<div class="absolute bottom-0 left-0 h-0.5 w-full bg-orange-500"></div>
+					<div class="absolute bottom-0 left-0 h-0.5 w-full bg-brand-orange"></div>
 				{/if}
 			</button>
 			<button
-				onclick={() => (activeTab = 'members')}
-				class="relative pb-4 text-sm font-bold transition-all {activeTab === 'members'
-					? 'text-white'
-					: 'text-zinc-500 hover:text-zinc-300'}"
+				onclick={() => (activeTab = 'notifications')}
+				class="relative pb-4 text-sm font-bold transition-all {activeTab === 'notifications'
+					? 'text-content'
+					: 'text-content-dim hover:text-content'}"
 			>
-				Members ({members.length})
-				{#if activeTab === 'members'}
-					<div class="absolute bottom-0 left-0 h-0.5 w-full bg-orange-500"></div>
+				Notifications
+				{#if activeTab === 'notifications'}
+					<div class="absolute bottom-0 left-0 h-0.5 w-full bg-brand-orange"></div>
 				{/if}
 			</button>
 		</div>
 
 		{#if loading}
 			<div class="space-y-6">
-				<div class="h-12 animate-pulse rounded-xl bg-zinc-950"></div>
-				<div class="h-32 animate-pulse rounded-xl bg-zinc-950"></div>
+				<div class="h-12 animate-pulse rounded-xl bg-surface-dim"></div>
+				<div class="h-32 animate-pulse rounded-xl bg-surface-dim"></div>
 			</div>
 		{:else if activeTab === 'general'}
 			<div class="space-y-10">
@@ -186,9 +229,11 @@
 								class="rounded-2xl"
 							/>
 							<div class="space-y-2">
-								<p class="text-xs font-bold tracking-wider text-white uppercase">Workspace Logo</p>
+								<p class="text-xs font-bold tracking-wider text-content uppercase">
+									Workspace Logo
+								</p>
 								<label
-									class="inline-block cursor-pointer rounded-lg bg-zinc-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-zinc-800"
+									class="inline-block cursor-pointer rounded-lg bg-surface-dim px-4 py-2 text-xs font-bold text-content transition-colors hover:bg-stroke"
 								>
 									{saving ? 'Uploading...' : 'Upload New Logo'}
 									<input
@@ -208,13 +253,13 @@
 						<div class="space-y-2">
 							<label
 								for="ws-description"
-								class="block text-[10px] font-bold tracking-[1px] text-zinc-500 uppercase"
+								class="block text-[10px] font-bold tracking-[1px] text-content-dim uppercase"
 								>Description</label
 							>
 							<textarea
 								id="ws-description"
 								bind:value={description}
-								class="h-32 w-full resize-none rounded-xl border border-zinc-900 bg-zinc-950 px-4 py-3 text-sm text-white transition-all outline-none focus:border-orange-500"
+								class="h-32 w-full resize-none rounded-xl border border-stroke bg-surface-dim px-4 py-3 text-sm text-content transition-all outline-none focus:border-brand-orange"
 							></textarea>
 						</div>
 						<Button type="submit" loading={saving}>Save Changes</Button>
@@ -222,9 +267,9 @@
 				</section>
 
 				{#if userRole === 'owner'}
-					<section class="rounded-2xl border border-red-900/50 bg-red-950/5 p-8">
+					<section class="rounded-2xl border border-red-500/20 bg-red-500/5 p-8">
 						<h3 class="mb-2 text-lg font-bold text-red-500">Danger Zone</h3>
-						<p class="mb-6 text-sm text-zinc-500">
+						<p class="mb-6 text-sm text-content-dim">
 							Once you delete a workspace, there is no going back. Please be certain.
 						</p>
 						<Button variant="secondary" onclick={() => (showDeleteModal = true)}>
@@ -233,62 +278,116 @@
 					</section>
 				{/if}
 			</div>
-		{:else if activeTab === 'members'}
-			<div class="space-y-6">
-				<div class="mb-4 flex items-center justify-between">
-					<h3 class="text-lg font-bold">Manage Members</h3>
-					<Button variant="primary" size="sm" onclick={() => uiStore.setInviteModalOpen(true)}
-						>Invite Member</Button
-					>
-				</div>
+		{:else if activeTab === 'notifications'}
+			<div class="space-y-10">
+				<section class="max-w-2xl">
+					<h3 class="mb-2 text-lg font-bold text-content">Notification Preferences</h3>
+					<p class="mb-8 text-sm text-content-dim">
+						Configure how you want to be alerted for activity within {currentWorkspace?.name}.
+					</p>
 
-				<div class="overflow-hidden rounded-2xl border border-zinc-900">
-					{#each members as member (member.user_id)}
-						<div
-							class="flex items-center justify-between border-b border-zinc-900 bg-zinc-950/50 p-4 last:border-0"
-						>
-							<div class="flex items-center gap-4">
-								<Avatar name={member.profile.username || 'User'} src={member.profile.avatar_url} />
+					<div class="space-y-4 rounded-2xl border border-stroke bg-surface-dim/50 p-6">
+						{#if loadingPrefs}
+							<div class="space-y-6">
+								{#each Array(4) as _, i (i)}
+									<div class="flex items-center justify-between">
+										<div class="space-y-2">
+											<div class="h-4 w-24 animate-pulse rounded bg-surface"></div>
+											<div class="h-3 w-48 animate-pulse rounded bg-surface"></div>
+										</div>
+										<div class="h-6 w-11 animate-pulse rounded-full bg-surface"></div>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<!-- Mentions -->
+							<div class="flex items-center justify-between">
 								<div>
-									<p class="text-sm font-bold text-white">{member.profile.username}</p>
-									<p class="text-xs text-zinc-500 lowercase italic">{member.role}</p>
+									<p class="text-sm font-bold text-content">Mentions</p>
+									<p class="text-xs text-content-dim">
+										Notify me when someone types my @username in messages or notes.
+									</p>
 								</div>
+								<label class="relative inline-flex cursor-pointer items-center">
+									<input
+										type="checkbox"
+										bind:checked={preferences.mentions_enabled}
+										class="peer sr-only"
+									/>
+									<div
+										class="peer h-6 w-11 rounded-full bg-stroke transition-all peer-checked:bg-brand-orange after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-full"
+									></div>
+								</label>
 							</div>
 
-							{#if userRole === 'owner' && member.user_id !== session?.user.id}
-								<div class="flex items-center gap-2">
-									<select
-										value={member.role}
-										onchange={(e) =>
-											handleRoleChange(
-												member.user_id,
-												e.currentTarget.value as 'owner' | 'member' | 'guest'
-											)}
-										class="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-white outline-none focus:border-orange-500"
-									>
-										<option value="owner">Owner</option>
-										<option value="member">Member</option>
-										<option value="guest">Guest</option>
-									</select>
-									<button
-										onclick={() => handleRemoveMember(member.user_id)}
-										class="p-2 text-zinc-500 transition-colors hover:text-red-500"
-										title="Remove member"
-									>
-										<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-											/>
-										</svg>
-									</button>
+							<!-- Replies -->
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-sm font-bold text-content">Replies</p>
+									<p class="text-xs text-content-dim">
+										Notify me when someone replies to one of my messages.
+									</p>
 								</div>
-							{/if}
-						</div>
-					{/each}
-				</div>
+								<label class="relative inline-flex cursor-pointer items-center">
+									<input
+										type="checkbox"
+										bind:checked={preferences.replies_enabled}
+										class="peer sr-only"
+									/>
+									<div
+										class="peer h-6 w-11 rounded-full bg-stroke transition-all peer-checked:bg-brand-orange after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-full"
+									></div>
+								</label>
+							</div>
+
+							<!-- Invites -->
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-sm font-bold text-content">Workspace Activity</p>
+									<p class="text-xs text-content-dim">
+										Notify me when invites are accepted or new members join.
+									</p>
+								</div>
+								<label class="relative inline-flex cursor-pointer items-center">
+									<input
+										type="checkbox"
+										bind:checked={preferences.invites_enabled}
+										class="peer sr-only"
+									/>
+									<div
+										class="peer h-6 w-11 rounded-full bg-stroke transition-all peer-checked:bg-brand-orange after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-full"
+									></div>
+								</label>
+							</div>
+
+							<!-- AI -->
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-sm font-bold text-content">AI Task Completions</p>
+									<p class="text-xs text-content-dim">
+										Notify me when long-running AI operations are finished.
+									</p>
+								</div>
+								<label class="relative inline-flex cursor-pointer items-center">
+									<input
+										type="checkbox"
+										bind:checked={preferences.ai_completions_enabled}
+										class="peer sr-only"
+									/>
+									<div
+										class="peer h-6 w-11 rounded-full bg-stroke transition-all peer-checked:bg-brand-orange after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all peer-checked:after:translate-x-full"
+									></div>
+								</label>
+							</div>
+						{/if}
+					</div>
+
+					<div class="mt-8">
+						<Button onclick={saveNotificationPreferences} loading={savingPrefs}
+							>Save Preferences</Button
+						>
+					</div>
+				</section>
 			</div>
 		{/if}
 	</div>
@@ -302,8 +401,8 @@
 		</div>
 
 		<div class="space-y-4">
-			<p class="text-sm text-zinc-400">
-				Please type <span class="font-bold text-white">{currentWorkspace?.name}</span> to confirm.
+			<p class="text-sm text-content-dim">
+				Please type <span class="font-bold text-content">{currentWorkspace?.name}</span> to confirm.
 			</p>
 			<Input label={undefined} bind:value={deleteConfirm} placeholder={currentWorkspace?.name} />
 		</div>

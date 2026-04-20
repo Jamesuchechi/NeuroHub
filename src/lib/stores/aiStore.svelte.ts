@@ -540,8 +540,26 @@ Return just the raw HTML content.`;
 		return result?.replace(/["']/g, '').trim() || null;
 	}
 
-	async generateCustom(prompt: string, systemPrompt?: string): Promise<string | null> {
-		const result = await this.smartStream(prompt, systemPrompt);
+	async generateCustom(
+		prompt: string,
+		systemPrompt?: string,
+		workspaceId?: string,
+		userId?: string
+	): Promise<string | null> {
+		const result = await this.smartStream(prompt, systemPrompt, workspaceId);
+
+		if (result && userId && workspaceId) {
+			try {
+				const { notificationService } = await import('$lib/services/notificationService');
+				await notificationService.createNotification(userId, workspaceId, 'ai_complete', null, {
+					prompt: prompt.slice(0, 100),
+					preview: result.slice(0, 100)
+				});
+			} catch (err) {
+				console.error('[aiStore] Failed to trigger AI completion notification:', err);
+			}
+		}
+
 		return result || null;
 	}
 

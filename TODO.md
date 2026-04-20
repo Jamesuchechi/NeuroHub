@@ -389,29 +389,28 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 9 — Notifications & Activity
+## Phase 9 — Notifications & Activity [COMPLETE]
 
 **Target: Week 7**
 
 ### Database Schema
 
-- [ ] Create `notifications` table (id, user_id, type, payload JSONB, read_at, created_at)
-- [ ] Create `notification_preferences` table (user_id, workspace_id, preferences JSONB)
+- [x] Create `notifications` table (id, user_id, type, payload JSONB, read_at, created_at)
+- [x] Create `notification_preferences` table (user_id, workspace_id, individual boolean columns)
 
 ### Notification Types
 
-- [ ] `@mention` in message or note
-- [ ] Reply to your message (thread)
-- [ ] Workspace invite accepted
-- [ ] Note shared with you
-- [ ] AI command completed (for long-running tasks)
+- [x] @mention in message or note
+- [x] Reply to your message (thread)
+- [x] Workspace invite accepted
+- [x] AI command completed (for long-running tasks)
 
 ### Notification UI
 
-- [ ] Notification bell icon in sidebar with unread badge
-- [ ] Notification dropdown panel (mark read, navigate to source)
-- [ ] Notification preferences page (per-workspace toggles)
-- [ ] Browser push notifications (Web Push API + service worker) — optional
+- [x] Notification bell icon in sidebar with unread badge
+- [x] Notification dropdown panel (mark read, navigate to source)
+- [x] Notification preferences page (per-workspace toggles)
+- [x] Browser push notifications (Web Push API + service worker)
 
 ---
 
@@ -437,6 +436,7 @@ Prism.js          Supabase Edge Fns      Streaming responses
 - [ ] Reduced-motion support (`prefers-reduced-motion`)
 
 ### Mobile Responsiveness
+
 - [ ] Make it responsive(Add mobile view on all pages)
 - [ ] Collapsible sidebar on mobile (drawer pattern)
 - [ ] Touch-friendly message input

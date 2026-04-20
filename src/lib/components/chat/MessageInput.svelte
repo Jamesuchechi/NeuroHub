@@ -7,6 +7,8 @@
 	import { contextBuilder } from '$lib/utils/contextBuilder';
 	import { toast } from '$lib/stores/toastStore';
 	import { aiStore } from '$lib/stores/aiStore.svelte';
+	import { authStore } from '$lib/stores/authStore';
+	import { get } from 'svelte/store';
 
 	let {
 		channelId,
@@ -118,7 +120,8 @@
 			}
 
 			// We use aiStore to handle the generation state which the UI can listen to
-			await aiStore.generateCustom(prompt, systemPrompt);
+			const user = get(authStore).user;
+			await aiStore.generateCustom(prompt, systemPrompt, workspaceId, user?.id);
 		} catch (err) {
 			console.error('[SlashCommand] Error:', err);
 			toast.show('AI Command failed', 'error');

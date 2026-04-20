@@ -121,6 +121,23 @@ function extractWikilinkIds(content: TiptapNode | unknown): string[] {
 	return Array.from(ids);
 }
 
+function extractMentionedUserIds(content: TiptapNode | unknown): string[] {
+	if (!content || typeof content !== 'object') return [];
+	const ids = new SvelteSet<string>();
+
+	const traverse = (node: TiptapNode) => {
+		if (node.type === 'mention' && node.attrs?.id) {
+			ids.add(node.attrs.id as string);
+		}
+		if (node.content) {
+			node.content.forEach(traverse);
+		}
+	};
+
+	traverse(content as TiptapNode);
+	return Array.from(ids);
+}
+
 export function extractTextFromTiptap(content: TiptapNode | unknown): string {
 	if (!content || typeof content !== 'object') return '';
 	let result = '';
@@ -301,6 +318,30 @@ class NotesStore {
 			if (updates.content) {
 				const linkIds = extractWikilinkIds(updates.content);
 				await this.syncLinks(noteId, linkIds);
+
+				// Handle notifications for mentions in nodes
+				const mentionedIds = extractMentionedUserIds(updates.content);
+				const previousMentionedIds = extractMentionedUserIds(previousCurrentNote?.content);
+				const newMentions = mentionedIds.filter((id) => !previousMentionedIds.includes(id));
+
+				if (newMentions.length > 0 && authorId) {
+					const { notificationService } = await import('$lib/services/notificationService');
+					for (const targetId of newMentions) {
+						if (targetId !== authorId) {
+							await notificationService.createNotification(
+								targetId,
+								data.workspace_id,
+								'mention',
+								authorId,
+								{
+									note_id: data.id,
+									title: data.title,
+									preview: extractTextFromTiptap(data.content).slice(0, 100)
+								}
+							);
+						}
+					}
+				}
 			}
 
 			return data;

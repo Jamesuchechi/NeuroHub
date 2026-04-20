@@ -214,6 +214,66 @@ export type ApiEnvironmentsTable = {
 	};
 };
 
+export type NotificationPreferencesTable = {
+	Row: {
+		user_id: string;
+		workspace_id: string;
+		mentions_enabled: boolean;
+		replies_enabled: boolean;
+		invites_enabled: boolean;
+		ai_completions_enabled: boolean;
+	};
+	Insert: {
+		user_id: string;
+		workspace_id: string;
+		mentions_enabled?: boolean;
+		replies_enabled?: boolean;
+		invites_enabled?: boolean;
+		ai_completions_enabled?: boolean;
+	};
+	Update: {
+		user_id?: string;
+		workspace_id?: string;
+		mentions_enabled?: boolean;
+		replies_enabled?: boolean;
+		invites_enabled?: boolean;
+		ai_completions_enabled?: boolean;
+	};
+};
+
+export type NotificationsTable = {
+	Row: {
+		id: string;
+		user_id: string;
+		workspace_id: string | null;
+		type: string;
+		actor_id: string | null;
+		payload: Json;
+		read_at: string | null;
+		created_at: string;
+	};
+	Insert: {
+		id?: string;
+		user_id: string;
+		workspace_id?: string | null;
+		type: string;
+		actor_id?: string | null;
+		payload?: Json;
+		read_at?: string | null;
+		created_at?: string;
+	};
+	Update: {
+		id?: string;
+		user_id?: string;
+		workspace_id?: string | null;
+		type?: string;
+		actor_id?: string | null;
+		payload?: Json;
+		read_at?: string | null;
+		created_at?: string;
+	};
+};
+
 export type Database = {
 	public: {
 		Tables: {
@@ -937,6 +997,66 @@ export type Database = {
 					variables?: Json;
 					created_at?: string;
 					updated_at?: string;
+				};
+				Relationships: [];
+			};
+			notification_preferences: {
+				Row: {
+					user_id: string;
+					workspace_id: string;
+					mentions_enabled: boolean;
+					replies_enabled: boolean;
+					invites_enabled: boolean;
+					ai_completions_enabled: boolean;
+				};
+				Insert: {
+					user_id: string;
+					workspace_id: string;
+					mentions_enabled?: boolean;
+					replies_enabled?: boolean;
+					invites_enabled?: boolean;
+					ai_completions_enabled?: boolean;
+				};
+				Update: {
+					user_id?: string;
+					workspace_id?: string;
+					mentions_enabled?: boolean;
+					replies_enabled?: boolean;
+					invites_enabled?: boolean;
+					ai_completions_enabled?: boolean;
+				};
+				Relationships: [];
+			};
+			notifications: {
+				Row: {
+					id: string;
+					user_id: string;
+					workspace_id: string | null;
+					type: string;
+					actor_id: string | null;
+					payload: Json;
+					read_at: string | null;
+					created_at: string;
+				};
+				Insert: {
+					id?: string;
+					user_id: string;
+					workspace_id?: string | null;
+					type: string;
+					actor_id?: string | null;
+					payload?: Json;
+					read_at?: string | null;
+					created_at?: string;
+				};
+				Update: {
+					id?: string;
+					user_id?: string;
+					workspace_id?: string | null;
+					type?: string;
+					actor_id?: string | null;
+					payload?: Json;
+					read_at?: string | null;
+					created_at?: string;
 				};
 				Relationships: [];
 			};
