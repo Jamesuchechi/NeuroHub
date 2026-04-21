@@ -16,6 +16,8 @@
 	import { chatStore, type EnrichedChannel } from '$lib/stores/chatStore.svelte';
 	import { notificationStore } from '$lib/stores/notificationStore.svelte';
 
+	import ToolboxSelector from '../devtools/ToolboxSelector.svelte';
+
 	const sidebarCollapsed = $derived($uiStore.sidebarCollapsed);
 
 	import type { Database } from '$lib/types/db';
@@ -36,13 +38,17 @@
 	 */
 	const publicChannels = $derived<EnrichedChannel[]>(
 		(chatStore.enrichedChannels as EnrichedChannel[]).filter(
-			(c) => c.type !== 'private' || !c.name.startsWith('dm-')
+			(c) => c.type === 'text' || c.type === 'announcement'
 		)
 	);
 	const directMessages = $derived<EnrichedChannel[]>(
-		(chatStore.enrichedChannels as EnrichedChannel[]).filter(
-			(c) => c.type === 'private' && c.name.startsWith('dm-')
-		)
+		(chatStore.enrichedChannels as EnrichedChannel[])
+			.filter((c) => c.type === 'group_dm' || (c.type === 'private' && c.name.startsWith('dm-')))
+			.filter((c, index, self) => {
+				if (c.type === 'group_dm') return true;
+				// Deduplicate by other_user_id
+				return index === self.findIndex((t) => t.other_user_id === c.other_user_id);
+			})
 	);
 
 	interface NavLink {
@@ -57,6 +63,16 @@
 			name: 'NeuroAI',
 			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/ai` : '#',
 			icon: 'brain'
+		},
+		{
+			name: 'Activity Center',
+			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/activity` : '#',
+			icon: 'pulse'
+		},
+		{
+			name: 'Unreads',
+			href: currentWorkspace ? `/workspace/${currentWorkspace.slug}/unreads` : '#',
+			icon: 'check-circle'
 		},
 		{
 			name: 'Dashboard',
@@ -451,6 +467,24 @@
 										d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
 									/>
 								</svg>
+							{:else if link.icon === 'pulse'}
+								<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="1.5"
+										d="M13 10V3L4 14h7v7l9-11h-7z"
+									/>
+								</svg>
+							{:else if link.icon === 'check-circle'}
+								<svg class="h-full w-full" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="1.5"
+										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
 							{/if}
 						</div>
 						{#if !sidebarCollapsed}
@@ -482,6 +516,42 @@
 					</a>
 				{/each}
 			</nav>
+		</div>
+
+		<!-- Toolboxes Section (New) -->
+		<div class="mb-6">
+			<button
+				onclick={() => {
+					if (sidebarCollapsed) {
+						uiStore.setSidebarCollapsed(false);
+					}
+				}}
+				class="group mb-1 flex w-full items-center justify-between px-3 py-1 text-[10px] font-bold tracking-[2px] text-zinc-600 uppercase hover:text-zinc-400"
+			>
+				{#if !sidebarCollapsed}
+					<span>Toolboxes</span>
+					<div class="shadow-neon-blue h-1.5 w-1.5 rounded-full bg-brand-blue"></div>
+				{:else}
+					<div
+						class="flex h-5 w-5 items-center justify-center text-zinc-500 group-hover:text-brand-blue"
+					>
+						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+							/>
+						</svg>
+					</div>
+				{/if}
+			</button>
+
+			{#if !sidebarCollapsed}
+				<div class="px-2">
+					<ToolboxSelector />
+				</div>
+			{/if}
 		</div>
 
 		<!-- Channels Section (Always Visible) -->
@@ -650,7 +720,14 @@
 											></div>
 										{/if}
 									</div>
-									<span class="truncate font-medium">{dm.display_name}</span>
+									<div class="flex flex-col overflow-hidden">
+										<span class="truncate font-medium">{dm.display_name}</span>
+										{#if chatStore.presence[dm.other_user_id || '']?.[0]?.status && chatStore.presence[dm.other_user_id || '']?.[0]?.status !== 'Active'}
+											<span class="truncate text-[9px] text-zinc-500 italic">
+												{chatStore.presence[dm.other_user_id || '']?.[0]?.status}
+											</span>
+										{/if}
+									</div>
 									{#if chatStore.channelHasUnread(dm.id)}
 										<div
 											class="ml-auto h-2 w-2 rounded-full bg-brand-orange shadow-neon-orange"
@@ -670,17 +747,30 @@
 						</div>
 					{/if}
 
-					<button
-						onclick={() =>
-							!currentWorkspace ? (showSwitcher = true) : uiStore.setStartChatModalOpen(true)}
-						class="flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-xs text-zinc-600 transition-all hover:text-zinc-400"
-					>
-						<span
-							class="flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800"
-							>+</span
+					<div class="flex flex-col gap-1 px-3 py-1">
+						<button
+							onclick={() =>
+								!currentWorkspace ? (showSwitcher = true) : uiStore.setStartChatModalOpen(true)}
+							class="flex w-full items-center gap-3 rounded-lg py-1 text-xs text-zinc-600 transition-all hover:text-zinc-400"
 						>
-						<span>New Message</span>
-					</button>
+							<span
+								class="flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800"
+								>+</span
+							>
+							<span>New DM</span>
+						</button>
+						<button
+							onclick={() =>
+								!currentWorkspace ? (showSwitcher = true) : uiStore.setCreateGroupDMModalOpen(true)}
+							class="flex w-full items-center gap-3 rounded-lg py-1 text-xs text-zinc-600 transition-all hover:text-zinc-400"
+						>
+							<span
+								class="flex h-4 w-4 items-center justify-center rounded border border-dashed border-zinc-800"
+								>+</span
+							>
+							<span>New Group DM</span>
+						</button>
+					</div>
 				</nav>
 			{/if}
 		</div>

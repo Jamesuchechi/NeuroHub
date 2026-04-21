@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { apiTestService } from '$lib/services/apiTester';
+	import { toolboxStore } from '$lib/stores/toolboxStore.svelte';
 	import { apiHistoryStore, type ApiHistoryItem } from '$lib/stores/apiHistoryStore';
 	import { activeApiTestId } from '$lib/stores/devToolsStore';
 	import { toast } from '$lib/stores/toastStore';
@@ -20,7 +21,7 @@
 		if (!workspaceId) return;
 		loading = true;
 		try {
-			const res = await apiTestService.list(workspaceId);
+			const res = await apiTestService.list(workspaceId, toolboxStore.selectedToolboxId);
 			if (res.data) {
 				savedRequests = res.data;
 			}
@@ -59,6 +60,12 @@
 			apiHistoryStore.clear();
 		}
 	}
+
+	$effect(() => {
+		if (workspaceId || toolboxStore.selectedToolboxId !== undefined) {
+			loadSaved();
+		}
+	});
 
 	onMount(() => {
 		loadSaved();

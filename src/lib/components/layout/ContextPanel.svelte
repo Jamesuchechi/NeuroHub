@@ -1,16 +1,22 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { uiStore } from '$lib/stores/uiStore';
 	import SimilarNotes from '../ai/SimilarNotes.svelte';
 	import ContextPreview from '../ai/ContextPreview.svelte';
+	import SidebarNoteView from './SidebarNoteView.svelte';
 	import { page } from '$app/state';
 
 	const { currentWorkspace } = $derived($workspaceStore);
-	const { contextPanelCollapsed } = $derived($uiStore);
+	const { contextPanelCollapsed, selectedNoteId } = $derived($uiStore);
 	const isNoteView = $derived(!!page.params.noteId);
 
 	function toggle() {
 		uiStore.setContextPanelCollapsed(!contextPanelCollapsed);
+	}
+
+	function clearSelection() {
+		uiStore.setSelectedNoteId(null);
 	}
 </script>
 
@@ -37,43 +43,49 @@
 	</div>
 
 	<!-- Content -->
-	<div class="scrollbar-hide flex-1 space-y-8 overflow-y-auto p-6">
-		<section>
-			<h3 class="mb-2 text-sm leading-tight font-bold text-content">
-				{currentWorkspace?.name || 'NeuroHub'}
-			</h3>
-			<p class="text-[11px] leading-relaxed text-content-dim">
-				Intelligence hub active. NeuroAI is monitoring workspace signals to provide real-time
-				support.
-			</p>
-		</section>
+	<div class="scrollbar-hide flex-1 overflow-y-auto">
+		{#if selectedNoteId}
+			<SidebarNoteView noteId={selectedNoteId} onClose={clearSelection} />
+		{:else}
+			<div class="space-y-8 p-6" in:fade>
+				<section>
+					<h3 class="mb-2 text-sm leading-tight font-bold text-content">
+						{currentWorkspace?.name || 'NeuroHub'}
+					</h3>
+					<p class="text-[11px] leading-relaxed text-content-dim">
+						Intelligence hub active. NeuroAI is monitoring workspace signals to provide real-time
+						support.
+					</p>
+				</section>
 
-		<!-- AI Intelligence Section -->
-		<section class="space-y-6">
-			<ContextPreview />
+				<!-- AI Intelligence Section -->
+				<section class="space-y-6">
+					<ContextPreview />
 
-			{#if isNoteView}
-				<SimilarNotes />
-			{/if}
-		</section>
+					{#if isNoteView}
+						<SimilarNotes />
+					{/if}
+				</section>
 
-		<!-- Metadata Placeholder for Phase 9 -->
-		<section class="opacity-50">
-			<p class="mb-3 text-[10px] font-bold tracking-wider text-content-dim uppercase">
-				Active participants
-			</p>
-			<div class="flex -space-x-2">
-				<div
-					class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface-dim bg-orange-500/20 text-[10px] font-bold text-brand-orange"
-				>
-					JD
-				</div>
-				<div
-					class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface-dim bg-stroke text-[10px] font-bold text-content-dim"
-				>
-					+1
-				</div>
+				<!-- Metadata Placeholder -->
+				<section class="opacity-50">
+					<p class="mb-3 text-[10px] font-bold tracking-wider text-content-dim uppercase">
+						Active participants
+					</p>
+					<div class="flex -space-x-2">
+						<div
+							class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface-dim bg-orange-500/20 text-[10px] font-bold text-brand-orange"
+						>
+							JD
+						</div>
+						<div
+							class="flex h-8 w-8 items-center justify-center rounded-full border-2 border-surface-dim bg-stroke text-[10px] font-bold text-content-dim"
+						>
+							+1
+						</div>
+					</div>
+				</section>
 			</div>
-		</section>
+		{/if}
 	</div>
 </aside>

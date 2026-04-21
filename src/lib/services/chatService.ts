@@ -7,9 +7,11 @@ export type Channel = {
 	workspace_id: string;
 	name: string;
 	description: string | null;
-	type: 'text' | 'announcement' | 'private';
+	type: 'text' | 'announcement' | 'private' | 'group_dm';
 	created_at: string;
 	last_msg_id?: string | null;
+	custom_name?: string | null;
+	icon_url?: string | null;
 };
 
 export type MessageAttachment = {
@@ -209,6 +211,35 @@ export const chatService = {
 		).upsert({ message_id: messageId, user_id: userId, emoji });
 
 		if (error) throw error;
+
+		// --- Notification Trigger ---
+		try {
+			const { notificationService } = await import('./notificationService');
+			const { data: message } = await supabase
+				.from('messages')
+				.select('user_id, channel_id, content, channels(workspace_id, name)')
+				.eq('id', messageId)
+				.single();
+
+			if (message && message.user_id !== userId) {
+				const channels = message.channels as unknown as { workspace_id: string; name: string };
+				await notificationService.createNotification(
+					message.user_id,
+					channels.workspace_id,
+					'reaction',
+					userId,
+					{
+						message_id: messageId,
+						channel_id: message.channel_id,
+						channel_name: channels.name,
+						emoji: emoji,
+						preview: message.content.slice(0, 50)
+					}
+				);
+			}
+		} catch (err) {
+			console.error('[chatService] Reaction notification failed:', err);
+		}
 	},
 
 	async removeReaction(messageId: string, userId: string, emoji: string) {
@@ -346,12 +377,69 @@ export const chatService = {
 		if (existing) return existing as Channel;
 
 		// Create new if not exists
-		return await this.createChannel(
+		const channel = await this.createChannel(
 			workspaceId,
 			myId,
 			channelName,
 			`Direct message channel`,
 			'private'
 		);
+
+		// Initialize members for DM
+		await supabase.from('channel_members').insert([
+			{ channel_id: channel.id, user_id: myId },
+			{ channel_id: channel.id, user_id: otherId }
+		]);
+
+		return channel;
+	},
+
+	async createGroupDM(
+		workspaceId: string,
+		creatorId: string,
+		memberIds: string[],
+		name?: string,
+		iconUrl?: string
+	): Promise<Channel> {
+		// Group DM name defaults to member IDs if not provided (internal name)
+		const internalName = `gdm-${crypto.randomUUID()}`;
+
+		const { data: channel, error } = await supabase
+			.from('channels')
+			.insert({
+				workspace_id: workspaceId,
+				created_by: creatorId,
+				name: internalName,
+				custom_name: name,
+				icon_url: iconUrl,
+				type: 'group_dm'
+			})
+			.select()
+			.single();
+
+		if (error) throw error;
+		if (!channel) throw new Error('Failed to create group DM');
+
+		// Add all members (including creator)
+		const membersToInsert = Array.from(new Set([creatorId, ...memberIds])).map((uid) => ({
+			channel_id: channel.id,
+			user_id: uid
+		}));
+
+		const { error: memberError } = await supabase.from('channel_members').insert(membersToInsert);
+
+		if (memberError) throw memberError;
+
+		return channel;
+	},
+
+	async getChannelMembers(channelId: string) {
+		const { data, error } = await supabase
+			.from('channel_members')
+			.select('*, user:profiles!user_id(*)')
+			.eq('channel_id', channelId);
+
+		if (error) throw error;
+		return data;
 	}
 };

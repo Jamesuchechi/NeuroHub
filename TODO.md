@@ -420,24 +420,24 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### The "Glue" (Cross-Feature Integration)
 
-- [ ] **Unified Mentions**: Update `MessageInput` to support `@User`, `#Channel`, `!Snippet`, and `[Note]` mentions in a single autocomplete flow.
-- [ ] **Contextual Pinning**: Implement "Channel Pins" that can include not just messages, but specific **Notes** or **API Tests** for instant team access.
-- [ ] **Feature Promotion**: Add "Refactor to Note" and "Export to Snippet" buttons on chat messages/threads to turn ephemeral chat into permanent knowledge.
-- [ ] **Global Deep-Linking**: Ensure every resource (Note, Snippet, API Test) has a unique, shareable URI that navigates correctly within the app shell.
+- [x] **Unified Mentions**: Update `MessageInput` to support `@User`, `#Channel`, `!Snippet`, and `[Note]` mentions in a single autocomplete flow.
+- [x] **Contextual Pinning**: Implement "Channel Pins" that can include not just messages, but specific **Notes** or **API Tests** for instant team access.
+- [x] **Feature Promotion**: Add "Refactor to Note" and "Export to Snippet" buttons on chat messages/threads to turn ephemeral chat into permanent knowledge.
+- [x] **Global Deep-Linking**: Ensure every resource (Note, Snippet, API Test) has a unique, shareable URI that navigates correctly within the app shell.
 
 ### Advanced Communication
 
-- [ ] **Group Direct Messages**: Support multi-person private chats (3–8 people) with custom group naming and icons.
-- [ ] **Aggregated Views**: Build a "Mentions & Reactions" dashboard to catch up on all personal activity across all channels.
-- [ ] **Unreads Dashboard**: A dedicated view for all unread threads and channels across the entire workspace.
-- [ ] **Rich Text Processing**: Implement a formatting toolbar (Bold, Code, Lists) in the `MessageInput` while maintaining Markdown compatibility.
+- [x] **Group Direct Messages**: Support multi-person private chats (3–8 people) with custom group naming and icons.
+- [x] **Aggregated Views**: Build a "Mentions & Reactions" dashboard to catch up on all personal activity across all channels.
+- [x] **Unreads Dashboard**: A dedicated view for all unread threads and channels across the entire workspace.
+- [x] **Rich Text Processing**: Implement a formatting toolbar (Bold, Code, Lists) in the `MessageInput` while maintaining Markdown compatibility.
 
 ### Expert Developer Features
 
-- [ ] **AI Knowledge Promotion**: Proactive AI that detects technical specifications in Chat and suggests drafting a Note for the team.
-- [ ] **Workload-Aware Presence**: Automatically update user status based on activity (e.g., "📝 Editing Architecture Note" or "🧑‍💻 Running API Tests").
-- [ ] **Project Toolboxes**: Logical grouping of Snippets and API Tests into "Environments" (e.g., "Dev", "Staging", "Prod") with shared variables.
-- [ ] **Command Palette Advanced Actions**: Use `cmd+K` to "Attach Snippet to Current Chat" or "Link Note to Thread" without leaving the keyboard.
+- [x] **AI Knowledge Promotion**: Proactive AI that detects technical specifications in Chat and suggests drafting a Note for the team.
+- [x] **Workload-Aware Presence**: Automatically update user status based on activity (e.g., "📝 Editing Architecture Note" or "🧑‍💻 Running API Tests").
+- [x] **Project Toolboxes**: Logical grouping of Snippets and API Tests into "Environments" (e.g., "Dev", "Staging", "Prod") with shared variables.
+- [x] **Command Palette Advanced Actions**: Use `cmd+K` to "Attach Snippet to Current Chat" or "Link Note to Thread" without leaving the keyboard.
 
 ---
 
@@ -644,4 +644,4 @@ src/
 
 ---
 
-_Last updated: Phase 7 Completed — Robust AI Layer Solidified_
+_Last updated: Phase 10 Core Integration & Ecosystem Synergy Finished_

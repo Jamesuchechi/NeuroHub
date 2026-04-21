@@ -9,7 +9,7 @@
 
 	let { data } = $props<{ data: PageData }>();
 
-	let { snippets, apiTests, environments, workspace } = $derived(data);
+	let { apiTests, environments, workspace } = $derived(data);
 
 	const toolTitles: Record<string, string> = {
 		snippets: 'Snippets Library',
@@ -72,9 +72,9 @@
 		<!-- Active Tool Container -->
 		<main class="relative flex-1 overflow-hidden">
 			{#if $activeTab === 'snippets'}
-				<SnippetBrowser workspaceId={workspace.id} initialSnippets={snippets} />
+				<SnippetBrowser workspaceId={workspace.id} />
 			{:else if $activeTab === 'sandbox'}
-				<CodeSandbox />
+				<CodeSandbox workspaceId={workspace.id} />
 			{:else if $activeTab === 'api'}
 				<ApiTester
 					workspaceId={workspace.id}

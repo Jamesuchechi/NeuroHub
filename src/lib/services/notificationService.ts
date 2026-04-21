@@ -4,6 +4,7 @@ import type { Json } from '$lib/types/db';
 export type NotificationType =
 	| 'mention'
 	| 'reply'
+	| 'reaction'
 	| 'workspace_invite'
 	| 'invite_accepted'
 	| 'workspace_join_request'

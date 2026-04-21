@@ -14,6 +14,7 @@ export const snippetService = {
 			sort?: 'recent' | 'stars' | 'forks';
 			limit?: number;
 			cursor?: string;
+			toolboxId?: string | null;
 		}
 	) {
 		let query = supabase
@@ -35,6 +36,13 @@ export const snippetService = {
 		if (opts?.tags?.length) query = query.overlaps('tags', opts.tags);
 		if (opts?.search) query = query.textSearch('fts', opts.search);
 		if (opts?.cursor) query = query.lt('created_at', opts.cursor);
+		if (opts?.toolboxId !== undefined) {
+			if (opts.toolboxId === null) {
+				query = query.is('toolbox_id', null);
+			} else {
+				query = query.eq('toolbox_id', opts.toolboxId);
+			}
+		}
 
 		return query;
 	},

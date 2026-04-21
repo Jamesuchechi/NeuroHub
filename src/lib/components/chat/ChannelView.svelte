@@ -7,6 +7,7 @@
 	import AiResponse from '../ai/AiResponse.svelte';
 	import ThreadView from './ThreadView.svelte';
 	import Skeleton from '../ui/Skeleton.svelte';
+	import PinnedResources from './PinnedResources.svelte';
 	import { fade, slide } from 'svelte/transition';
 	import { aiStore } from '$lib/stores/aiStore.svelte';
 
@@ -73,11 +74,16 @@
 		>
 			<div class="flex flex-col">
 				<h2 class="flex items-center gap-2 text-lg font-black text-content">
-					<span class="text-xl text-brand-orange">#</span>
-					{chatStore.activeChannel?.name || 'loading...'}
+					<span class="text-xl text-brand-orange">
+						{chatStore.activeChannel?.type === 'text' ? '#' : '👤'}
+					</span>
+					{chatStore.activeChannel?.display_name || 'loading...'}
 				</h2>
 				<p class="max-w-md truncate text-xs text-content-dim">
-					{chatStore.activeChannel?.description || 'No description set.'}
+					{chatStore.activeChannel?.description ||
+						(chatStore.activeChannel?.type === 'private'
+							? 'Direct message channel'
+							: 'No description set.')}
 				</p>
 			</div>
 
@@ -113,6 +119,7 @@
 				</button>
 			</div>
 		</header>
+		<PinnedResources {channelId} />
 
 		<!-- Message List -->
 		<div
@@ -148,11 +155,12 @@
 						</svg>
 					</div>
 					<h3 class="text-lg font-bold text-content italic">
-						Welcome to #{chatStore.activeChannel?.name}!
+						Welcome to {chatStore.activeChannel?.type === 'text' ? '#' : ''}{chatStore.activeChannel
+							?.display_name}!
 					</h3>
 					<p class="mt-2 max-w-xs text-sm text-content-dim">
-						This is the start of the #{chatStore.activeChannel?.name} channel. Send a message to get things
-						rolling.
+						This is the start of your conversation in {chatStore.activeChannel?.display_name}. Send
+						a message to get things rolling.
 					</p>
 				</div>
 			{:else}

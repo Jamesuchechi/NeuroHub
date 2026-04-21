@@ -3,12 +3,14 @@
 	import { apiTestService, generateCurl, interpolateEnvVars } from '$lib/services/apiTester';
 	import { apiHistoryStore } from '$lib/stores/apiHistoryStore';
 	import type { HttpMethod, ApiResponse } from '$lib/types/devtools';
-	import { activeApiTestId, activeEnvironmentId } from '$lib/stores/devToolsStore';
+	import { activeApiTestId } from '$lib/stores/devToolsStore';
+	import { toolboxStore } from '$lib/stores/toolboxStore.svelte';
 	import { authStore } from '$lib/stores/authStore';
 	import { toast } from '$lib/stores/toastStore';
 	import { formatBytes } from '$lib/utils/formatBytes';
 	import { supabase } from '$lib/services/supabase';
 	import JsonViewer from '../ui/JsonViewer.svelte';
+	import { useActivityStatus } from '$lib/stores/userActivity.svelte';
 	import type { ApiTestsTable, ApiEnvironmentsTable, Json } from '$lib/types/db';
 
 	let {
@@ -20,6 +22,11 @@
 		initialHistory?: ApiTestsTable['Row'][];
 		initialEnvironments?: ApiEnvironmentsTable['Row'][];
 	}>();
+
+	// --- Activity Tracking ---
+	$effect(() => {
+		useActivityStatus('🛠️ Testing APIs');
+	});
 
 	let user = $derived($authStore.user);
 
@@ -57,25 +64,13 @@
 	let isEditingEnv = $state(false);
 	let editingEnvName = $state('');
 	let editingEnvId = $state<string | null>(null);
-	let envVars = $state<Record<string, string>>({});
 
-	let activeEnv = $derived(environments.find((e) => e.id === $activeEnvironmentId));
-
-	$effect(() => {
-		if (activeEnv) {
-			envVars =
-				typeof activeEnv.variables === 'object'
-					? { ...(activeEnv.variables as Record<string, string>) }
-					: {};
-		} else {
-			envVars = {};
-		}
-	});
+	let activeEnv = $derived(toolboxStore.activeToolbox);
+	let envVars = $derived(toolboxStore.activeVariables);
 
 	function startCreateEnv() {
 		editingEnvId = null;
 		editingEnvName = 'New Environment';
-		envVars = {};
 		isEditingEnv = true;
 	}
 
@@ -104,7 +99,7 @@
 				const idx = environments.findIndex((e) => e.id === res.data.id);
 				if (idx >= 0) environments[idx] = res.data;
 				else environments = [res.data, ...environments];
-				$activeEnvironmentId = res.data.id;
+				toolboxStore.setToolbox(res.data.id);
 				isEditingEnv = false;
 			}
 		} catch {
@@ -118,7 +113,7 @@
 		try {
 			await supabase.from('api_environments').delete().eq('id', editingEnvId);
 			environments = environments.filter((e) => e.id !== editingEnvId);
-			if ($activeEnvironmentId === editingEnvId) $activeEnvironmentId = null;
+			if (toolboxStore.selectedToolboxId === editingEnvId) toolboxStore.setToolbox(null);
 			isEditingEnv = false;
 			toast.show('Environment deleted', 'success');
 		} catch {
@@ -501,11 +496,11 @@
 					<div class="mb-4 flex items-center gap-4">
 						<span class="text-xs font-bold text-content">Environment:</span>
 						<select
-							bind:value={$activeEnvironmentId}
+							bind:value={toolboxStore.selectedToolboxId}
 							class="rounded border border-stroke bg-surface px-3 py-1 text-xs text-content outline-none"
 						>
 							<option value={null}>No Environment</option>
-							{#each environments as e (e.id)}
+							{#each toolboxStore.toolboxes as e (e.id)}
 								<option value={e.id}>{e.name}</option>
 							{/each}
 						</select>

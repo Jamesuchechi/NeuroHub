@@ -6,12 +6,19 @@
 	import NoteView from '$lib/components/notes/NoteView.svelte';
 	import BacklinksPanel from '$lib/components/notes/BacklinksPanel.svelte';
 	import { fade } from 'svelte/transition';
+	import { useActivityStatus } from '$lib/stores/userActivity.svelte';
 
 	const noteId = $derived(page.params.noteId as string);
 	let viewMode = $state<'edit' | 'preview'>('edit');
 
 	const isAuthor = $derived(notesStore.currentNote?.author_id === $authStore.user?.id);
 	const isPublished = $derived(notesStore.currentNote?.status === 'published');
+
+	// --- Activity Tracking ---
+	$effect(() => {
+		const title = notesStore.currentNote?.title || 'a note';
+		useActivityStatus(`📝 Editing ${title}`);
+	});
 
 	function toggleViewMode() {
 		viewMode = viewMode === 'edit' ? 'preview' : 'edit';

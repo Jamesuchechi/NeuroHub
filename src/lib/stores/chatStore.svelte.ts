@@ -83,6 +83,7 @@ interface PresenceState {
 	username: string;
 	avatar_url: string;
 	online_at: string;
+	status?: string;
 }
 
 export class ChatStore {
@@ -95,28 +96,25 @@ export class ChatStore {
 	presence = $state<Record<string, PresenceState[]>>({});
 	typingUsers = $state<Record<string, SvelteSet<string>>>({}); // channelId -> Set of userIds
 	dmProfiles = $state<Record<string, { username: string; avatar_url: string | null }>>({}); // userId -> profile
+	currentStatus = $state<string>('Active');
 
 	private subscription: RealtimeChannel | null = null;
 	private presenceChannel: RealtimeChannel | null = null;
 
-	activeChannel = $derived(this.channels.find((c) => c.id === this.activeChannelId) || null);
+	activeChannel = $derived(
+		this.enrichedChannels.find((c) => c.id === this.activeChannelId) || null
+	);
 
 	get enrichedChannels(): EnrichedChannel[] {
 		return this.channels.map((c): EnrichedChannel => {
 			if (c.type === 'private' && c.name.startsWith('dm-')) {
 				const myId = get(profileStore).profile?.id;
-				// Better ID extraction: skip 'dm-', then split by logic that knows UUIDs
-				// Since UUIDs have a fixed format or at least we know we have two,
-				// and they are joined by a hyphen, but contain hyphens themselves.
-				// A reliable way is to find the other ID by checking which profile ID
-				// is contained within the channel name.
 				const nameWithoutPrefix = c.name.slice(3); // remove 'dm-'
 
-				// If we have myId, we can find the other ID by removing myId from the string
 				let otherId = '';
 				if (myId) {
 					if (nameWithoutPrefix.startsWith(myId)) {
-						otherId = nameWithoutPrefix.slice(myId.length + 1); // +1 for the separator hyphen
+						otherId = nameWithoutPrefix.slice(myId.length + 1);
 					} else {
 						otherId = nameWithoutPrefix.split(`-${myId}`)[0];
 					}
@@ -131,6 +129,15 @@ export class ChatStore {
 					other_user_id: otherId
 				};
 			}
+
+			if (c.type === 'group_dm') {
+				return {
+					...c,
+					display_name: c.custom_name || 'Group Message',
+					display_avatar: c.icon_url || null
+				};
+			}
+
 			return {
 				...c,
 				display_name: c.name,
@@ -590,10 +597,26 @@ export class ChatStore {
 						user_id: profile.id,
 						username: profile.username,
 						avatar_url: profile.avatar_url,
-						online_at: new SvelteDate().toISOString()
+						online_at: new SvelteDate().toISOString(),
+						status: this.currentStatus
 					});
 				}
 			});
+	}
+
+	async setUserStatus(status: string) {
+		this.currentStatus = status;
+		if (this.presenceChannel) {
+			const profile = get(profileStore).profile;
+			if (!profile) return;
+			await this.presenceChannel.track({
+				user_id: profile.id,
+				username: profile.username,
+				avatar_url: profile.avatar_url,
+				online_at: new SvelteDate().toISOString(),
+				status: status
+			});
+		}
 	}
 
 	cleanup() {

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { activeSnippetId, starredIds, toggleStarLocal } from '$lib/stores/devToolsStore';
 	import { snippetService } from '$lib/services/snippets';
+	import { toolboxStore } from '$lib/stores/toolboxStore.svelte';
 	import { authStore } from '$lib/stores/authStore';
 	import { toast } from '$lib/stores/toastStore';
 	import type { SnippetsTable } from '$lib/types/db';
@@ -74,6 +75,7 @@
 				const res = await snippetService.create({
 					workspace_id: workspaceId,
 					author_id: user.id,
+					toolbox_id: toolboxStore.selectedToolboxId,
 					...data
 				});
 				if (res.data) {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { chatStore } from '$lib/stores/chatStore.svelte';
-	import { fly } from 'svelte/transition';
+	import { fly, slide } from 'svelte/transition';
 	import Button from '../ui/Button.svelte';
 	import EmojiPicker from './EmojiPicker.svelte';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
@@ -9,6 +9,11 @@
 	import { aiStore } from '$lib/stores/aiStore.svelte';
 	import { authStore } from '$lib/stores/authStore';
 	import { get } from 'svelte/store';
+	import { resourceParser, type ListItem } from '$lib/services/resourceService';
+	import { notesStore } from '$lib/stores/notesStore.svelte';
+	import { snippetService } from '$lib/services/snippets';
+	import MentionPalette from './MentionPalette.svelte';
+	import FormattingToolbar from './FormattingToolbar.svelte';
 
 	let {
 		channelId,
@@ -37,15 +42,30 @@
 		{ id: 'translate', name: 'Translate', description: 'Translate last message', icon: '🌐' }
 	];
 
+	// Mention Autocomplete State
+	let showMentions = $state(false);
+	let mentionTrigger = $state('');
+	let mentionItems = $state<ListItem[]>([]);
+	let mentionPaletteRef:
+		| { handleKeydown: (e: KeyboardEvent) => boolean; updateSearch: (q: string) => void }
+		| undefined = $state();
+
+	let textareaRef = $state<HTMLTextAreaElement | null>(null);
 	let showCommands = $state(false);
 	let selectedCommandIndex = $state(0);
 	const filteredCommands = $derived(
-		content.startsWith('/')
+		content.startsWith('/') && !showMentions
 			? commands.filter((c) => c.id.includes(content.toLowerCase().slice(1)))
 			: []
 	);
 
 	async function handleKeydown(e: KeyboardEvent) {
+		// 1. If Mention Palette is open, delegate control
+		if (showMentions && mentionPaletteRef) {
+			const handled = mentionPaletteRef.handleKeydown(e);
+			if (handled) return;
+		}
+
 		if (showCommands && filteredCommands.length > 0) {
 			if (e.key === 'ArrowDown') {
 				e.preventDefault();
@@ -63,6 +83,17 @@
 			return;
 		}
 
+		// Markdown Shortcuts
+		if (e.ctrlKey || e.metaKey) {
+			if (e.key === 'b') {
+				e.preventDefault();
+				applyMarkdownFormat('**');
+			} else if (e.key === 'i') {
+				e.preventDefault();
+				applyMarkdownFormat('_');
+			}
+		}
+
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			if (typingTimeout) clearTimeout(typingTimeout);
@@ -71,8 +102,32 @@
 		}
 	}
 
-	function handleInput() {
-		showCommands = content.startsWith('/');
+	async function handleInput(e: Event) {
+		const target = e.target as HTMLTextAreaElement;
+		const cursorPosition = target.selectionStart;
+		const textBeforeCursor = content.slice(0, cursorPosition);
+
+		// Trigger Detection Logic
+		const triggerMatch = textBeforeCursor.match(/([@#![])(\w*)$/);
+
+		if (triggerMatch) {
+			const trigger = triggerMatch[1];
+			const query = triggerMatch[2];
+
+			if (trigger !== mentionTrigger) {
+				mentionTrigger = trigger;
+				// Load specialized items based on trigger
+				await loadMentionItems(trigger);
+			}
+
+			showMentions = true;
+			if (mentionPaletteRef) mentionPaletteRef.updateSearch(query);
+		} else {
+			showMentions = false;
+			mentionTrigger = '';
+		}
+
+		showCommands = content.startsWith('/') && !showMentions;
 		if (showCommands) selectedCommandIndex = 0;
 
 		if (typingTimeout) clearTimeout(typingTimeout);
@@ -80,6 +135,87 @@
 		typingTimeout = setTimeout(() => {
 			chatStore.setTyping(channelId, false);
 		}, 3000);
+	}
+
+	async function loadMentionItems(trigger: string) {
+		const workspaceId = $workspaceStore.currentWorkspace?.id;
+		if (!workspaceId) return;
+
+		switch (trigger) {
+			case '@':
+				mentionItems = $workspaceStore.members.map((m) => ({
+					id: m.user_id,
+					name: m.profile.username || 'Unknown User',
+					avatar: m.profile.avatar_url || undefined,
+					type: 'user'
+				}));
+				break;
+			case '#':
+				mentionItems = chatStore.channels.map((c) => ({
+					id: c.id,
+					name: c.name || 'Unnamed Channel',
+					type: 'chan',
+					icon: c.type === 'private' ? '🔒' : '#'
+				}));
+				break;
+			case '!': {
+				// Fetch snippets for current workspace
+				const { data: snippets } = await snippetService.list(workspaceId, { limit: 50 });
+				mentionItems = (snippets || []).map((s) => ({
+					id: s.id,
+					name: s.title,
+					type: 'snip',
+					subtitle: s.language,
+					icon: '✂️'
+				}));
+				break;
+			}
+			case '[':
+				mentionItems = notesStore.notes.map((n) => ({
+					id: n.id,
+					name: n.title,
+					type: 'note',
+					icon: '📝'
+				}));
+				break;
+		}
+	}
+
+	function handleMentionSelect(item: ListItem) {
+		const cursorPosition = (document.activeElement as HTMLTextAreaElement).selectionStart;
+		const textBeforeCursor = content.slice(0, cursorPosition);
+		const textAfterCursor = content.slice(cursorPosition);
+
+		// Find the last trigger before cursor
+		const lastTriggerIndex = textBeforeCursor.lastIndexOf(mentionTrigger);
+		if (lastTriggerIndex === -1) return;
+
+		const token = resourceParser.serialize(item.type, item.id, item.name);
+		content = content.slice(0, lastTriggerIndex) + token + ' ' + textAfterCursor;
+		showMentions = false;
+
+		// Refocus
+		setTimeout(() => {
+			if (textareaRef) textareaRef.focus();
+		}, 0);
+	}
+
+	function applyMarkdownFormat(symbol: string) {
+		if (!textareaRef) return;
+		const start = textareaRef.selectionStart;
+		const end = textareaRef.selectionEnd;
+		const selection = content.substring(start, end);
+		const before = content.substring(0, start);
+		const after = content.substring(end);
+
+		content = before + symbol + selection + symbol + after;
+
+		setTimeout(() => {
+			if (textareaRef) {
+				textareaRef.focus();
+				textareaRef.setSelectionRange(start + symbol.length, end + symbol.length);
+			}
+		}, 0);
 	}
 
 	async function executeCommand(command: (typeof commands)[0]) {
@@ -149,28 +285,38 @@
 </script>
 
 <div
-	class="relative flex flex-col gap-2 rounded-2xl border border-stroke bg-surface-dim/50 p-3 transition-all duration-300 {isFocused
-		? 'bg-surface-dim/80 shadow-lg ring-1 ring-brand-orange/30'
-		: ''}"
+	class="group relative flex flex-col gap-2 rounded-2xl border border-stroke/50 bg-surface-dim/40 p-3 backdrop-blur-xl transition-all duration-500 {isFocused
+		? 'border-brand-orange/40 bg-surface-dim/60 shadow-[0_0_30px_-10px_rgba(255,107,0,0.15)] ring-1 ring-brand-orange/20'
+		: 'hover:border-stroke hover:bg-surface-dim/50'}"
 >
+	{#if showMentions}
+		<MentionPalette
+			bind:this={mentionPaletteRef}
+			trigger={mentionTrigger}
+			items={mentionItems}
+			onSelect={handleMentionSelect}
+			onClose={() => (showMentions = false)}
+		/>
+	{/if}
+
 	{#if showCommands && filteredCommands.length > 0}
 		<div
 			transition:fly={{ y: 20, duration: 300 }}
-			class="absolute bottom-full left-0 mb-2 w-72 overflow-hidden rounded-xl border border-stroke bg-surface-dim shadow-2xl"
+			class="absolute bottom-full left-0 mb-4 w-72 overflow-hidden rounded-xl border border-stroke bg-surface-dim/95 shadow-2xl backdrop-blur-2xl"
 		>
 			<div class="border-b border-stroke bg-surface/50 px-3 py-2">
 				<span class="text-[10px] font-black tracking-widest text-content-dim uppercase"
 					>AI Commands</span
 				>
 			</div>
-			<div class="p-1">
+			<div class="scrollbar-hide max-h-60 overflow-y-auto p-1">
 				{#each filteredCommands as cmd, i (cmd.id)}
 					<button
 						onclick={() => executeCommand(cmd)}
-						class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors {i ===
+						class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all {i ===
 						selectedCommandIndex
-							? 'bg-brand-orange/10 text-brand-orange'
-							: 'text-content-dim hover:bg-surface'}"
+							? 'bg-brand-orange/15 text-brand-orange'
+							: 'text-content-dim hover:bg-white/5 hover:text-content'}"
 					>
 						<span class="text-lg">{cmd.icon}</span>
 						<div class="flex flex-col">
@@ -183,77 +329,100 @@
 		</div>
 	{/if}
 
-	<div class="flex items-end gap-3">
-		<!-- Emoji/Plus placeholder -->
+	<div class="flex items-start gap-2">
+		<!-- Attach Button -->
 		<button
-			class="mb-1 flex h-9 w-9 items-center justify-center rounded-xl p-2 text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
+			class="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-content-dim transition-all hover:bg-brand-orange/10 hover:text-brand-orange"
 			aria-label="Attach file"
 			title="Attach file"
 		>
 			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1.5"
+					d="M12 4v16m8-8H4"
+				/>
 			</svg>
 		</button>
 
-		<textarea
-			bind:value={content}
-			oninput={handleInput}
-			onkeydown={handleKeydown}
-			onfocus={() => (isFocused = true)}
-			onblur={() => (isFocused = false)}
-			{placeholder}
-			class="max-h-[200px] min-h-[40px] w-full flex-1 resize-none bg-transparent py-2 text-sm text-content outline-none placeholder:text-content-dim/30"
-			style="height: auto;"
-		></textarea>
-
-		<div class="relative mb-1 flex items-center gap-1">
-			<button
-				onclick={() => (showEmojiPicker = !showEmojiPicker)}
-				class="flex h-9 w-9 items-center justify-center rounded-xl p-2 text-content-dim transition-colors hover:bg-surface hover:text-brand-orange {showEmojiPicker
-					? 'border-brand-orange/20 bg-surface text-brand-orange'
-					: ''}"
-				aria-label="Insert emoji"
-				title="Insert emoji"
-			>
-				<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-			</button>
-
-			{#if showEmojiPicker}
-				<div
-					transition:fly={{ y: 20, duration: 400 }}
-					class="absolute right-0 bottom-16 z-50 shadow-2xl"
-				>
-					<EmojiPicker
-						onSelect={(emoji) => {
-							content += emoji;
-							showEmojiPicker = false;
-						}}
-					/>
+		<div class="flex min-w-0 flex-1 flex-col gap-1">
+			{#if isFocused || content.length > 0}
+				<div transition:slide={{ duration: 300 }}>
+					<FormattingToolbar textarea={textareaRef} onFormat={(val) => (content = val)} />
 				</div>
 			{/if}
+
+			<textarea
+				bind:this={textareaRef}
+				bind:value={content}
+				oninput={handleInput}
+				onkeydown={handleKeydown}
+				onfocus={() => (isFocused = true)}
+				onblur={() => (isFocused = false)}
+				{placeholder}
+				class="scrollbar-hide max-h-[400px] min-h-[40px] w-full resize-none bg-transparent py-2.5 text-sm leading-relaxed text-content transition-all outline-none placeholder:text-content-dim/30"
+				style="height: auto;"
+			></textarea>
+		</div>
+
+		<div class="mt-1 flex shrink-0 items-center gap-1.5">
+			<div class="relative">
+				<button
+					onclick={() => (showEmojiPicker = !showEmojiPicker)}
+					class="flex h-9 w-9 items-center justify-center rounded-xl text-content-dim transition-all hover:bg-brand-orange/10 hover:text-brand-orange {showEmojiPicker
+						? 'bg-brand-orange/20 text-brand-orange'
+						: ''}"
+					aria-label="Insert emoji"
+					title="Insert emoji"
+				>
+					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+				</button>
+
+				{#if showEmojiPicker}
+					<div
+						transition:fly={{ y: 20, duration: 400 }}
+						class="absolute right-0 bottom-full z-50 mb-4 shadow-2xl"
+					>
+						<EmojiPicker
+							onSelect={(emoji) => {
+								content += emoji;
+								showEmojiPicker = false;
+							}}
+						/>
+					</div>
+				{/if}
+			</div>
 
 			<Button
 				variant="primary"
 				size="sm"
-				width="auto"
 				disabled={!content.trim() || isSubmitting}
 				onclick={send}
-				class="h-9 w-9 rounded-xl p-0!"
+				class="group/send h-9 w-9 overflow-hidden rounded-xl p-0! shadow-neon-orange transition-all hover:scale-105 active:scale-95"
 				aria-label="Send message"
 				title="Send message"
 			>
-				<svg class="h-4 w-4 rotate-90" fill="currentColor" viewBox="0 0 20 20">
-					<path
-						d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
-					/>
-				</svg>
+				<div
+					class="flex h-full w-full items-center justify-center bg-brand-orange transition-colors group-hover/send:bg-brand-orange/90"
+				>
+					<svg
+						class="h-4 w-4 rotate-90 text-zinc-950 transition-transform group-hover/send:translate-x-0.5"
+						fill="currentColor"
+						viewBox="0 0 20 20"
+					>
+						<path
+							d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
+						/>
+					</svg>
+				</div>
 			</Button>
 		</div>
 	</div>

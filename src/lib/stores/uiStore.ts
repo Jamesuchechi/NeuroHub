@@ -12,8 +12,11 @@ interface UIState {
 	inviteModalOpen: boolean;
 	createChannelModalOpen: boolean;
 	startChatModalOpen: boolean;
+	createGroupDMModalOpen: boolean;
 	channelSettingsModalOpen: boolean;
 	dashboardTeamCollapsed: boolean;
+	selectedNoteId: string | null;
+	selectedSnippetId: string | null;
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 260;
@@ -34,8 +37,11 @@ function createUIStore() {
 				inviteModalOpen: false,
 				createChannelModalOpen: false,
 				startChatModalOpen: false,
+				createGroupDMModalOpen: false,
 				channelSettingsModalOpen: false,
-				dashboardTeamCollapsed: false
+				dashboardTeamCollapsed: false,
+				selectedNoteId: null,
+				selectedSnippetId: null
 			};
 
 	const { subscribe, update } = writable<UIState>(initialState);
@@ -57,10 +63,15 @@ function createUIStore() {
 		setCreateChannelModalOpen: (open: boolean) =>
 			update((s) => ({ ...s, createChannelModalOpen: open })),
 		setStartChatModalOpen: (open: boolean) => update((s) => ({ ...s, startChatModalOpen: open })),
+		setCreateGroupDMModalOpen: (open: boolean) =>
+			update((s) => ({ ...s, createGroupDMModalOpen: open })),
 		setChannelSettingsModalOpen: (open: boolean) =>
 			update((s) => ({ ...s, channelSettingsModalOpen: open })),
 		setDashboardTeamCollapsed: (collapsed: boolean) =>
 			update((s) => ({ ...s, dashboardTeamCollapsed: collapsed })),
+		setSelectedNoteId: (id: string | null) =>
+			update((s) => ({ ...s, selectedNoteId: id, contextPanelCollapsed: !id })),
+		setSelectedSnippetId: (id: string | null) => update((s) => ({ ...s, selectedSnippetId: id })),
 
 		persist: (state: UIState) => {
 			if (typeof window !== 'undefined') {

@@ -1,31 +1,20 @@
 <script lang="ts">
 	import data from '@emoji-mart/data';
 	import * as EmojiMart from 'emoji-mart';
-
-	interface EmojiData {
-		id: string;
-		name: string;
-		native: string;
-		unified: string;
-		keywords: string[];
-		shortcodes: string;
-	}
-
 	interface EmojiMartModule {
-		Picker: new (options: {
-			data: unknown;
-			onEmojiSelect: (emoji: EmojiData) => void;
-			theme?: string;
-			skinTonePosition?: string;
-			previewPosition?: string;
-			navPosition?: string;
-			perLine?: number;
-		}) => HTMLElement;
+		Picker: new (options: unknown) => HTMLElement;
 	}
-
-	const Picker = (EmojiMart as unknown as EmojiMartModule).Picker;
+	const Picker = (EmojiMart as unknown as EmojiMartModule).Picker || EmojiMart;
+	import { uiStore } from '$lib/stores/uiStore';
 
 	let { onSelect } = $props<{ onSelect: (emoji: string) => void }>();
+
+	const theme = $derived($uiStore.theme === 'system' ? 'auto' : $uiStore.theme);
+
+	interface EmojiData {
+		native: string;
+		[key: string]: unknown;
+	}
 
 	function mountPicker(node: HTMLElement) {
 		const picker = new Picker({
@@ -33,19 +22,20 @@
 			onEmojiSelect: (emoji: EmojiData) => {
 				onSelect(emoji.native);
 			},
-			theme: 'dark',
+			theme,
 			skinTonePosition: 'none',
 			previewPosition: 'none',
 			navPosition: 'bottom',
 			perLine: 8
 		});
 
-		node.appendChild(picker);
+		// In v5, Picker constructor returns the custom element instance
+		node.appendChild(picker as unknown as Node);
 
 		return {
 			destroy() {
-				if (node.contains(picker)) {
-					node.removeChild(picker);
+				if (node.contains(picker as unknown as Node)) {
+					node.removeChild(picker as unknown as Node);
 				}
 			}
 		};
@@ -54,29 +44,25 @@
 
 <div
 	use:mountPicker
-	class="emoji-picker-wrapper rounded-2xl border border-stroke bg-[#09090b] shadow-2xl"
+	class="emoji-picker-container overflow-hidden rounded-2xl border border-stroke bg-surface shadow-2xl"
 ></div>
 
 <style>
-	.emoji-picker-wrapper {
+	.emoji-picker-container {
 		width: 352px;
-		min-height: 430px;
+		height: 430px;
 		display: flex;
 		flex-direction: column;
-		background-color: #09090b;
-
-		/* Emoji-mart custom variables */
-		--em-background: #09090b;
-		--em-border: transparent;
-		--em-color-border: #27272a;
-		--em-rgb-background: 9, 9, 11;
-		--em-rgb-input: 24, 24, 27;
 	}
 
 	:global(em-emoji-picker) {
-		background: #09090b;
-		border-radius: 1rem;
+		--em-background: var(--color-surface);
+		--em-color-border: var(--color-stroke);
+		/* Note: emoji-mart uses its own internal theme for most things, 
+		   but we can override some basics */
 		height: 430px !important;
 		width: 100% !important;
+		border: none !important;
+		background: var(--color-surface) !important;
 	}
 </style>

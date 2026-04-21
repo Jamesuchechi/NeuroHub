@@ -143,6 +143,9 @@ class NotificationStore {
 			case 'reply':
 				message = `${actorName} replied to your message`;
 				break;
+			case 'reaction':
+				message = `${actorName} reacted with ${n.payload.emoji || 'an emoji'} to your message`;
+				break;
 			case 'invite_accepted':
 				message = `${actorName} joined your workspace`;
 				break;

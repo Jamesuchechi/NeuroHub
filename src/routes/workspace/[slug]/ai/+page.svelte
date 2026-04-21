@@ -10,9 +10,15 @@
 	import type { MentionItem } from '$lib/components/ai/types';
 	import { onMount, tick } from 'svelte';
 	import { resolve } from '$app/paths';
+	import { useActivityStatus } from '$lib/stores/userActivity.svelte';
 
 	const currentWorkspace = $derived($workspaceStore.currentWorkspace);
 	const profile = $derived($profileStore.profile);
+
+	// --- Activity Tracking ---
+	$effect(() => {
+		useActivityStatus('🤖 Chatting with NeuroAI');
+	});
 
 	// ── Core State ────────────────────────────────────────────────────────────────
 	let messageInput = $state('');

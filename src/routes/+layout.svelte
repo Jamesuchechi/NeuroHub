@@ -8,6 +8,7 @@
 	import ShortcutsModal from '$lib/components/layout/ShortcutsModal.svelte';
 	import InviteModal from '$lib/components/workspace/InviteModal.svelte';
 	import ToastContainer from '$lib/components/ui/ToastContainer.svelte';
+	import CreateGroupDMModal from '$lib/components/chat/CreateGroupDMModal.svelte';
 
 	let { children } = $props();
 
@@ -80,3 +81,4 @@
 <ToastContainer />
 <ShortcutsModal isOpen={shortcutsOpen} onClose={() => (shortcutsOpen = false)} />
 <InviteModal />
+<CreateGroupDMModal />

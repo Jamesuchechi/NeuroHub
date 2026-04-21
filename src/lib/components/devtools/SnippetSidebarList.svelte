@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { snippetFilters, openInTab, activeSnippetId } from '$lib/stores/devToolsStore';
 	import { snippetService } from '$lib/services/snippets';
+	import { toolboxStore } from '$lib/stores/toolboxStore.svelte';
 	import { toast } from '$lib/stores/toastStore';
 	import type { SnippetsTable } from '$lib/types/db';
 
@@ -22,7 +23,8 @@
 			const res = await snippetService.list(workspaceId, {
 				search: $snippetFilters.search || undefined,
 				limit: 50,
-				sort: 'recent'
+				sort: 'recent',
+				toolboxId: toolboxStore.selectedToolboxId
 			});
 			if (res.data) {
 				snippets = res.data;

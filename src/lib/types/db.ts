@@ -86,6 +86,7 @@ export type SnippetsTable = {
 		star_count: number;
 		created_at: string;
 		updated_at: string;
+		toolbox_id: string | null;
 		fts: unknown;
 	};
 	Insert: {
@@ -102,6 +103,7 @@ export type SnippetsTable = {
 		fork_count?: number;
 		star_count?: number;
 		created_at?: string;
+		toolbox_id?: string | null;
 		updated_at?: string;
 		fts?: unknown;
 	};
@@ -118,6 +120,7 @@ export type SnippetsTable = {
 		parent_id?: string | null;
 		fork_count?: number;
 		star_count?: number;
+		toolbox_id?: string | null;
 		created_at?: string;
 		updated_at?: string;
 		fts?: unknown;
@@ -153,6 +156,7 @@ export type ApiTestsTable = {
 		headers: Json | null;
 		body: string | null;
 		last_response: Json | null;
+		toolbox_id: string | null;
 		last_run_at: string | null;
 		created_at: string;
 		updated_at: string;
@@ -166,6 +170,7 @@ export type ApiTestsTable = {
 		url: string;
 		headers?: Json | null;
 		body?: string | null;
+		toolbox_id?: string | null;
 		last_response?: Json | null;
 		last_run_at?: string | null;
 		created_at?: string;
@@ -179,6 +184,7 @@ export type ApiTestsTable = {
 		method?: string;
 		url?: string;
 		headers?: Json | null;
+		toolbox_id?: string | null;
 		body?: string | null;
 		last_response?: Json | null;
 		last_run_at?: string | null;
@@ -271,6 +277,24 @@ export type NotificationsTable = {
 		payload?: Json;
 		read_at?: string | null;
 		created_at?: string;
+	};
+};
+
+export type ChannelMembersTable = {
+	Row: {
+		channel_id: string;
+		user_id: string;
+		joined_at: string;
+	};
+	Insert: {
+		channel_id: string;
+		user_id: string;
+		joined_at?: string;
+	};
+	Update: {
+		channel_id?: string;
+		user_id?: string;
+		joined_at?: string;
 	};
 };
 
@@ -415,29 +439,68 @@ export type Database = {
 					workspace_id: string;
 					name: string;
 					description: string | null;
-					type: 'text' | 'announcement' | 'private';
+					type: 'text' | 'announcement' | 'private' | 'group_dm';
 					created_by: string | null;
 					created_at: string;
+					custom_name: string | null;
+					icon_url: string | null;
 				};
 				Insert: {
 					id?: string;
 					workspace_id: string;
 					name: string;
 					description?: string | null;
-					type?: 'text' | 'announcement' | 'private';
+					type?: 'text' | 'announcement' | 'private' | 'group_dm';
 					created_by?: string | null;
 					created_at?: string;
+					custom_name?: string | null;
+					icon_url?: string | null;
 				};
 				Update: {
 					id?: string;
 					workspace_id?: string;
 					name?: string;
 					description?: string | null;
-					type?: 'text' | 'announcement' | 'private';
+					type?: 'text' | 'announcement' | 'private' | 'group_dm';
 					created_by?: string | null;
 					created_at?: string;
+					custom_name?: string | null;
+					icon_url?: string | null;
 				};
 				Relationships: [];
+			};
+			channel_members: {
+				Row: {
+					channel_id: string;
+					user_id: string;
+					joined_at: string;
+				};
+				Insert: {
+					channel_id: string;
+					user_id: string;
+					joined_at?: string;
+				};
+				Update: {
+					channel_id?: string;
+					user_id?: string;
+					joined_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: 'channel_members_channel_id_fkey';
+						columns: ['channel_id'];
+						isOneToOne: false;
+						referencedRelation: 'channels';
+						referencedColumns: ['id'];
+					},
+					{
+						foreignKeyName: 'channel_members_user_id_fkey';
+						columns: ['user_id'];
+						isOneToOne: false;
+						referencedRelation: 'profiles';
+						referencedColumns: ['id'];
+					}
+				];
 			};
 			messages: {
 				Row: {
@@ -653,6 +716,9 @@ export type Database = {
 					website: string | null;
 					location: string | null;
 					social_links: Json;
+					birthday: string | null;
+					title: string | null;
+					skills: string[];
 					mfa_recovery_codes: string[] | null;
 					created_at: string;
 				};
@@ -666,6 +732,9 @@ export type Database = {
 					website?: string | null;
 					location?: string | null;
 					social_links?: Json;
+					birthday?: string | null;
+					title?: string | null;
+					skills?: string[];
 					mfa_recovery_codes?: string[] | null;
 					created_at?: string;
 				};
@@ -679,6 +748,9 @@ export type Database = {
 					website?: string | null;
 					location?: string | null;
 					social_links?: Json;
+					birthday?: string | null;
+					title?: string | null;
+					skills?: string[];
 					mfa_recovery_codes?: string[] | null;
 					created_at?: string;
 				};
@@ -857,6 +929,7 @@ export type Database = {
 					embedding: string | null;
 					created_at: string;
 					updated_at: string;
+					toolbox_id: string | null;
 					fts: unknown;
 				};
 				Insert: {
@@ -874,6 +947,7 @@ export type Database = {
 					star_count?: number;
 					created_at?: string;
 					updated_at?: string;
+					toolbox_id?: string | null;
 					fts?: unknown;
 				};
 				Update: {
@@ -891,6 +965,7 @@ export type Database = {
 					star_count?: number;
 					created_at?: string;
 					updated_at?: string;
+					toolbox_id?: string | null;
 					fts?: unknown;
 				};
 				Relationships: [
@@ -942,6 +1017,7 @@ export type Database = {
 					last_run_at: string | null;
 					created_at: string;
 					updated_at: string;
+					toolbox_id: string | null;
 				};
 				Insert: {
 					id?: string;
@@ -956,6 +1032,7 @@ export type Database = {
 					last_run_at?: string | null;
 					created_at?: string;
 					updated_at?: string;
+					toolbox_id?: string | null;
 				};
 				Update: {
 					id?: string;
@@ -970,6 +1047,7 @@ export type Database = {
 					last_run_at?: string | null;
 					created_at?: string;
 					updated_at?: string;
+					toolbox_id?: string | null;
 				};
 				Relationships: [];
 			};

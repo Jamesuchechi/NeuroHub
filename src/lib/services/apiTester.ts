@@ -22,12 +22,22 @@ export function interpolateEnvVars(text: string, variables: Record<string, strin
 }
 
 export const apiTestService = {
-	async list(workspaceId: string) {
-		return supabase
+	async list(workspaceId: string, toolboxId?: string | null) {
+		let query = supabase
 			.from('api_tests')
 			.select('*, author:profiles(id, username, avatar_url)')
 			.eq('workspace_id', workspaceId)
 			.order('updated_at', { ascending: false });
+
+		if (toolboxId !== undefined) {
+			if (toolboxId === null) {
+				query = query.is('toolbox_id', null);
+			} else {
+				query = query.eq('toolbox_id', toolboxId);
+			}
+		}
+
+		return query;
 	},
 
 	async save(

@@ -1,8 +1,14 @@
 <script lang="ts">
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import DevToolsWorkbench from '$lib/components/devtools/DevToolsWorkbench.svelte';
+	import { useActivityStatus } from '$lib/stores/userActivity.svelte';
 
 	let workspaceId = $derived($workspaceStore.currentWorkspace?.id);
+
+	// --- Activity Tracking ---
+	$effect(() => {
+		useActivityStatus('👨‍💻 Managing Snippets & Tools');
+	});
 </script>
 
 <svelte:head>
