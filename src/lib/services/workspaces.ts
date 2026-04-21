@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Database } from '$lib/types/db';
+import type { WorkspaceItem } from '$lib/types/discovery';
 
 type Workspace = Database['public']['Tables']['workspaces']['Row'];
 type WorkspaceInsert = Database['public']['Tables']['workspaces']['Insert'];
@@ -217,5 +218,59 @@ export const workspacesService = {
 
 		if (error) throw error;
 		return data;
+	},
+
+	async getPopularWorkspaces(limit = 5, excludeId?: string) {
+		let query = supabase.from('workspaces').select('*').order('created_at', { ascending: false });
+
+		if (excludeId) {
+			query = query.neq('owner_id', excludeId);
+		}
+
+		const { data, error } = await query.limit(limit);
+
+		if (error) throw error;
+		return data as unknown as WorkspaceItem[];
+	},
+
+	async getSharedWorkspaces(userId1: string, userId2: string) {
+		// 1. Get user2's workspace IDs
+		const { data: user2Workspaces } = await supabase
+			.from('workspace_members')
+			.select('workspace_id')
+			.eq('user_id', userId2);
+
+		if (!user2Workspaces || user2Workspaces.length === 0) return [];
+
+		const workspaceIds = user2Workspaces.map((w) => w.workspace_id);
+
+		// 2. Get intersection where userId1 is also a member
+		const { data, error } = await supabase
+			.from('workspace_members')
+			.select('workspace_id, workspaces!inner(*)')
+			.eq('user_id', userId1)
+			.in('workspace_id', workspaceIds);
+
+		if (error) throw error;
+		return (data || []).map((d) => d.workspaces) as unknown as WorkspaceItem[];
+	},
+
+	async requestJoinWorkspace(
+		workspaceId: string,
+		userId: string,
+		workspaceName: string,
+		ownerId: string
+	) {
+		const { notificationService } = await import('./notificationService');
+		return notificationService.createNotification(
+			ownerId,
+			workspaceId,
+			'workspace_join_request',
+			userId,
+			{
+				workspace_name: workspaceName,
+				message: 'Requesting to join your workspace.'
+			}
+		);
 	}
 };

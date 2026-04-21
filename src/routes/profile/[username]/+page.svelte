@@ -9,9 +9,19 @@
 	import AppShell from '$lib/components/layout/AppShell.svelte';
 	import { profileStore } from '$lib/stores/profileStore';
 	import { profileService } from '$lib/services/profileService';
+	import { chatService } from '$lib/services/chatService';
+	import { workspacesService } from '$lib/services/workspaces';
+	import { toast } from '$lib/stores/toastStore';
+	import type { Database } from '$lib/types/db';
+
+	type Profile = Database['public']['Tables']['profiles']['Row'];
+	interface ProfileExtended extends Profile {
+		title?: string;
+		skills?: string[];
+	}
 
 	let { data } = $props();
-	const profile = $derived(data.profile);
+	const profile = $derived(data.profile as ProfileExtended);
 	const activities = $derived(data.activities ?? []);
 	const isOwnProfile = $derived($profileStore.profile?.id === profile.id);
 
@@ -69,6 +79,40 @@
 		{ id: 'snippets', name: 'Snippets', icon: 'code' },
 		{ id: 'media', name: 'Media', icon: 'image' }
 	];
+
+	async function handleMessage() {
+		if (!$profileStore.profile) {
+			toast.show('Please sign in to message users.', 'error');
+			return;
+		}
+
+		try {
+			// 1. Find a shared workspace
+			const shared = await workspacesService.getSharedWorkspaces(
+				$profileStore.profile.id,
+				profile.id
+			);
+
+			if (shared.length === 0) {
+				toast.show(`You and @${profile.username} don't share any workspaces yet.`, 'info');
+				return;
+			}
+
+			// 2. Use the first shared workspace for the DM
+			const workspace = shared[0];
+			const channel = await chatService.getOrCreateDMChannel(
+				workspace.id,
+				$profileStore.profile.id,
+				profile.id
+			);
+
+			// 3. Navigate to the chat
+			goto(resolve(`/workspace/${workspace.slug}/chat/${channel.id}`));
+		} catch (err) {
+			console.error('[Profile] Failed to initiate DM:', err);
+			toast.show('Failed to start conversation.', 'error');
+		}
+	}
 </script>
 
 <AppShell>
@@ -111,7 +155,9 @@
 						Edit Profile
 					</Button>
 				{:else}
-					<Button variant="secondary" size="md" width="auto">Message</Button>
+					<Button variant="secondary" size="md" width="auto" onclick={handleMessage}>
+						Message
+					</Button>
 					<Button
 						variant={isFollowing ? 'secondary' : 'primary'}
 						size="md"

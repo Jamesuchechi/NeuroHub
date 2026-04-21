@@ -23,6 +23,12 @@ type ChannelWithLastMessage = DB['channels']['Row'] & {
 	last_message: Array<{ id: string; created_at: string }>;
 };
 
+export interface EnrichedChannel extends Channel {
+	display_name: string;
+	display_avatar: string | null;
+	other_user_id?: string;
+}
+
 interface ChatDB {
 	from(table: 'channels'): {
 		select<T = DB['channels']['Row']>(
@@ -65,6 +71,7 @@ interface ChatDB {
 			): {
 				single(): Promise<PostgrestSingleResponse<DB['profiles']['Row']>>;
 			};
+			in(k: string, v: string[]): Promise<PostgrestResponse<DB['profiles']['Row']>>;
 		};
 	};
 }
@@ -87,11 +94,51 @@ export class ChatStore {
 	selectedThreadId = $state<string | null>(null);
 	presence = $state<Record<string, PresenceState[]>>({});
 	typingUsers = $state<Record<string, SvelteSet<string>>>({}); // channelId -> Set of userIds
+	dmProfiles = $state<Record<string, { username: string; avatar_url: string | null }>>({}); // userId -> profile
 
 	private subscription: RealtimeChannel | null = null;
 	private presenceChannel: RealtimeChannel | null = null;
 
 	activeChannel = $derived(this.channels.find((c) => c.id === this.activeChannelId) || null);
+
+	get enrichedChannels(): EnrichedChannel[] {
+		return this.channels.map((c): EnrichedChannel => {
+			if (c.type === 'private' && c.name.startsWith('dm-')) {
+				const myId = get(profileStore).profile?.id;
+				// Better ID extraction: skip 'dm-', then split by logic that knows UUIDs
+				// Since UUIDs have a fixed format or at least we know we have two,
+				// and they are joined by a hyphen, but contain hyphens themselves.
+				// A reliable way is to find the other ID by checking which profile ID
+				// is contained within the channel name.
+				const nameWithoutPrefix = c.name.slice(3); // remove 'dm-'
+
+				// If we have myId, we can find the other ID by removing myId from the string
+				let otherId = '';
+				if (myId) {
+					if (nameWithoutPrefix.startsWith(myId)) {
+						otherId = nameWithoutPrefix.slice(myId.length + 1); // +1 for the separator hyphen
+					} else {
+						otherId = nameWithoutPrefix.split(`-${myId}`)[0];
+					}
+				}
+
+				const profile = otherId ? this.dmProfiles[otherId] : null;
+
+				return {
+					...c,
+					display_name: profile?.username || 'Direct Message',
+					display_avatar: profile?.avatar_url || null,
+					other_user_id: otherId
+				};
+			}
+			return {
+				...c,
+				display_name: c.name,
+				display_avatar: null,
+				other_user_id: undefined
+			};
+		});
+	}
 
 	constructor() {}
 
@@ -113,6 +160,9 @@ export class ChatStore {
 					...c,
 					last_msg_id: c.last_message?.[0]?.id || null
 				})) as Channel[];
+
+				// Resolve profiles for DMs
+				await this.resolveDMProfiles();
 			}
 
 			if (this.channels.length > 0 && !this.activeChannelId) {
@@ -123,6 +173,50 @@ export class ChatStore {
 			this.loadReadReceipts();
 		} catch (err) {
 			console.error('[ChatStore] Init failed:', err);
+		}
+	}
+
+	async resolveDMProfiles() {
+		const myId = get(profileStore).profile?.id;
+		if (!myId) return;
+
+		const dmUserIds = new SvelteSet<string>();
+		this.channels.forEach((c) => {
+			if (c.type === 'private' && c.name.startsWith('dm-')) {
+				const nameWithoutPrefix = c.name.slice(3);
+				if (myId) {
+					if (nameWithoutPrefix.startsWith(myId)) {
+						const otherId = nameWithoutPrefix.slice(myId.length + 1);
+						if (otherId) dmUserIds.add(otherId);
+					} else if (nameWithoutPrefix.includes(`-${myId}`)) {
+						const otherId = nameWithoutPrefix.split(`-${myId}`)[0];
+						if (otherId) dmUserIds.add(otherId);
+					}
+				}
+			}
+		});
+
+		if (dmUserIds.size === 0) return;
+
+		try {
+			const { data: profiles } = await db
+				.from('profiles')
+				.select('id, username, avatar_url')
+				.in('id', Array.from(dmUserIds));
+
+			if (profiles) {
+				profiles.forEach(
+					(p: { id: string; username: string | null; avatar_url: string | null }) => {
+						this.dmProfiles[p.id] = {
+							username: p.username || 'Unknown',
+							avatar_url: p.avatar_url
+						};
+					}
+				);
+				this.dmProfiles = { ...this.dmProfiles }; // Trigger reactivity
+			}
+		} catch (err) {
+			console.error('[ChatStore] resolveDMProfiles failed:', err);
 		}
 	}
 
@@ -508,4 +602,4 @@ export class ChatStore {
 	}
 }
 
-export const chatStore = new ChatStore();
+export const chatStore: ChatStore = new ChatStore();

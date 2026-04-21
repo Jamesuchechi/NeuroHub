@@ -125,12 +125,17 @@
 	<div class="group relative flex gap-4 p-4 transition-all hover:bg-white/2">
 		<!-- Left: Avatar & Connector -->
 		<div class="flex flex-col items-center">
-			<Avatar
-				name={activity.profiles?.username || 'User'}
-				src={activity.profiles?.avatar_url}
-				size="sm"
-				class="z-10 ring-2 ring-black transition-transform group-hover:scale-105"
-			/>
+			<a
+				href={resolve(`/profile/${activity.profiles?.username}`)}
+				class="z-10 block transition-transform hover:scale-105 active:scale-95"
+			>
+				<Avatar
+					name={activity.profiles?.username || 'User'}
+					src={activity.profiles?.avatar_url}
+					size="sm"
+					class="ring-2 ring-black"
+				/>
+			</a>
 			<div class="mt-2 w-px flex-1 bg-stroke/30 group-last:hidden"></div>
 		</div>
 
@@ -138,9 +143,12 @@
 		<div class="min-w-0 flex-1 pb-4">
 			<!-- Header -->
 			<div class="mb-0.5 flex flex-wrap items-center gap-1.5">
-				<span class="text-sm font-black text-content decoration-brand-orange/50 hover:underline">
+				<a
+					href={resolve(`/profile/${activity.profiles?.username}`)}
+					class="text-sm font-black text-content decoration-brand-orange/30 underline-offset-2 transition-colors hover:text-brand-orange hover:underline"
+				>
 					{activity.profiles?.username || 'Unknown'}
-				</span>
+				</a>
 				<span class="text-[13px] font-medium text-content-dim">
 					{config.label}
 				</span>
@@ -412,14 +420,24 @@
 
 					{#each comments as comment (comment.id)}
 						<div transition:fade class="group/reply flex gap-3 py-3">
-							<Avatar
-								name={comment.profiles?.username || 'User'}
-								src={comment.profiles?.avatar_url}
-								size="xs"
-							/>
+							<a
+								href={resolve(`/profile/${comment.profiles?.username}`)}
+								class="shrink-0 transition-transform hover:scale-105 active:scale-95"
+							>
+								<Avatar
+									name={comment.profiles?.username || 'User'}
+									src={comment.profiles?.avatar_url}
+									size="xs"
+								/>
+							</a>
 							<div class="flex-1">
 								<div class="flex items-center gap-2">
-									<span class="text-xs font-bold text-content">{comment.profiles?.username}</span>
+									<a
+										href={resolve(`/profile/${comment.profiles?.username}`)}
+										class="text-xs font-bold text-content decoration-brand-orange/30 underline-offset-1 transition-colors hover:text-brand-orange hover:underline"
+									>
+										{comment.profiles?.username}
+									</a>
 									<span class="text-[10px] text-content-dim">{formatTime(comment.created_at)}</span>
 								</div>
 								<p class="mt-1 text-sm text-content/80">

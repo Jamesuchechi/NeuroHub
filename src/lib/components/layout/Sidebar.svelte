@@ -13,7 +13,7 @@
 	import Avatar from '../ui/Avatar.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
 	import { onMount } from 'svelte';
-	import { chatStore } from '$lib/stores/chatStore.svelte';
+	import { chatStore, type EnrichedChannel } from '$lib/stores/chatStore.svelte';
 	import { notificationStore } from '$lib/stores/notificationStore.svelte';
 
 	const sidebarCollapsed = $derived($uiStore.sidebarCollapsed);
@@ -32,9 +32,18 @@
 	let chatsExpanded = $state(true);
 
 	/**
-	 * Workspace Channels (Reactive)
+	 * Workspace Channels & Chats (Reactive)
 	 */
-	const channels = $derived(chatStore.channels);
+	const publicChannels = $derived<EnrichedChannel[]>(
+		(chatStore.enrichedChannels as EnrichedChannel[]).filter(
+			(c) => c.type !== 'private' || !c.name.startsWith('dm-')
+		)
+	);
+	const directMessages = $derived<EnrichedChannel[]>(
+		(chatStore.enrichedChannels as EnrichedChannel[]).filter(
+			(c) => c.type === 'private' && c.name.startsWith('dm-')
+		)
+	);
 
 	interface NavLink {
 		name: string;
@@ -515,8 +524,8 @@
 			{#if channelsExpanded && !sidebarCollapsed}
 				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
 					{#if currentWorkspace}
-						{#if channels.length > 0}
-							{#each channels as channel (channel.id)}
+						{#if publicChannels.length > 0}
+							{#each publicChannels as channel (channel.id)}
 								<a
 									href={resolve(
 										`/workspace/${currentWorkspace.slug}/chat/${channel.id}` as unknown as '/'
@@ -532,7 +541,7 @@
 											? 'text-brand-orange'
 											: 'text-zinc-600 group-hover:text-brand-orange'}">#</span
 									>
-									<span class="truncate font-medium">{channel.name}</span>
+									<span class="truncate font-medium">{channel.display_name}</span>
 									{#if chatStore.channelHasUnread(channel.id)}
 										<div
 											class="ml-auto h-2 w-2 rounded-full bg-brand-orange shadow-neon-orange"
@@ -622,9 +631,39 @@
 			{#if chatsExpanded && !sidebarCollapsed}
 				<nav transition:slide={{ duration: 200 }} class="space-y-0.5">
 					{#if currentWorkspace}
-						<div class="px-3 py-2 text-left">
-							<p class="text-[10px] text-zinc-500 italic">No recent chats found</p>
-						</div>
+						{#if directMessages.length > 0}
+							{#each directMessages as dm (dm.id)}
+								<a
+									href={resolve(
+										`/workspace/${currentWorkspace.slug}/chat/${dm.id}` as unknown as '/'
+									)}
+									class="group flex items-center gap-3 rounded-lg px-3 py-1.5 text-sm transition-all {chatStore.activeChannelId ===
+									dm.id
+										? 'bg-brand-orange/10 text-brand-orange'
+										: 'hover:bg-zinc-900/40 hover:text-white'}"
+								>
+									<div class="relative shrink-0">
+										<Avatar name={dm.display_name} src={dm.display_avatar || undefined} size="xs" />
+										{#if chatStore.presence[dm.other_user_id || '']}
+											<div
+												class="absolute -right-0.5 -bottom-0.5 h-2 w-2 rounded-full border border-black bg-brand-green"
+											></div>
+										{/if}
+									</div>
+									<span class="truncate font-medium">{dm.display_name}</span>
+									{#if chatStore.channelHasUnread(dm.id)}
+										<div
+											class="ml-auto h-2 w-2 rounded-full bg-brand-orange shadow-neon-orange"
+											in:fade
+										></div>
+									{/if}
+								</a>
+							{/each}
+						{:else}
+							<div class="px-3 py-2 text-left">
+								<p class="text-[10px] text-zinc-500 italic">No recent chats found</p>
+							</div>
+						{/if}
 					{:else}
 						<div class="px-3 py-2 text-left">
 							<p class="text-[10px] text-zinc-500 italic">Select workspace to view chats</p>

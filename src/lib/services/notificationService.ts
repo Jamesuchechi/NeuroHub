@@ -6,6 +6,7 @@ export type NotificationType =
 	| 'reply'
 	| 'workspace_invite'
 	| 'invite_accepted'
+	| 'workspace_join_request'
 	| 'share'
 	| 'ai_complete';
 

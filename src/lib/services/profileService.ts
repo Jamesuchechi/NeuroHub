@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { ActivitiesTable, FollowsTable } from '$lib/types/db';
+import type { DeveloperItem } from '$lib/types/discovery';
 
 export type ProfileActivity = ActivitiesTable['Row'];
 type Follow = FollowsTable['Row'];
@@ -129,5 +130,21 @@ export const profileService = {
 			.eq('following_id', followingId);
 
 		if (error) throw error;
+	},
+
+	/**
+	 * Fetches trending/popular profiles.
+	 */
+	async getPopularProfiles(limit = 5, excludeId?: string) {
+		let query = supabase.from('profiles').select('*').order('created_at', { ascending: false });
+
+		if (excludeId) {
+			query = query.neq('id', excludeId);
+		}
+
+		const { data, error } = await query.limit(limit);
+
+		if (error) throw error;
+		return data as unknown as DeveloperItem[];
 	}
 };

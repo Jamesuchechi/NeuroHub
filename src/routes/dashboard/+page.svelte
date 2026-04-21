@@ -9,13 +9,15 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import ActivityItem from '$lib/components/dashboard/ActivityItem.svelte';
 	import { activityService } from '$lib/services/activity';
 	import { fly } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import StoriesBar from '$lib/components/social/StoriesBar.svelte';
 	import PostComposer from '$lib/components/social/PostComposer.svelte';
+	import UserProfileCard from '$lib/components/dashboard/UserProfileCard.svelte';
+	import PopularWorkspaces from '$lib/components/dashboard/PopularWorkspaces.svelte';
+	import PopularDevelopers from '$lib/components/dashboard/PopularDevelopers.svelte';
 
 	type Workspace = Database['public']['Tables']['workspaces']['Row'];
 
@@ -215,38 +217,14 @@
 				</div>
 			</div>
 
-			<!-- Quick Stats / User Profile -->
+			<!-- Sidebar: Profile & Stories -->
 			<div class="space-y-8">
-				<div class="rounded-3xl border border-stroke bg-surface-dim p-8 shadow-2xl">
-					<p class="mb-6 text-[10px] font-black tracking-[2px] text-content-dim uppercase">
-						Your Profile
-					</p>
-					<div class="mb-8 flex items-center gap-4">
-						<Avatar name={displayName} src={profile?.avatar_url} size="lg" class="rounded-2xl" />
-						<div>
-							<p class="text-xl font-black text-content">{displayName}</p>
-							<p class="text-xs text-content-dim">Individual Hub</p>
-						</div>
-					</div>
-					<div class="grid grid-cols-2 gap-4">
-						<div class="rounded-2xl bg-surface p-4">
-							<p class="mb-1 text-[10px] font-bold text-content-dim uppercase">Commits</p>
-							<p class="text-xl font-black text-content">124</p>
-						</div>
-						<div class="rounded-2xl bg-surface p-4">
-							<p class="mb-1 text-[10px] font-bold text-content-dim uppercase">Messages</p>
-							<p class="text-xl font-black text-content">8.2k</p>
-						</div>
-					</div>
-				</div>
+				{#if profile}
+					<UserProfileCard {profile} />
+				{/if}
 
-				<div class="rounded-3xl border border-stroke bg-surface-dim/50 p-8">
-					<h4 class="mb-4 text-sm font-bold text-content">Account Storage</h4>
-					<div class="mb-2 h-1.5 w-full overflow-hidden rounded-full bg-surface">
-						<div class="h-full w-1/3 bg-linear-to-r from-orange-500 to-orange-300"></div>
-					</div>
-					<p class="text-[10px] font-bold text-content-dim uppercase">3.2 GB of 10 GB used</p>
-				</div>
+				<PopularWorkspaces />
+				<PopularDevelopers />
 			</div>
 		</div>
 

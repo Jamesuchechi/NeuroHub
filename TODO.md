@@ -414,7 +414,34 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 10 — Performance & Polish
+## Phase 10 — Ecosystem Integration & Synergy
+
+**Target: Week 7–8**
+
+### The "Glue" (Cross-Feature Integration)
+
+- [ ] **Unified Mentions**: Update `MessageInput` to support `@User`, `#Channel`, `!Snippet`, and `[Note]` mentions in a single autocomplete flow.
+- [ ] **Contextual Pinning**: Implement "Channel Pins" that can include not just messages, but specific **Notes** or **API Tests** for instant team access.
+- [ ] **Feature Promotion**: Add "Refactor to Note" and "Export to Snippet" buttons on chat messages/threads to turn ephemeral chat into permanent knowledge.
+- [ ] **Global Deep-Linking**: Ensure every resource (Note, Snippet, API Test) has a unique, shareable URI that navigates correctly within the app shell.
+
+### Advanced Communication
+
+- [ ] **Group Direct Messages**: Support multi-person private chats (3–8 people) with custom group naming and icons.
+- [ ] **Aggregated Views**: Build a "Mentions & Reactions" dashboard to catch up on all personal activity across all channels.
+- [ ] **Unreads Dashboard**: A dedicated view for all unread threads and channels across the entire workspace.
+- [ ] **Rich Text Processing**: Implement a formatting toolbar (Bold, Code, Lists) in the `MessageInput` while maintaining Markdown compatibility.
+
+### Expert Developer Features
+
+- [ ] **AI Knowledge Promotion**: Proactive AI that detects technical specifications in Chat and suggests drafting a Note for the team.
+- [ ] **Workload-Aware Presence**: Automatically update user status based on activity (e.g., "📝 Editing Architecture Note" or "🧑‍💻 Running API Tests").
+- [ ] **Project Toolboxes**: Logical grouping of Snippets and API Tests into "Environments" (e.g., "Dev", "Staging", "Prod") with shared variables.
+- [ ] **Command Palette Advanced Actions**: Use `cmd+K` to "Attach Snippet to Current Chat" or "Link Note to Thread" without leaving the keyboard.
+
+---
+
+## Phase 11 — Performance & Polish
 
 **Target: Week 8**
 
@@ -453,7 +480,7 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 11 — Security Hardening
+## Phase 12 — Security Hardening
 
 **Target: Week 8–9**
 
@@ -481,7 +508,7 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 12 — Observability & Monitoring
+## Phase 13 — Observability & Monitoring
 
 **Target: Week 9**
 
@@ -491,7 +518,7 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 13 — Deployment & DevOps
+## Phase 14 — Deployment & DevOps
 
 **Target: Week 9–10**
 
@@ -519,7 +546,7 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 14 — Social Intelligence (Expert Features)
+## Phase 15 — Social Intelligence (Expert Features)
 
 **Target: Week 11 and Beyond**
 
