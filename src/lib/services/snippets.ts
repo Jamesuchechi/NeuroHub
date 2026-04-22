@@ -17,9 +17,12 @@ export const snippetService = {
 			toolboxId?: string | null;
 		}
 	) {
+		console.log('--- Snippets Fetching (Safe Mode) ---');
 		let query = supabase
 			.from('snippets')
-			.select('*, author:profiles(id, username, avatar_url)')
+			.select(
+				'id, workspace_id, author_id, toolbox_id, title, description, code, language, tags, visibility, parent_id, fork_count, star_count, created_at, updated_at'
+			)
 			.eq('workspace_id', workspaceId)
 			.order(
 				opts?.sort === 'stars'
@@ -50,7 +53,9 @@ export const snippetService = {
 	async getById(id: string) {
 		return supabase
 			.from('snippets')
-			.select('*, author:profiles(id, username, avatar_url)')
+			.select(
+				'id, workspace_id, author_id, toolbox_id, title, description, code, language, tags, visibility, parent_id, fork_count, star_count, created_at, updated_at'
+			)
 			.eq('id', id)
 			.single();
 	},
@@ -58,14 +63,14 @@ export const snippetService = {
 	async create(
 		data: SnippetsTable['Insert']
 	): Promise<PostgrestSingleResponse<SnippetsTable['Row']>> {
-		return supabase.from('snippets').insert(data).select().single();
+		return supabase.from('snippets').insert(data).select('id').single();
 	},
 
 	async update(
 		id: string,
 		data: SnippetsTable['Update']
 	): Promise<PostgrestSingleResponse<SnippetsTable['Row']>> {
-		return supabase.from('snippets').update(data).eq('id', id).select().single();
+		return supabase.from('snippets').update(data).eq('id', id).select('id').single();
 	},
 
 	async delete(id: string) {
@@ -79,7 +84,7 @@ export const snippetService = {
 	): Promise<PostgrestSingleResponse<SnippetsTable['Row']>> {
 		const { data: original } = await supabase
 			.from('snippets')
-			.select('*')
+			.select('id, title, code, language, description, tags')
 			.eq('id', snippetId)
 			.single();
 		if (!original) throw new Error('Snippet not found');
@@ -97,7 +102,7 @@ export const snippetService = {
 				visibility: 'workspace',
 				parent_id: snippetId
 			})
-			.select()
+			.select('id')
 			.single();
 	},
 

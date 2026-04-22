@@ -1,15 +1,19 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { snippetFilters, openInTab, activeSnippetId } from '$lib/stores/devToolsStore';
+	import { onMount, untrack } from 'svelte';
+	import {
+		snippetFilters,
+		openInTab,
+		activeSnippetId,
+		refreshSnippetsTrigger
+	} from '$lib/stores/devToolsStore';
 	import { snippetService } from '$lib/services/snippets';
-	import { toolboxStore } from '$lib/stores/toolboxStore.svelte';
 	import { toast } from '$lib/stores/toastStore';
 	import type { SnippetsTable } from '$lib/types/db';
 
 	let { workspaceId } = $props<{ workspaceId: string }>();
 
 	let snippets = $state<
-		(SnippetsTable['Row'] & {
+		(Omit<SnippetsTable['Row'], 'fts'> & {
 			author?: { id: string; username: string | null; avatar_url: string | null };
 		})[]
 	>([]);
@@ -20,11 +24,11 @@
 		if (!workspaceId) return;
 		loading = true;
 		try {
+			// Sidebar shows ALL snippets — no toolbox filter here
 			const res = await snippetService.list(workspaceId, {
 				search: $snippetFilters.search || undefined,
 				limit: 50,
-				sort: 'recent',
-				toolboxId: toolboxStore.selectedToolboxId
+				sort: 'recent'
 			});
 			if (res.data) {
 				snippets = res.data;
@@ -46,9 +50,13 @@
 		loadSnippets();
 	});
 
-	// Support external refreshes via filter state if needed
+	// Reload when workspaceId changes or a manual refresh is triggered
 	$effect(() => {
-		if (workspaceId) loadSnippets();
+		const ws = workspaceId;
+		const trigger = $refreshSnippetsTrigger;
+		if (ws || trigger >= 0) {
+			untrack(() => loadSnippets());
+		}
 	});
 </script>
 

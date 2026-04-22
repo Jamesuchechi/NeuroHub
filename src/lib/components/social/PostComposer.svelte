@@ -7,6 +7,10 @@
 	import { fly, fade, slide } from 'svelte/transition';
 	import { cubicOut } from 'svelte/easing';
 	import { type PostBlock } from '$lib/types/social';
+	import { workspacesService } from '$lib/services/workspaces';
+	import type { Database } from '$lib/types/db';
+
+	type Workspace = Database['public']['Tables']['workspaces']['Row'];
 
 	let {
 		workspaceId = null,
@@ -29,6 +33,33 @@
 	let fileInput: HTMLInputElement;
 	let isUploading = $state(false);
 	let activeUploadIndex = $state<number | null>(null);
+
+	let userWorkspaces = $state<Workspace[]>([]);
+	let selectedWorkspaceId = $state<string | null>(null);
+	let isPublic = $state(true);
+
+	// Sync local state with prop changes
+	$effect(() => {
+		selectedWorkspaceId = workspaceId;
+		isPublic = workspaceId === null;
+	});
+
+	$effect(() => {
+		if (!workspaceId && profile?.id && userWorkspaces.length === 0) {
+			workspacesService
+				.getUserWorkspaces(profile.id)
+				.then((ws) => {
+					userWorkspaces = ws;
+					// Default to first workspace if available and we're in the global hub
+					if (ws.length > 0 && selectedWorkspaceId === null) {
+						selectedWorkspaceId = ws[0].id;
+					}
+				})
+				.catch((err) => {
+					console.error('[PostComposer] Failed to fetch workspaces:', err);
+				});
+		}
+	});
 
 	function createEmptyBlock(): PostBlock {
 		return {
@@ -121,9 +152,9 @@
 					: undefined;
 
 				const res = await activityService.createPost(profile.id, block.content, {
-					workspaceId,
+					workspaceId: selectedWorkspaceId,
 					attachments: allAttachments,
-					isPublic: true,
+					isPublic: isPublic,
 					parentId: lastParentId,
 					poll: pollData
 				});
@@ -413,8 +444,33 @@
 	{#if isFocused || posts.some((p) => p.content.length > 0)}
 		<div
 			in:fly={{ y: 20, duration: 400 }}
-			class="mt-6 flex items-center justify-end border-t border-stroke pt-4"
+			class="mt-6 flex items-center justify-between border-t border-stroke pt-4"
 		>
+			<div class="flex items-center gap-2">
+				{#if !workspaceId && userWorkspaces.length > 0}
+					<select
+						bind:value={selectedWorkspaceId}
+						onchange={() => (isPublic = selectedWorkspaceId === null)}
+						class="rounded-lg border border-stroke bg-surface-dim px-3 py-1.5 text-[10px] font-bold text-content-dim transition-all outline-none focus:border-brand-orange"
+					>
+						<option value={null}>Global Hub</option>
+						{#each userWorkspaces as ws (ws.id)}
+							<option value={ws.id}>{ws.name}</option>
+						{/each}
+					</select>
+				{/if}
+
+				{#if selectedWorkspaceId !== null}
+					<label class="flex cursor-pointer items-center gap-2 px-2">
+						<input
+							type="checkbox"
+							bind:checked={isPublic}
+							class="h-3 w-3 rounded border-stroke bg-surface-dim text-brand-orange transition-all focus:ring-0 focus:ring-offset-0"
+						/>
+						<span class="text-[10px] font-bold text-content-dim uppercase">Public</span>
+					</label>
+				{/if}
+			</div>
 			<div class="flex gap-2">
 				<button
 					onclick={() => {

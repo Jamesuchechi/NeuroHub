@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { activeSnippetId, starredIds, toggleStarLocal } from '$lib/stores/devToolsStore';
+	import {
+		activeSnippetId,
+		starredIds,
+		toggleStarLocal,
+		refreshSnippets
+	} from '$lib/stores/devToolsStore';
 	import { snippetService } from '$lib/services/snippets';
 	import { toolboxStore } from '$lib/stores/toolboxStore.svelte';
 	import { authStore } from '$lib/stores/authStore';
@@ -16,7 +21,7 @@
 
 	let user = $derived($authStore.user);
 
-	let snippetData = $state<SnippetsTable['Row'] | null>(null);
+	let snippetData = $state<Omit<SnippetsTable['Row'], 'fts'> | null>(null);
 	let loading = $state(false);
 	let isSaving = $state(false);
 
@@ -84,6 +89,7 @@
 					import('$lib/stores/devToolsStore').then(({ openInTab, closeTab }) => {
 						closeTab('new');
 						openInTab(res.data.id);
+						refreshSnippets();
 					});
 				}
 			} else if ($activeSnippetId) {
@@ -91,12 +97,44 @@
 				if (res.data) {
 					toast.show('Snippet updated', 'success');
 					snippetData = { ...snippetData, ...res.data };
+					refreshSnippets();
+
+					// Force the tab to refresh its title
+					window.dispatchEvent(
+						new CustomEvent('snippet-updated', {
+							detail: { id: $activeSnippetId, title, language }
+						})
+					);
 				}
 			}
 		} catch {
 			toast.show('Failed to save changes', 'error');
 		}
 		isSaving = false;
+	}
+
+	async function handleDelete() {
+		if (!$activeSnippetId || $activeSnippetId === 'new') return;
+
+		if (!confirm('Are you sure you want to delete this snippet? This action cannot be undone.')) {
+			return;
+		}
+
+		try {
+			const { error } = await snippetService.delete($activeSnippetId);
+			if (error) throw error;
+
+			toast.show('Snippet deleted', 'success');
+			const idToDelete = $activeSnippetId;
+
+			import('$lib/stores/devToolsStore').then(({ closeTab }) => {
+				closeTab(idToDelete);
+				refreshSnippets();
+			});
+		} catch (err) {
+			console.error('Delete error:', err);
+			toast.show('Failed to delete snippet', 'error');
+		}
 	}
 
 	async function handleStar() {
@@ -150,6 +188,7 @@
 							<button
 								class="flex h-9 items-center gap-2 rounded-lg border border-stroke bg-surface px-4 text-sm font-medium text-content-dim transition-colors hover:bg-surface-dim hover:text-content"
 								onclick={handleCopy}
+								title="Copy Code"
 							>
 								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path
@@ -159,8 +198,24 @@
 										d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-1 4h.01M9 16h.01"
 									/>
 								</svg>
-								Copy
 							</button>
+
+							{#if $activeSnippetId !== 'new'}
+								<button
+									class="flex h-9 w-9 items-center justify-center rounded-lg border border-stroke bg-surface text-content-dim transition-colors hover:border-red-500/50 hover:bg-red-500/10 hover:text-red-500"
+									onclick={handleDelete}
+									title="Delete Snippet"
+								>
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+										/>
+									</svg>
+								</button>
+							{/if}
 
 							<button
 								class="flex h-9 items-center gap-2 rounded-lg bg-orange-500 px-4 text-sm font-bold text-white transition-all hover:bg-orange-600 disabled:opacity-50"

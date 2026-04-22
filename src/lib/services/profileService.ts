@@ -142,9 +142,29 @@ export const profileService = {
 			query = query.neq('id', excludeId);
 		}
 
-		const { data, error } = await query.limit(limit);
+		const { data: profiles, error } = await query.limit(limit);
 
 		if (error) throw error;
-		return data as unknown as DeveloperItem[];
+
+		const items = profiles as unknown as DeveloperItem[];
+
+		// If we have a current user, check follow status
+		if (excludeId && items.length > 0) {
+			const profileIds = items.map((p) => p.id);
+			const { data: follows } = await supabase
+				.from('follows')
+				.select('following_id')
+				.eq('follower_id', excludeId)
+				.in('following_id', profileIds);
+
+			if (follows) {
+				const followedIds = new Set(follows.map((f) => f.following_id));
+				items.forEach((p) => {
+					p.is_followed = followedIds.has(p.id);
+				});
+			}
+		}
+
+		return items;
 	}
 };

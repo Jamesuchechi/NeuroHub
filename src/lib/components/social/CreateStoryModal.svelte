@@ -30,6 +30,8 @@
 		'linear-gradient(135deg, #f8ff00 0%, #3ad59f 100%)'
 	];
 
+	let customColor = $state('#f97316');
+
 	const fonts = ['Inter', 'Outfit', 'Space Grotesk', 'Playfair Display', 'Permanent Marker'];
 
 	let scope = $state<'global' | 'workspace'>('global');
@@ -215,6 +217,39 @@
 								title="Select background style"
 							></button>
 						{/each}
+
+						<!-- Custom Color Picker -->
+						<div class="relative h-10 w-10">
+							<input
+								type="color"
+								bind:value={customColor}
+								oninput={() => (activeGradient = customColor)}
+								class="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+								title="Choose custom color"
+							/>
+							<div
+								class="flex h-full w-full items-center justify-center rounded-xl border-2 border-stroke bg-surface-dim transition-all hover:border-brand-orange"
+								style="background: {!gradients.includes(activeGradient)
+									? activeGradient
+									: 'transparent'}"
+							>
+								{#if gradients.includes(activeGradient)}
+									<svg
+										class="h-5 w-5 text-content-dim"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="3"
+											d="M12 4v16m8-8H4"
+										/>
+									</svg>
+								{/if}
+							</div>
+						</div>
 					</div>
 
 					<div class="flex flex-wrap gap-2">

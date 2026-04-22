@@ -14,5 +14,6 @@ export interface DeveloperItem {
 	full_name: string | null;
 	avatar_url: string | null;
 	follows: { count: number }[];
+	is_followed?: boolean;
 	created_at: string;
 }

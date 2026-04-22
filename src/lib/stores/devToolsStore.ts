@@ -104,3 +104,9 @@ export function openCreateSnippet(data: {
 	openSnippetId.set('new'); // Trigger modal opening in create mode
 	activeSnippetId.set('new'); // Also set as active tab if using tabbed view
 }
+
+// Refresh triggers
+export const refreshSnippetsTrigger = writable(0);
+export function refreshSnippets() {
+	refreshSnippetsTrigger.update((n) => n + 1);
+}

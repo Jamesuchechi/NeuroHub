@@ -1,8 +1,8 @@
 <script lang="ts">
 	const variants = {
-		primary: 'bg-white text-black hover:opacity-90',
-		secondary: 'bg-zinc-900 text-white border border-zinc-800 hover:bg-zinc-800',
-		ghost: 'bg-transparent text-zinc-500 hover:text-white',
+		primary: 'bg-content text-surface hover:opacity-90',
+		secondary: 'bg-surface-dim text-content border border-stroke hover:bg-surface',
+		ghost: 'bg-transparent text-content-dim hover:text-content',
 		danger: 'bg-red-600 text-white hover:bg-red-700'
 	};
 

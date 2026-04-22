@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { openSnippetTabs, activeSnippetId, closeTab } from '$lib/stores/devToolsStore';
 	import { snippetService } from '$lib/services/snippets';
+	import { untrack, onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 
 	// We need titles for the tabs, so we might need a local cache of snippet metadata
@@ -8,17 +9,27 @@
 
 	async function fetchMetadata(id: string) {
 		if (id === 'new') {
-			tabMetadata[id] = { title: 'New Snippet', language: 'javascript' };
+			untrack(() => {
+				tabMetadata = { ...tabMetadata, [id]: { title: 'New Snippet', language: 'javascript' } };
+			});
 			return;
 		}
-		if (tabMetadata[id]) return;
+		// Guard: don't re-fetch if we already have this metadata
+		if (untrack(() => tabMetadata[id])) return;
 		try {
 			const res = await snippetService.getById(id);
 			if (res.data) {
-				tabMetadata[id] = { title: res.data.title, language: res.data.language };
+				untrack(() => {
+					tabMetadata = {
+						...tabMetadata,
+						[id]: { title: res.data!.title, language: res.data!.language }
+					};
+				});
 			}
 		} catch {
-			tabMetadata[id] = { title: 'Unknown', language: 'txt' };
+			untrack(() => {
+				tabMetadata = { ...tabMetadata, [id]: { title: 'Unknown', language: 'txt' } };
+			});
 		}
 	}
 
@@ -26,6 +37,18 @@
 		for (const id of $openSnippetTabs) {
 			fetchMetadata(id);
 		}
+	});
+
+	// Handle real-time updates from the browser
+	onMount(() => {
+		const handler = (e: CustomEvent<{ id: string; title: string; language: string }>) => {
+			const { id, title, language } = e.detail;
+			untrack(() => {
+				tabMetadata = { ...tabMetadata, [id]: { title, language } };
+			});
+		};
+		window.addEventListener('snippet-updated', handler as EventListener);
+		return () => window.removeEventListener('snippet-updated', handler as EventListener);
 	});
 
 	function selectTab(id: string) {

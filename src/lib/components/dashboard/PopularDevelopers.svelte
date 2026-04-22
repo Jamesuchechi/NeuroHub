@@ -32,10 +32,17 @@
 			return;
 		}
 		try {
-			await profileService.followUser(user.id, dev.id);
-			toast.show(`Followed @${dev.username}`);
+			if (dev.is_followed) {
+				await profileService.unfollowUser(user.id, dev.id);
+				dev.is_followed = false;
+				toast.show(`Unfollowed @${dev.username}`);
+			} else {
+				await profileService.followUser(user.id, dev.id);
+				dev.is_followed = true;
+				toast.show(`Followed @${dev.username}`);
+			}
 		} catch (_err) {
-			toast.show('Failed to follow developer.', 'error');
+			toast.show('Operation failed.', 'error');
 		}
 	}
 </script>
@@ -89,9 +96,9 @@
 						variant="primary"
 						size="sm"
 						onclick={() => handleFollow(dev)}
-						class="shrink-0 rounded-full bg-content px-6 text-surface hover:bg-content/90"
+						class="shrink-0 rounded-full px-6"
 					>
-						Follow
+						{dev.is_followed ? 'Following' : 'Follow'}
 					</Button>
 				</div>
 			{/each}
