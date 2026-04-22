@@ -25,6 +25,33 @@
 		isExpanded = false;
 	}
 
+	async function handleCreateToolbox() {
+		const wsId = get(workspaceStore).currentWorkspace?.id;
+		if (!wsId) return;
+
+		const name = prompt('Enter a name for your new toolbox:');
+		if (!name) return;
+
+		try {
+			const { data, error } = await apiTestService.saveEnvironment({
+				workspace_id: wsId,
+				name,
+				variables: {}
+			});
+
+			if (error) throw error;
+			if (data) {
+				toolboxStore.setToolboxes([...toolboxStore.toolboxes, data]);
+				toolboxStore.setToolbox(data.id);
+				isExpanded = false;
+			}
+		} catch {
+			import('$lib/stores/toastStore').then(({ toast }) =>
+				toast.show('Failed to create toolbox', 'error')
+			);
+		}
+	}
+
 	onMount(() => {
 		loadEnvironments();
 	});
@@ -73,6 +100,7 @@
 				{/each}
 
 				<button
+					onclick={handleCreateToolbox}
 					class="mt-1 flex w-full items-center gap-2 rounded-lg border border-dashed border-zinc-800 px-3 py-2 text-[10px] text-zinc-500 hover:border-brand-blue/30 hover:text-brand-blue"
 				>
 					<span>+</span>
