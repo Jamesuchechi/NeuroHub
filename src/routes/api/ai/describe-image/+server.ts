@@ -22,7 +22,7 @@ export const POST: RequestHandler = async ({ request, locals: { safeGetSession, 
 				: 'Generate a short, engaging caption for this story image.';
 
 		const { text, usage } = await generateText({
-			model: openrouter.chat('meta-llama/llama-3.2-11b-vision-instruct:free'),
+			model: openrouter.chat('google/gemini-2.0-flash-001'),
 			messages: [
 				{
 					role: 'user',
@@ -34,14 +34,21 @@ export const POST: RequestHandler = async ({ request, locals: { safeGetSession, 
 			]
 		});
 
+		interface TokenUsage {
+			inputTokens: number;
+			outputTokens: number;
+			totalTokens: number;
+		}
+
 		// Log usage
 		try {
+			const u = usage as unknown as TokenUsage;
 			await supabase.from('ai_requests').insert({
 				user_id: session.user.id,
-				model: 'llama-3.2-11b-vision',
-				prompt_tokens: usage.inputTokens,
-				completion_tokens: usage.outputTokens,
-				total_tokens: usage.totalTokens,
+				model: 'gemini-2.0-flash-001',
+				prompt_tokens: u.inputTokens || 0,
+				completion_tokens: u.outputTokens || 0,
+				total_tokens: u.totalTokens || 0,
 				feature: 'vision-describe'
 			});
 		} catch (logErr) {

@@ -40,6 +40,7 @@ export const POST: RequestHandler = async ({ request, locals: { safeGetSession, 
 	}
 
 	if (!activities || activities.length === 0) {
+		console.log('[Roundup API] No activities found in the last 24h');
 		return json({
 			summary: "It's been a quiet 24 hours. The team is likely in deep focus mode! 🧘‍♂️",
 			activityCount: 0
@@ -65,21 +66,28 @@ export const POST: RequestHandler = async ({ request, locals: { safeGetSession, 
 
 	try {
 		const { text, usage } = await generateText({
-			model: openrouter.chat('meta-llama/llama-3.3-70b-instruct:free'),
+			model: openrouter.chat('google/gemini-2.0-flash-001'),
 			system:
 				"You are NeuroAI, a high-performance team coordinator. Create a concise, energetic, and developer-friendly 'Daily Roundup' of the workspace activities. Use emojis. Max 280 characters.",
 			prompt: `Workspace Activities (Last 24h):\n${activityText}\n\nSummary:`
 		});
 
+		interface TokenUsage {
+			inputTokens: number;
+			outputTokens: number;
+			totalTokens: number;
+		}
+
 		// Log usage
 		try {
+			const u = usage as unknown as TokenUsage;
 			await supabase.from('ai_requests').insert({
 				user_id: session.user.id,
 				workspace_id: workspaceId,
-				model: 'llama-3.3-70b',
-				prompt_tokens: usage.inputTokens,
-				completion_tokens: usage.outputTokens,
-				total_tokens: usage.totalTokens,
+				model: 'gemini-2.0-flash-001',
+				prompt_tokens: u.inputTokens || 0,
+				completion_tokens: u.outputTokens || 0,
+				total_tokens: u.totalTokens || 0,
 				feature: 'daily-roundup'
 			});
 		} catch (logErr) {

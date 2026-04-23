@@ -141,6 +141,7 @@ export const POST: RequestHandler = async ({ request, locals: { supabase, safeGe
 			modelStack.push(openrouter.chat('meta-llama/llama-3.3-70b-instruct:free'));
 			modelStack.push(mistral('mistral-large-latest'));
 			modelStack.push(groq('llama-3.3-70b-versatile'));
+			modelStack.push(openrouter.chat('google/gemini-2.0-flash-001'));
 			break;
 		case 'stable':
 			modelStack.push(mistral('mistral-small-latest'));
