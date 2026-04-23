@@ -45,6 +45,8 @@
 	html,
 	body {
 		@apply h-full overflow-hidden bg-surface text-content antialiased;
+		padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+			env(safe-area-inset-left);
 	}
 
 	* {
