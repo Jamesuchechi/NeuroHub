@@ -88,7 +88,8 @@ const authHandle: Handle = async ({ event, resolve }) => {
 		"connect-src 'self' " +
 			config.public.supabaseUrl +
 			' ' +
-			config.public.supabaseUrl.replace('https', 'wss'),
+			config.public.supabaseUrl.replace('https', 'wss') +
+			' https://api.cloudinary.com',
 		"worker-src 'self' blob:",
 		"frame-ancestors 'none'",
 		"object-src 'none'",
