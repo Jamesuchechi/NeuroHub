@@ -298,7 +298,7 @@ export class ChatStore {
 
 		const oldestMessage = this.messages[0];
 		try {
-			const olderMessages = await chatService.getMessages(channelId, 50, oldestMessage.id);
+			const olderMessages = await chatService.getMessages(channelId, 50, oldestMessage.created_at);
 			if (olderMessages.length > 0) {
 				// Filter out any messages that might already have arrived via realtime
 				const existingIds = new SvelteSet(this.messages.map((m) => m.id));

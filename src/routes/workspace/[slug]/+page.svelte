@@ -12,6 +12,7 @@
 	import { authStore } from '$lib/stores/authStore';
 	import { profileStore } from '$lib/stores/profileStore';
 	import { uiStore } from '$lib/stores/uiStore';
+	import FeedRefreshBanner from '$lib/components/social/FeedRefreshBanner.svelte';
 
 	const workspace = $derived($workspaceStore.currentWorkspace);
 	const members = $derived($workspaceStore.members);
@@ -21,13 +22,13 @@
 
 	// Contextual stats
 	const stats = $derived([
-		{ name: 'Channels', value: '0', icon: 'chat' },
-		{ name: 'Documents', value: '0', icon: 'book' },
-		{ name: 'Snippets', value: '0', icon: 'code' },
+		{ name: 'Channels', value: $workspaceStore.stats.channels.toString(), icon: 'chat' },
+		{ name: 'Documents', value: $workspaceStore.stats.documents.toString(), icon: 'book' },
+		{ name: 'Snippets', value: $workspaceStore.stats.snippets.toString(), icon: 'code' },
 		{ name: 'Team Size', value: members.length.toString(), icon: 'users' }
 	]);
 
-	const activities = $derived($activityService);
+	let sentinel = $state<HTMLElement>();
 
 	onMount(() => {
 		if (user) {
@@ -36,12 +37,31 @@
 
 		if (workspace?.id) {
 			activityService.fetchActivities(workspace.id);
-			return activityService.subscribeToActivities(workspace.id);
+			const unsubscribe = activityService.subscribeToActivities(workspace.id);
+
+			// Infinite Scroll Observer
+			const observer = new IntersectionObserver(
+				(entries) => {
+					if (entries[0].isIntersecting) {
+						activityService.fetchMoreActivities(workspace.id, user?.id || null);
+					}
+				},
+				{ rootMargin: '400px' }
+			);
+
+			if (sentinel) observer.observe(sentinel);
+
+			return () => {
+				unsubscribe();
+				observer.disconnect();
+			};
 		}
 	});
 </script>
 
-<div class="p-6 md:p-8 lg:p-10">
+<FeedRefreshBanner workspaceId={workspace?.id} userId={user?.id} />
+
+<div class="p-4 md:p-8 lg:p-10">
 	{#if workspace}
 		<div
 			in:fly={{ y: 20, duration: 800, easing: cubicOut }}
@@ -120,10 +140,10 @@
 		>
 			{#each stats as stat (stat.name)}
 				<div
-					class="group relative rounded-2xl border border-stroke bg-surface-dim/30 p-6 transition-all hover:bg-surface-dim/60"
+					class="group relative rounded-2xl border border-stroke bg-surface-dim/30 p-4 transition-all hover:bg-surface-dim/60 md:p-6"
 				>
 					<div
-						class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-surface transition-colors group-hover:text-brand-orange"
+						class="mb-3 flex h-8 w-8 items-center justify-center rounded-xl bg-surface transition-colors group-hover:text-brand-orange md:mb-4 md:h-10 md:w-10"
 					>
 						{#if stat.icon === 'chat'}
 							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -175,7 +195,7 @@
 			<!-- Recent Activity -->
 			<div
 				in:fly={{ y: 40, duration: 1200, easing: cubicOut, delay: 400 }}
-				class="flex-1 rounded-3xl border border-stroke bg-surface-dim/20 p-8"
+				class="flex-1 rounded-3xl border border-stroke bg-surface-dim/20 p-4 md:p-8"
 			>
 				<h3 class="mb-8 text-xl font-black text-content">Recent Activity</h3>
 
@@ -188,14 +208,22 @@
 				</div>
 
 				<div class="space-y-6">
-					{#if activities.length === 0}
+					{#if $activityService.items.length === 0}
 						<p class="py-12 text-center text-xs text-content-dim italic">
 							No team activity yet. Start the conversation!
 						</p>
 					{:else}
-						{#each activities as activity (activity.id)}
+						{#each $activityService.items as activity (activity.id)}
 							<ActivityItem {activity} />
 						{/each}
+
+						{#if $activityService.hasMore}
+							<div bind:this={sentinel} class="flex h-20 items-center justify-center">
+								<div
+									class="h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent opacity-30"
+								></div>
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>

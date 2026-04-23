@@ -3,12 +3,15 @@
 	import { fade } from 'svelte/transition';
 	import { uiStore } from '$lib/stores/uiStore';
 	import { workspaceStore } from '$lib/stores/workspaceStore';
+	import { onMount } from 'svelte';
 
-	// Sub-components (we will refactor these or create them)
+	// Sub-components
 	import SnippetSidebarList from './SnippetSidebarList.svelte';
 	import ApiSidebarHistory from './ApiSidebarHistory.svelte';
 	import SandboxSidebarControls from './SandboxSidebarControls.svelte';
 	import JsonSidebarHistory from './JsonSidebarHistory.svelte';
+
+	let isMobile = $state(false);
 
 	const menuItems: { id: DevTab; label: string; icon: string }[] = [
 		{
@@ -40,36 +43,56 @@
 	function toggleCollapse() {
 		devSidebarCollapsed.update((c) => !c);
 	}
+
+	onMount(() => {
+		const checkMobile = () => {
+			isMobile = window.innerWidth < 1024;
+		};
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	});
 </script>
 
 <div class="flex h-full w-full overflow-hidden">
 	<!-- Activity Bar (Narrow strip) -->
 	<div
-		class="activity-bar no-print flex w-16 flex-col items-center gap-2 border-r border-stroke bg-surface-dim py-4"
+		class="activity-bar no-print flex {isMobile
+			? 'w-12'
+			: 'w-16'} flex-col items-center gap-2 border-r border-stroke bg-surface-dim py-4"
 	>
 		{#each menuItems as item (item.id)}
 			<button
-				class="group relative flex h-12 w-12 items-center justify-center rounded-xl transition-all
+				class="group relative flex {isMobile
+					? 'h-10 w-10'
+					: 'h-12 w-12'} items-center justify-center rounded-xl transition-all
 					{$activeTab === item.id
 					? 'bg-orange-500/10 font-bold text-orange-500'
 					: 'text-content-dim hover:bg-surface hover:text-content'}"
 				onclick={() => selectTab(item.id)}
 				title={item.label}
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<svg
+					class={isMobile ? 'h-5 w-5' : 'h-6 w-6'}
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={item.icon} />
 				</svg>
 
 				{#if $activeTab === item.id}
-					<div class="absolute top-3 bottom-3 left-0 w-1 rounded-r-full bg-orange-500"></div>
+					<div class="absolute top-2 bottom-2 left-0 w-0.5 rounded-r-full bg-orange-500"></div>
 				{/if}
 
 				<!-- Sidebar Tooltip -->
-				<div
-					class="pointer-events-none absolute left-16 z-50 rounded-md border border-stroke bg-surface-dim px-2 py-1 text-xs whitespace-nowrap text-content opacity-0 shadow-xl transition-opacity group-hover:opacity-100"
-				>
-					{item.label}
-				</div>
+				{#if !isMobile}
+					<div
+						class="pointer-events-none absolute left-16 z-50 rounded-md border border-stroke bg-surface-dim px-2 py-1 text-xs whitespace-nowrap text-content opacity-0 shadow-xl transition-opacity group-hover:opacity-100"
+					>
+						{item.label}
+					</div>
+				{/if}
 			</button>
 		{/each}
 
@@ -79,7 +102,12 @@
 				onclick={() => uiStore.toggleCommandPalette()}
 				title="Command Palette (Cmd+K)"
 			>
-				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<svg
+					class={isMobile ? 'h-5 w-5' : 'h-6 w-6'}
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -89,33 +117,37 @@
 				</svg>
 			</button>
 
-			<button
-				class="text-content-dim transition-colors hover:text-content"
-				onclick={toggleCollapse}
-				title={$devSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-			>
-				<svg
-					class="h-6 w-6 {$devSidebarCollapsed ? 'rotate-180' : ''} transition-transform"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
+			{#if !isMobile}
+				<button
+					class="text-content-dim transition-colors hover:text-content"
+					onclick={toggleCollapse}
+					title={$devSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-					/>
-				</svg>
-			</button>
+					<svg
+						class="h-6 w-6 {$devSidebarCollapsed ? 'rotate-180' : ''} transition-transform"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="1.5"
+							d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+						/>
+					</svg>
+				</button>
+			{/if}
 		</div>
 	</div>
 
 	<!-- Side Bar Content -->
-	{#if !$devSidebarCollapsed}
+	{#if !$devSidebarCollapsed || isMobile}
 		<div class="flex h-full flex-1 flex-col overflow-hidden bg-surface" in:fade={{ duration: 150 }}>
 			<div class="flex h-12 items-center border-b border-stroke px-4">
-				<span class="text-xs font-bold tracking-widest text-content-dim uppercase">
+				<span
+					class="truncate text-[10px] font-bold tracking-widest text-content-dim uppercase md:text-xs"
+				>
 					{#if $activeTab === 'snippets'}
 						Snippets Library
 					{:else if $activeTab === 'api'}

@@ -66,7 +66,7 @@
 	>
 </svelte:head>
 
-<div class="min-h-full bg-surface p-6 md:p-8 lg:p-10">
+<div class="min-h-full bg-surface p-6 pb-32 md:p-8 md:pb-8 lg:p-10">
 	<div class="mx-auto max-w-3xl">
 		<!-- Back Header -->
 		<div class="mb-8 flex items-center gap-4">

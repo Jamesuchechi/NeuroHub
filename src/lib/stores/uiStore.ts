@@ -17,6 +17,8 @@ interface UIState {
 	dashboardTeamCollapsed: boolean;
 	selectedNoteId: string | null;
 	selectedSnippetId: string | null;
+	isMobile: boolean;
+	mobileSidebarOpen: boolean;
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 260;
@@ -25,24 +27,28 @@ const DEFAULT_CONTEXT_PANEL_WIDTH = 300;
 function createUIStore() {
 	// Try to load from localStorage
 	const stored = typeof window !== 'undefined' ? localStorage.getItem('neurohub-ui-state') : null;
-	const initialState: UIState = stored
-		? JSON.parse(stored)
-		: {
-				sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
-				sidebarCollapsed: false,
-				contextPanelWidth: DEFAULT_CONTEXT_PANEL_WIDTH,
-				contextPanelCollapsed: true, // Collapsed by default as requested/implied
-				theme: 'dark',
-				commandPaletteOpen: false,
-				inviteModalOpen: false,
-				createChannelModalOpen: false,
-				startChatModalOpen: false,
-				createGroupDMModalOpen: false,
-				channelSettingsModalOpen: false,
-				dashboardTeamCollapsed: false,
-				selectedNoteId: null,
-				selectedSnippetId: null
-			};
+	const initialState: UIState = {
+		...(stored
+			? JSON.parse(stored)
+			: {
+					sidebarWidth: DEFAULT_SIDEBAR_WIDTH,
+					sidebarCollapsed: false,
+					contextPanelWidth: DEFAULT_CONTEXT_PANEL_WIDTH,
+					contextPanelCollapsed: true,
+					theme: 'dark',
+					commandPaletteOpen: false,
+					inviteModalOpen: false,
+					createChannelModalOpen: false,
+					startChatModalOpen: false,
+					createGroupDMModalOpen: false,
+					channelSettingsModalOpen: false,
+					dashboardTeamCollapsed: false,
+					selectedNoteId: null,
+					selectedSnippetId: null
+				}),
+		isMobile: false, // Reset on each load
+		mobileSidebarOpen: false
+	};
 
 	const { subscribe, update } = writable<UIState>(initialState);
 
@@ -72,10 +78,13 @@ function createUIStore() {
 		setSelectedNoteId: (id: string | null) =>
 			update((s) => ({ ...s, selectedNoteId: id, contextPanelCollapsed: !id })),
 		setSelectedSnippetId: (id: string | null) => update((s) => ({ ...s, selectedSnippetId: id })),
+		setIsMobile: (isMobile: boolean) => update((s) => ({ ...s, isMobile })),
+		setMobileSidebarOpen: (open: boolean) => update((s) => ({ ...s, mobileSidebarOpen: open })),
 
 		persist: (state: UIState) => {
 			if (typeof window !== 'undefined') {
-				localStorage.setItem('neurohub-ui-state', JSON.stringify(state));
+				const { isMobile, mobileSidebarOpen, ...toPersist } = state;
+				localStorage.setItem('neurohub-ui-state', JSON.stringify(toPersist));
 			}
 		}
 	};
@@ -83,8 +92,20 @@ function createUIStore() {
 
 export const uiStore = createUIStore();
 
-// Auto-persist changes
+// Runtime listeners
 if (typeof window !== 'undefined') {
+	const mediaQuery = window.matchMedia('(max-width: 768px)');
+
+	const handleMediaChange = (e: MediaQueryListEvent | MediaQueryList) => {
+		uiStore.setIsMobile(e.matches);
+		if (!e.matches) {
+			uiStore.setMobileSidebarOpen(false);
+		}
+	};
+
+	mediaQuery.addEventListener('change', handleMediaChange);
+	handleMediaChange(mediaQuery); // Initial check
+
 	uiStore.subscribe((state) => {
 		uiStore.persist(state);
 

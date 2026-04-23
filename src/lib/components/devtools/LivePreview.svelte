@@ -61,6 +61,7 @@
 					};
 					try {
 						${js}
+						//# sourceURL=sandbox.js
 					} catch (err) {
 						window.parent.postMessage({ type: 'error', msg: err.message }, '*');
 					}

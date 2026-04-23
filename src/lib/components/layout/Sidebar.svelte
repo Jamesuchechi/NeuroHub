@@ -167,20 +167,22 @@
 		: 'w-full'}"
 >
 	<!-- Collapse Toggle -->
-	<button
-		onclick={() => uiStore.setSidebarCollapsed(!sidebarCollapsed)}
-		class="absolute top-20 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stroke bg-surface text-zinc-500 shadow-lg transition-all hover:text-white"
-		aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-	>
-		<svg
-			class="h-3 w-3 transition-transform duration-300 {sidebarCollapsed ? 'rotate-180' : ''}"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
+	{#if !$uiStore.isMobile}
+		<button
+			onclick={() => uiStore.setSidebarCollapsed(!sidebarCollapsed)}
+			class="absolute top-20 -right-3 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-stroke bg-surface text-zinc-500 shadow-lg transition-all hover:text-white"
+			aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
 		>
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-		</svg>
-	</button>
+			<svg
+				class="h-3 w-3 transition-transform duration-300 {sidebarCollapsed ? 'rotate-180' : ''}"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+			</svg>
+		</button>
+	{/if}
 
 	<!-- Workspace Switcher -->
 	<div class="relative p-5">
@@ -189,6 +191,8 @@
 			class="group flex w-full items-center gap-3 rounded-xl border border-stroke bg-surface-dim/50 p-2.5 text-left transition-all hover:border-stroke hover:bg-surface-dim/50 {showSwitcher
 				? 'border-brand-orange/50 bg-surface-dim'
 				: ''}"
+			aria-label="Switch workspace"
+			title="Switch workspace"
 		>
 			<div
 				class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-brand-orange to-brand-blue p-2 shadow-lg transition-transform group-hover:scale-105"
@@ -296,6 +300,8 @@
 			<button
 				onclick={() => uiStore.setCommandPaletteOpen(true)}
 				class="flex w-full items-center gap-3 rounded-xl border border-stroke bg-surface-dim/50 px-4 py-2.5 text-content-dim transition-all hover:border-stroke hover:bg-surface-dim"
+				aria-label="Open command search"
+				title="Search (⌘K)"
 			>
 				<svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path

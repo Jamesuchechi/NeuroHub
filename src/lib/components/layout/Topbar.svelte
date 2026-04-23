@@ -42,11 +42,32 @@
 </script>
 
 <header
-	class="flex h-16 w-full items-center justify-between border-b border-stroke bg-surface/50 px-8 backdrop-blur-md"
+	class="flex h-16 w-full items-center justify-between border-b border-stroke bg-surface/50 px-4 backdrop-blur-md md:px-8"
 >
-	<!-- Left: Breadcrumbs -->
-	<div class="flex items-center gap-2 overflow-hidden">
-		<svg class="h-4 w-4 text-content-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+	<!-- Left: Breadcrumbs + Mobile Menu -->
+	<div class="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+		{#if $uiStore.isMobile}
+			<button
+				onclick={() => uiStore.setMobileSidebarOpen(true)}
+				class="mr-2 p-1 text-content-dim active:text-brand-orange"
+				aria-label="Open menu"
+			>
+				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M4 6h16M4 12h16M4 18h16"
+					/>
+				</svg>
+			</button>
+		{/if}
+		<svg
+			class="hidden h-4 w-4 text-content-dim md:block"
+			fill="none"
+			viewBox="0 0 24 24"
+			stroke="currentColor"
+		>
 			<path
 				stroke-linecap="round"
 				stroke-linejoin="round"
@@ -136,7 +157,7 @@
 		<Button
 			variant="primary"
 			size="sm"
-			class="px-4! py-2! text-[11px]! font-bold!"
+			class="hidden px-4! py-2! text-[11px]! font-bold! md:flex"
 			onclick={() => uiStore.setInviteModalOpen(true)}>Invite</Button
 		>
 	</div>

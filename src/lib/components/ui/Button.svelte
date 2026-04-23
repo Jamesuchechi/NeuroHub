@@ -47,6 +47,7 @@
 	{onclick}
 	{...rest}
 	disabled={disabled || loading}
+	aria-busy={loading}
 	class="{width === 'full'
 		? 'w-full'
 		: 'w-auto'} cursor-pointer font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 {variants[
@@ -56,10 +57,11 @@
 	{#if loading}
 		<span class="flex items-center justify-center gap-2">
 			<svg
-				class="h-4 w-4 animate-spin text-current"
+				class="h-4 w-4 animate-spin text-current motion-reduce:animate-[spin_2s_linear_infinite]"
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"
 				viewBox="0 0 24 24"
+				aria-hidden="true"
 			>
 				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
 				></circle>

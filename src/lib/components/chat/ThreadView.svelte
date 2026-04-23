@@ -2,6 +2,7 @@
 	import { chatStore } from '$lib/stores/chatStore.svelte';
 	import ChatMessage from './ChatMessage.svelte';
 	import MessageInput from './MessageInput.svelte';
+	import { uiStore } from '$lib/stores/uiStore';
 
 	let { messageId, onClose } = $props<{
 		messageId: string;
@@ -22,7 +23,7 @@
 </script>
 
 <div
-	class="flex h-full max-w-[450px] min-w-[320px] flex-col overflow-hidden border-l border-stroke bg-surface shadow-2xl"
+	class="flex h-full w-full flex-col overflow-hidden border-l border-stroke bg-surface shadow-2xl md:max-w-[450px] md:min-w-[320px]"
 >
 	<!-- Thread Header -->
 	<header
@@ -77,7 +78,9 @@
 	</div>
 
 	<!-- Thread Input -->
-	<footer class="shrink-0 border-t border-stroke bg-surface-dim/20 p-4">
+	<footer
+		class="shrink-0 border-t border-stroke bg-surface-dim/20 p-4 {$uiStore.isMobile ? 'pb-20' : ''}"
+	>
 		<MessageInput
 			channelId={chatStore.activeChannelId || ''}
 			parentId={messageId}

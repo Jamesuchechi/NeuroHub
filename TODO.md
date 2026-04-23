@@ -441,42 +441,43 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 11 — Performance & Polish
+## Phase 11 — Performance & Polish [COMPLETE]
 
 **Target: Week 8**
 
 ### Performance
 
-- [ ] Audit bundle size (`vite-bundle-visualizer`)
-- [ ] Lazy-load heavy components (code editor, emoji picker) with dynamic imports
-- [ ] Implement virtual scrolling for large message lists (`svelte-virtual-list`)
-- [ ] Image lazy loading + blur placeholder for avatars/attachments
-- [ ] Supabase cursor-based pagination for all lists (no offset pagination)
-- [ ] Cache workspace metadata in Svelte stores (avoid redundant fetches)
+- [x] Audit bundle size (`vite-bundle-visualizer`)
+- [x] Lazy-load heavy components (code editor, emoji picker) with dynamic imports
+- [x] Implement virtual scrolling for large message lists (`svelte-virtual-list`)
+- [x] Image lazy loading + blur placeholder for avatars/attachments
+- [x] Supabase cursor-based pagination for all lists (no offset pagination)
+- [x] Cache workspace metadata in Svelte stores (avoid redundant fetches)
 
 ### Accessibility
 
-- [ ] Full keyboard navigation audit (tab order, focus traps in modals)
-- [ ] ARIA labels on all interactive elements
-- [ ] Screen reader test (VoiceOver/NVDA)
-- [ ] Color contrast check (WCAG AA minimum)
-- [ ] Reduced-motion support (`prefers-reduced-motion`)
+- [x] Full keyboard navigation audit (tab order, focus traps in modals)
+- [x] ARIA labels on all interactive elements
+- [x] Screen reader test (VoiceOver/NVDA)
+- [x] Color contrast check (WCAG AA minimum)
+- [x] Reduced-motion support (`prefers-reduced-motion`)
 
 ### Mobile Responsiveness
 
-- [ ] Make it responsive(Add mobile view on all pages)
-- [ ] Collapsible sidebar on mobile (drawer pattern)
-- [ ] Touch-friendly message input
-- [ ] Swipe-to-reply gesture on messages
-- [ ] Bottom navigation bar on mobile (chat, notes, snippets)
-- [ ] Test on iOS Safari + Android Chrome
+- [x] Make it responsive(Add mobile view on all pages)
+- [x] Collapsible sidebar on mobile (drawer pattern)
+- [x] Touch-friendly message input & Post Detail
+- [x] Swipe-to-reply gesture on messages
+- [x] Bottom navigation bar on mobile (chat, notes, snippets)
+- [x] Fix legacy 400 errors on activity comments (Unified Feed)
+- [x] Test on iOS Safari + Android Chrome (Emulated)
 
 ### Error Handling & Resilience
 
-- [ ] Global error boundary with friendly UI
-- [ ] Offline detection banner ("You're offline — messages will send when reconnected")
-- [ ] Retry logic for failed realtime subscriptions
-- [ ] Optimistic update rollback on API errors (show error toast, restore previous state)
+- [x] Global error boundary with friendly UI
+- [x] Offline detection banner ("You're offline — messages will send when reconnected")
+- [x] Retry logic for failed realtime subscriptions
+- [x] Optimistic update rollback on API errors (show error toast, restore previous state)
 
 ---
 

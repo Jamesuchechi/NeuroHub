@@ -102,7 +102,7 @@
 </script>
 
 <Modal bind:show title="Share a Story">
-	<div class="space-y-6 p-1">
+	<div class="scrollbar-hide max-h-[75vh] space-y-6 overflow-y-auto p-1 pb-20">
 		<!-- Mode Toggle -->
 		<div class="flex items-center gap-2 rounded-2xl border border-stroke bg-surface-dim p-1.5">
 			<button

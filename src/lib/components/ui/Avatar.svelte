@@ -25,13 +25,13 @@
 </script>
 
 <div
-	class="relative flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-stroke bg-surface-dim {sizes[
+	class="relative flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-stroke bg-surface-dim {sizes[
 		size
 	]} {className}"
 >
 	{#if src}
-		<img {src} alt={name} class="h-full w-full object-cover" />
+		<img {src} alt={name || 'Avatar'} loading="lazy" class="h-full w-full object-cover" />
 	{:else}
-		<span class="font-bold text-content-dim">{initials || '?'}</span>
+		<span class="font-bold text-content-dim" aria-hidden="true">{initials || '?'}</span>
 	{/if}
 </div>

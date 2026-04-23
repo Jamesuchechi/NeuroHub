@@ -18,6 +18,7 @@
 	import UserProfileCard from '$lib/components/dashboard/UserProfileCard.svelte';
 	import PopularWorkspaces from '$lib/components/dashboard/PopularWorkspaces.svelte';
 	import PopularDevelopers from '$lib/components/dashboard/PopularDevelopers.svelte';
+	import FeedRefreshBanner from '$lib/components/social/FeedRefreshBanner.svelte';
 
 	type Workspace = Database['public']['Tables']['workspaces']['Row'];
 
@@ -44,8 +45,6 @@
 	const displayName = $derived(
 		profile?.username || (user?.email ? user.email.split('@')[0] : 'Developer')
 	);
-
-	const activities = $derived($activityService);
 
 	async function loadWorkspaces() {
 		if (!user) return;
@@ -134,18 +133,39 @@
 		}
 	}
 
+	let sentinel = $state<HTMLElement>();
+
 	onMount(() => {
 		if (user) {
 			profileStore.fetchProfile(user.id);
 			loadWorkspaces();
 
 			activityService.fetchActivities(null, user.id);
-			return activityService.subscribeToActivities(null);
+			const unsubscribe = activityService.subscribeToActivities(null);
+
+			// Infinite Scroll Observer
+			const observer = new IntersectionObserver(
+				(entries) => {
+					if (entries[0].isIntersecting) {
+						activityService.fetchMoreActivities(null, user.id);
+					}
+				},
+				{ rootMargin: '400px' }
+			);
+
+			if (sentinel) observer.observe(sentinel);
+
+			return () => {
+				unsubscribe();
+				observer.disconnect();
+			};
 		}
 	});
 </script>
 
-<div class="min-h-full bg-surface p-8 text-content md:p-12">
+<FeedRefreshBanner userId={user?.id} />
+
+<div class="min-h-full bg-surface p-4 text-content md:p-12">
 	<div class="mx-auto max-w-6xl">
 		<!-- Hub Header -->
 		<div
@@ -190,7 +210,7 @@
 		>
 			<!-- Activity Feed Card -->
 			<div
-				class="rounded-3xl border border-stroke bg-surface-dim/50 p-8 shadow-2xl backdrop-blur-sm md:col-span-2"
+				class="rounded-3xl border border-stroke bg-surface-dim/50 p-4 shadow-2xl backdrop-blur-sm md:col-span-2 md:p-8"
 			>
 				<div class="mb-8 flex items-center justify-between">
 					<h3 class="text-xl font-black">Recent Activity</h3>
@@ -205,14 +225,22 @@
 				</div>
 
 				<div class="space-y-8">
-					{#if activities.length === 0}
+					{#if $activityService.items.length === 0 && !loading}
 						<p class="py-8 text-center text-xs text-content-dim italic">
 							No recent activity found.
 						</p>
 					{:else}
-						{#each activities as activity (activity.id)}
+						{#each $activityService.items as activity (activity.id)}
 							<ActivityItem {activity} />
 						{/each}
+
+						{#if $activityService.hasMore}
+							<div bind:this={sentinel} class="flex h-20 items-center justify-center">
+								<div
+									class="h-6 w-6 animate-spin rounded-full border-2 border-orange-500 border-t-transparent opacity-30"
+								></div>
+							</div>
+						{/if}
 					{/if}
 				</div>
 			</div>

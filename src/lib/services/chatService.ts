@@ -61,7 +61,7 @@ export const chatService = {
 		return data as Channel[];
 	},
 
-	async getMessages(channelId: string, limit = 50, beforeId?: string): Promise<Message[]> {
+	async getMessages(channelId: string, limit = 50, beforeTimestamp?: string): Promise<Message[]> {
 		let query = supabase
 			.from('messages')
 			.select(
@@ -75,21 +75,14 @@ export const chatService = {
 			.order('created_at', { ascending: false })
 			.limit(limit);
 
-		if (beforeId) {
-			// First get the timestamp of the beforeId message
-			const { data: beforeMsg } = await supabase
-				.from('messages')
-				.select('created_at')
-				.eq('id', beforeId)
-				.single();
-
-			if (beforeMsg && 'created_at' in beforeMsg) {
-				query = query.lt('created_at', (beforeMsg as { created_at: string }).created_at);
-			}
+		if (beforeTimestamp) {
+			query = query.lt('created_at', beforeTimestamp);
 		}
 
 		const { data, error } = await query;
 		if (error) throw error;
+
+		// Messages are fetched DESC for pagination but should be displayed ASC
 		return (data as unknown as Message[]).reverse();
 	},
 

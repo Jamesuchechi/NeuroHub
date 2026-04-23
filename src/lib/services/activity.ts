@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import type { Database as Database, Json } from '$lib/types/db';
 
 export type Activity = Database['public']['Tables']['activities']['Row'] & {
@@ -34,14 +34,8 @@ export type Attachment = {
 	title?: string;
 };
 
-export type Comment = Database['public']['Tables']['activity_comments']['Row'] & {
-	profiles: {
-		username: string;
-		avatar_url: string | null;
-	} | null;
-};
-
-export type CommentInsert = Database['public']['Tables']['activity_comments']['Insert'];
+// Simplified type for internal use
+export type Comment = Activity;
 
 interface RawActivityResponse {
 	id: string;
@@ -56,7 +50,6 @@ interface RawActivityResponse {
 	created_at: string;
 	profiles: { username: string; avatar_url: string | null } | null;
 	likes: { count: number }[];
-	activity_comments: { count: number }[];
 	replies: { count: number }[];
 	reposts: { count: number }[];
 	polls: (Database['public']['Tables']['polls']['Row'] & {
@@ -68,7 +61,6 @@ const ACTIVITY_SELECT = `
 	*,
 	profiles(username, avatar_url),
 	likes(count),
-	activity_comments(count),
 	replies:activities!parent_id(count),
 	reposts:activities!repost_id(count),
 	polls(
@@ -86,7 +78,7 @@ function transformActivity(
 	return {
 		...item,
 		likes_count: item.likes?.[0]?.count || 0,
-		comments_count: (item.activity_comments?.[0]?.count || 0) + (item.replies?.[0]?.count || 0),
+		comments_count: item.replies?.[0]?.count || 0,
 		reposts_count: item.reposts?.[0]?.count || 0,
 		user_liked: userLiked,
 		user_reposted: false,
@@ -100,11 +92,27 @@ function transformActivity(
 	} as Activity;
 }
 
+interface ActivityState {
+	items: Activity[];
+	hasMore: boolean;
+	isFetchingMore: boolean;
+	newActivityCount: number;
+}
+
 function createActivityService() {
-	const { subscribe, update, set } = writable<Activity[]>([]);
+	const { subscribe, update } = writable<ActivityState>({
+		items: [],
+		hasMore: true,
+		isFetchingMore: false,
+		newActivityCount: 0
+	});
+
+	let currentPage = 0;
+	const PAGE_SIZE = 20;
 
 	return {
 		subscribe,
+		resetNewCount: () => update((s) => ({ ...s, newActivityCount: 0 })),
 		/**
 		 * Fetches initial activities with interaction counts and states
 		 */
@@ -152,38 +160,7 @@ function createActivityService() {
 				}
 			}
 
-			const { data: legacyData } = await supabase
-				.from('activity_comments')
-				.select('*, profiles(username, avatar_url)')
-				.eq('activity_id', parentId)
-				.order('created_at', { ascending: true });
-
-			const legacyComments: Activity[] = legacyData
-				? (legacyData as unknown as Comment[]).map(
-						(c) =>
-							({
-								id: c.id,
-								user_id: c.user_id,
-								workspace_id: null,
-								type: 'comment',
-								payload: { content: c.content } as Json,
-								attachments: [] as unknown as Json,
-								is_public: true,
-								repost_id: null,
-								parent_id: parentId,
-								created_at: c.created_at,
-								profiles: c.profiles,
-								likes_count: 0,
-								comments_count: 0,
-								reposts_count: 0,
-								user_liked: false,
-								user_reposted: false,
-								poll: null
-							}) as Activity
-					)
-				: [];
-
-			const replies = activitiesData.map((item) => {
+			return activitiesData.map((item) => {
 				const pollId = item.polls?.[0]?.id;
 				return transformActivity(
 					item,
@@ -191,67 +168,44 @@ function createActivityService() {
 					pollId ? userVotes[pollId] : null
 				);
 			});
-
-			return [...replies, ...legacyComments].sort(
-				(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-			);
 		},
 
 		fetchActivities: async (
 			workspaceId: string | null = null,
 			_currentUserId: string | null = null,
-			parentId: string | null = null
+			parentId: string | null = null,
+			page: number = 0
 		) => {
+			if (page === 0) {
+				currentPage = 0;
+				update((s) => ({ ...s, items: [], hasMore: true, newActivityCount: 0 }));
+			}
+
 			let query = supabase.from('activities').select(ACTIVITY_SELECT);
-			let legacyComments: Activity[] = [];
 
 			if (parentId) {
 				query = query.eq('parent_id', parentId);
-
-				// Fetch legacy comments in parallel
-				const { data: commentsData } = await supabase
-					.from('activity_comments')
-					.select('*, profiles(username, avatar_url)')
-					.eq('activity_id', parentId)
-					.order('created_at', { ascending: true });
-
-				if (commentsData) {
-					legacyComments = (commentsData as unknown as Comment[]).map(
-						(c) =>
-							({
-								id: c.id,
-								user_id: c.user_id,
-								workspace_id: null,
-								type: 'comment',
-								payload: { content: c.content } as Json,
-								attachments: [] as unknown as Json,
-								is_public: true,
-								repost_id: null,
-								parent_id: parentId,
-								created_at: c.created_at,
-								profiles: c.profiles,
-								likes_count: 0,
-								comments_count: 0,
-								reposts_count: 0,
-								user_liked: false,
-								user_reposted: false,
-								poll: null
-							}) as Activity
-					);
-				}
 			} else if (workspaceId) {
 				query = query.eq('workspace_id', workspaceId).is('parent_id', null);
 			} else {
 				query = query.eq('is_public', true).is('parent_id', null);
 			}
 
+			const from = page * PAGE_SIZE;
+			const to = from + PAGE_SIZE - 1;
+
 			const { data: rawActivities, error: activitiesError } = await query
 				.order('created_at', { ascending: false })
-				.limit(50);
+				.range(from, to);
 
 			if (activitiesError) throw activitiesError as Error;
 
 			const activitiesData = (rawActivities as unknown as RawActivityResponse[]) || [];
+
+			let hasMoreItems = true;
+			if (activitiesData.length < PAGE_SIZE) {
+				hasMoreItems = false;
+			}
 			let userLikes: string[] = [];
 			const userVotes: Record<string, string> = {};
 
@@ -292,12 +246,27 @@ function createActivityService() {
 				);
 			});
 
-			// Merge and sort
-			const final = [...transformed, ...legacyComments].sort(
-				(a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-			);
+			if (page === 0) {
+				update((s) => ({ ...s, items: transformed, hasMore: hasMoreItems }));
+			} else {
+				update((s) => ({ ...s, items: [...s.items, ...transformed], hasMore: hasMoreItems }));
+			}
+			currentPage = page;
+		},
 
-			set(final);
+		fetchMoreActivities: async (
+			workspaceId: string | null = null,
+			userId: string | null = null
+		) => {
+			const state = get({ subscribe });
+			if (state.isFetchingMore || !state.hasMore) return;
+
+			update((s) => ({ ...s, isFetchingMore: true }));
+			try {
+				await activityService.fetchActivities(workspaceId, userId, null, currentPage + 1);
+			} finally {
+				update((s) => ({ ...s, isFetchingMore: false }));
+			}
 		},
 
 		/**
@@ -316,12 +285,27 @@ function createActivityService() {
 				.on(
 					'postgres_changes',
 					{
-						event: '*',
+						event: 'INSERT',
 						schema: 'public',
 						table: 'activities'
 					},
-					async () => {
-						if (onUpdate) onUpdate();
+					async (payload) => {
+						const newPost = payload.new as {
+							is_public: boolean;
+							workspace_id: string | null;
+							parent_id: string | null;
+						};
+
+						// Only notify for top-level posts that match current scope
+						if (newPost.parent_id) return;
+
+						const isGlobal = !workspaceId && newPost.is_public;
+						const isWorkspace = workspaceId && newPost.workspace_id === workspaceId;
+
+						if (isGlobal || isWorkspace) {
+							update((s) => ({ ...s, newActivityCount: s.newActivityCount + 1 }));
+							if (onUpdate) onUpdate();
+						}
 					}
 				)
 				.subscribe();
@@ -350,8 +334,9 @@ function createActivityService() {
 			}
 
 			// Optimistically update the store
-			update((activities) =>
-				activities.map((a) => {
+			update((state) => ({
+				...state,
+				items: state.items.map((a) => {
 					if (a.id === activityId) {
 						return {
 							...a,
@@ -361,7 +346,7 @@ function createActivityService() {
 					}
 					return a;
 				})
-			);
+			}));
 		},
 
 		/**
@@ -377,8 +362,9 @@ function createActivityService() {
 			if (error) throw error as Error;
 
 			// Update store optimistically
-			update((activities) =>
-				activities.map((a) => {
+			update((state) => ({
+				...state,
+				items: state.items.map((a) => {
 					if (a.poll?.id === pollId) {
 						return {
 							...a,
@@ -393,7 +379,7 @@ function createActivityService() {
 					}
 					return a;
 				})
-			);
+			}));
 		},
 
 		/**
@@ -497,46 +483,20 @@ function createActivityService() {
 		},
 
 		/**
-		 * Adds a comment to an activity
+		 * Adds a comment to an activity (Unified with createPost)
 		 */
 		addComment: async (userId: string, activityId: string, content: string) => {
-			const { data: commentData, error } = await supabase
-				.from('activity_comments')
-				.insert({
-					user_id: userId,
-					activity_id: activityId,
-					content
-				})
-				.select()
-				.single();
-
-			if (error) throw error as Error;
-
-			// Update count in store
-			update((activities) =>
-				activities.map((a) => {
-					if (a.id === activityId) {
-						return { ...a, comments_count: (a.comments_count || 0) + 1 };
-					}
-					return a;
-				})
-			);
-
-			return commentData as Comment;
+			return await activityService.createPost(userId, content, {
+				parentId: activityId,
+				isPublic: true
+			});
 		},
 
 		/**
-		 * Fetches comments for an activity
+		 * Fetches comments for an activity (Unified with fetchReplies)
 		 */
 		fetchComments: async (activityId: string) => {
-			const { data, error } = await supabase
-				.from('activity_comments')
-				.select('*, profiles(username, avatar_url)')
-				.eq('activity_id', activityId)
-				.order('created_at', { ascending: true });
-
-			if (error) throw error as Error;
-			return data as unknown as Comment[];
+			return await activityService.fetchReplies(activityId);
 		},
 
 		/**
@@ -558,14 +518,15 @@ function createActivityService() {
 			if (error) throw error as Error;
 
 			// Update count in store
-			update((activities) =>
-				activities.map((a) => {
+			update((state) => ({
+				...state,
+				items: state.items.map((a) => {
 					if (a.id === originalId) {
 						return { ...a, reposts_count: (a.reposts_count || 0) + 1, user_reposted: true };
 					}
 					return a;
 				})
-			);
+			}));
 
 			return repostData as Activity;
 		}

@@ -444,7 +444,7 @@
 	{#if isFocused || posts.some((p) => p.content.length > 0)}
 		<div
 			in:fly={{ y: 20, duration: 400 }}
-			class="mt-6 flex items-center justify-between border-t border-stroke pt-4"
+			class="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-stroke pt-4"
 		>
 			<div class="flex items-center gap-2">
 				{#if !workspaceId && userWorkspaces.length > 0}

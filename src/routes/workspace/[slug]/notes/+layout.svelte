@@ -4,8 +4,10 @@
 	import { notesStore } from '$lib/stores/notesStore.svelte';
 	import NoteSidebar from '$lib/components/notes/NoteSidebar.svelte';
 	import SplitPane from '$lib/components/ui/SplitPane.svelte';
+	import { onMount } from 'svelte';
 
 	let { children } = $props();
+	let isMobile = $state(false);
 
 	// Load notes for the current workspace
 	$effect(() => {
@@ -22,20 +24,43 @@
 			notesStore.fetchNote(noteId);
 		}
 	});
+
+	onMount(() => {
+		const checkMobile = () => {
+			isMobile = window.innerWidth < 768;
+		};
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	});
+
+	const hasNoteId = $derived(!!page.params.noteId);
 </script>
 
 <div class="flex h-full w-full overflow-hidden">
-	<SplitPane type="horizontal" initialSize={300} minSize={250} maxSize={450}>
-		{#snippet left()}
-			<div class="no-print h-full w-full">
+	{#if isMobile}
+		{#if !hasNoteId}
+			<div class="h-full w-full">
 				<NoteSidebar />
 			</div>
-		{/snippet}
-
-		{#snippet right()}
-			<div class="h-full flex-1">
+		{:else}
+			<div class="h-full w-full bg-surface">
 				{@render children()}
 			</div>
-		{/snippet}
-	</SplitPane>
+		{/if}
+	{:else}
+		<SplitPane type="horizontal" initialSize={300} minSize={250} maxSize={450}>
+			{#snippet left()}
+				<div class="no-print h-full w-full">
+					<NoteSidebar />
+				</div>
+			{/snippet}
+
+			{#snippet right()}
+				<div class="h-full flex-1">
+					{@render children()}
+				</div>
+			{/snippet}
+		</SplitPane>
+	{/if}
 </div>

@@ -23,17 +23,19 @@
 
 <div class="flex h-full flex-col overflow-hidden bg-surface">
 	<!-- Tab Header -->
-	<nav class="flex h-12 border-b border-stroke bg-surface-dim/30 px-4">
+	<nav
+		class="scrollbar-hide flex h-12 shrink-0 overflow-x-auto border-b border-stroke bg-surface-dim/30 px-2 md:px-4"
+	>
 		{#each tabs as tab (tab.id)}
 			<button
-				class="relative flex items-center gap-2 px-6 text-xs font-bold tracking-widest uppercase transition-all
+				class="relative flex shrink-0 items-center gap-2 px-4 text-[10px] font-bold tracking-widest uppercase transition-all md:px-6 md:text-xs
 					{activeSubTab === tab.id ? 'text-brand-orange' : 'text-content-dim hover:text-content'}"
 				onclick={() => (activeSubTab = tab.id)}
 			>
 				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={tab.icon} />
 				</svg>
-				{tab.label}
+				<span class="whitespace-nowrap">{tab.label}</span>
 
 				{#if activeSubTab === tab.id}
 					<div class="absolute right-0 bottom-0 left-0 h-0.5 bg-brand-orange"></div>
@@ -43,7 +45,7 @@
 	</nav>
 
 	<!-- Content Area -->
-	<main class="scrollbar-thin flex-1 overflow-y-auto p-6">
+	<main class="scrollbar-thin flex-1 overflow-y-auto p-4 md:p-6">
 		<div class="mx-auto max-w-5xl">
 			{#if activeSubTab === 'regex'}
 				<div in:fade={{ duration: 200 }} class="space-y-6">

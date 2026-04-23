@@ -45,6 +45,7 @@
 		onclick={() => applyFormat('**')}
 		class="flex h-7 w-7 items-center justify-center rounded-lg text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
 		title="Bold (Ctrl+B)"
+		aria-label="Bold"
 	>
 		<span class="font-bold">B</span>
 	</button>
@@ -52,6 +53,7 @@
 		onclick={() => applyFormat('_')}
 		class="flex h-7 w-7 items-center justify-center rounded-lg text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
 		title="Italic (Ctrl+I)"
+		aria-label="Italic"
 	>
 		<span class="italic">I</span>
 	</button>
@@ -59,6 +61,7 @@
 		onclick={() => applyFormat('`')}
 		class="flex h-7 w-7 items-center justify-center rounded-lg text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
 		title="Inline Code"
+		aria-label="Inline Code"
 	>
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path
@@ -73,6 +76,7 @@
 		onclick={() => applyFormat('[', '](url)')}
 		class="flex h-7 w-7 items-center justify-center rounded-lg text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
 		title="Link"
+		aria-label="Link"
 	>
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path
@@ -88,6 +92,7 @@
 		onclick={() => applyFormat('- ', '', true)}
 		class="flex h-7 w-7 items-center justify-center rounded-lg text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
 		title="Bullet List"
+		aria-label="Bullet List"
 	>
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path
@@ -102,6 +107,7 @@
 		onclick={() => applyFormat('```\n', '\n```')}
 		class="flex h-7 w-7 items-center justify-center rounded-lg text-content-dim transition-colors hover:bg-surface hover:text-brand-orange"
 		title="Code Block"
+		aria-label="Code Block"
 	>
 		<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 			<path

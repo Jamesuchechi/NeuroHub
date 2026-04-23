@@ -6,8 +6,7 @@
 	import SplitPane from '../ui/SplitPane.svelte';
 	import { sandboxPanelWidth } from '$lib/stores/devToolsStore';
 	import type { SandboxResult, Language } from '$lib/types/devtools';
-	import { onDestroy } from 'svelte';
-	import { formatBytes } from '$lib/utils/formatBytes';
+	import { onDestroy, onMount } from 'svelte';
 	import { aiService } from '$lib/services/ai';
 	import SandboxWorker from '$lib/workers/sandbox.worker?worker';
 	import { slide, fade } from 'svelte/transition';
@@ -18,6 +17,8 @@
 	let viewMode = $state<'logic' | 'visual'>('logic');
 	let webTabsView = $state<'combined' | 'separate'>('combined');
 	let activeWebTab = $state<'html' | 'css' | 'js'>('html');
+	let mobilePanel = $state<'editor' | 'output'>('editor');
+	let isMobile = $state(false);
 
 	// Multi-file state for 'separate' mode
 	let webFiles = $state({
@@ -92,11 +93,13 @@
 	}
 
 	async function runCode() {
-		if (viewMode === 'visual') return; // Live preview updates automatically via srcdoc
+		if (viewMode === 'visual') return;
 
 		if (worker) worker.terminate();
 		result = { stdout: [], stderr: [], error: null, duration_ms: 0, memory_usage_bytes: null };
 		isRunning = true;
+		if (isMobile) mobilePanel = 'output'; // Switch to output on mobile when running
+
 		const start = performance.now();
 
 		if (language === 'javascript' || language === 'python') {
@@ -155,6 +158,15 @@
 		}
 	}
 
+	onMount(() => {
+		const checkMobile = () => {
+			isMobile = window.innerWidth < 1024;
+		};
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	});
+
 	onDestroy(() => {
 		if (worker) worker.terminate();
 	});
@@ -163,13 +175,13 @@
 <div class="flex h-full flex-col overflow-hidden bg-surface">
 	<!-- Top: Main Header -->
 	<div
-		class="flex h-12 shrink-0 items-center justify-between border-b border-stroke bg-surface-dim/30 px-4"
+		class="flex h-auto shrink-0 flex-col items-center justify-between gap-2 border-b border-stroke bg-surface-dim/30 p-2 md:h-12 md:flex-row md:px-4"
 	>
-		<div class="flex items-center gap-6">
+		<div class="flex w-full items-center justify-between gap-4 md:w-auto md:justify-start md:gap-6">
 			<!-- Mode Switcher -->
 			<div class="flex rounded-lg border border-stroke bg-surface p-0.5">
 				<button
-					class="rounded-md px-4 py-1 text-[10px] font-bold tracking-widest uppercase transition-all
+					class="rounded-md px-3 py-1 text-[9px] font-bold tracking-widest uppercase transition-all md:px-4 md:text-[10px]
 						{viewMode === 'logic'
 						? 'bg-orange-500 text-white shadow-sm'
 						: 'text-content-dim hover:text-content'}"
@@ -178,7 +190,7 @@
 					Logic
 				</button>
 				<button
-					class="rounded-md px-4 py-1 text-[10px] font-bold tracking-widest uppercase transition-all
+					class="rounded-md px-3 py-1 text-[9px] font-bold tracking-widest uppercase transition-all md:px-4 md:text-[10px]
 						{viewMode === 'visual'
 						? 'bg-orange-500 text-white shadow-sm'
 						: 'text-content-dim hover:text-content'}"
@@ -188,233 +200,299 @@
 				</button>
 			</div>
 
-			<div class="flex items-center gap-3">
-				{#if viewMode === 'logic'}
-					<div class="flex items-center gap-3" in:fade>
-						<div class="flex items-center gap-2">
-							<div
-								class="h-2 w-2 rounded-full {isRunning
-									? 'animate-pulse bg-orange-500'
-									: 'bg-brand-green'}"
-							></div>
-							<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase">
-								{language === 'javascript'
-									? 'V8 Engine'
-									: language === 'python'
-										? 'WASM Runtime'
-										: 'AI Simulation'}
-							</span>
-						</div>
-						{#if isInitializingPython}
-							<span
-								class="animate-pulse rounded border border-orange-500/20 bg-orange-500/10 px-1.5 py-0.5 font-mono text-[10px] text-orange-500"
-								>Loading Python...</span
-							>
-						{/if}
-						{#if isAiSimulating}
-							<span
-								class="animate-pulse rounded border border-blue-500/20 bg-blue-500/10 px-1.5 py-0.5 font-mono text-[10px] text-blue-500"
-								>AI Inference...</span
-							>
-						{/if}
-						{#if result.duration_ms > 0}
-							<span class="font-mono text-[10px] text-content-dim opacity-50"
-								>{result.duration_ms}ms</span
-							>
-						{/if}
+			<div class="flex items-center gap-2">
+				<LanguageSelector bind:value={language} onchange={handleLanguageChange} />
+
+				{#if viewMode === 'visual'}
+					<div class="ml-2 flex rounded-lg border border-stroke bg-surface p-0.5 shadow-sm">
+						<button
+							class="rounded-md px-2.5 py-1 text-[9px] font-bold uppercase transition-all
+								{webTabsView === 'combined'
+								? 'bg-orange-500 text-white shadow-sm'
+								: 'text-content-dim hover:text-content'}"
+							onclick={() => (webTabsView = 'combined')}
+							title="Single combined file (HTML + Style + Script)"
+						>
+							Single
+						</button>
+						<button
+							class="rounded-md px-2.5 py-1 text-[9px] font-bold uppercase transition-all
+								{webTabsView === 'separate'
+								? 'bg-orange-500 text-white shadow-sm'
+								: 'text-content-dim hover:text-content'}"
+							onclick={() => (webTabsView = 'separate')}
+							title="Separate HTML, CSS, JS tabs"
+						>
+							Tabs
+						</button>
 					</div>
-				{:else}
-					<div class="flex items-center gap-2" in:fade>
-						<div class="h-2 w-2 animate-pulse rounded-full bg-brand-orange"></div>
-						<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase">
-							Live Rendering Engine
-						</span>
-					</div>
+				{/if}
+
+				{#if isInitializingPython}
+					<span
+						class="animate-pulse rounded border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[8px] font-bold tracking-tighter text-orange-500 uppercase"
+					>
+						Loading WASM...
+					</span>
+				{:else if isAiSimulating}
+					<span
+						class="animate-pulse rounded border border-blue-500/20 bg-blue-500/10 px-2 py-0.5 text-[8px] font-bold tracking-tighter text-blue-500 uppercase"
+					>
+						AI Simulating...
+					</span>
 				{/if}
 			</div>
 		</div>
 
-		<div class="flex items-center gap-3">
-			{#if viewMode === 'visual'}
-				<div class="mr-3 flex rounded-lg border border-stroke bg-surface p-0.5" in:fade>
+		<div class="flex w-full items-center justify-end gap-2 md:w-auto md:gap-3">
+			{#if isMobile}
+				<div class="mr-auto flex rounded-lg border border-stroke bg-surface p-0.5">
 					<button
-						class="rounded px-2 py-1 text-[9px] font-bold uppercase transition-all
-							{webTabsView === 'combined' ? 'bg-surface-dim text-content' : 'text-content-dim'}"
-						onclick={() => (webTabsView = 'combined')}
+						class="rounded-md px-3 py-1 text-[9px] font-bold uppercase transition-all
+							{mobilePanel === 'editor' ? 'bg-surface-dim text-content' : 'text-content-dim'}"
+						onclick={() => (mobilePanel = 'editor')}
 					>
-						Combined
+						Code
 					</button>
 					<button
-						class="rounded px-2 py-1 text-[9px] font-bold uppercase transition-all
-							{webTabsView === 'separate' ? 'bg-surface-dim text-content' : 'text-content-dim'}"
-						onclick={() => (webTabsView = 'separate')}
+						class="rounded-md px-3 py-1 text-[9px] font-bold uppercase transition-all
+							{mobilePanel === 'output' ? 'bg-surface-dim text-content' : 'text-content-dim'}"
+						onclick={() => (mobilePanel = 'output')}
 					>
-						Tabs
+						Output
 					</button>
 				</div>
 			{/if}
 
-			<LanguageSelector bind:value={language} onchange={handleLanguageChange} />
-			<div class="h-4 w-px bg-stroke"></div>
 			<button
-				class="rounded-md border border-stroke bg-surface-dim px-3 py-1.5 text-xs font-bold text-content transition-colors hover:bg-surface"
+				class="rounded-md border border-stroke bg-surface-dim px-2 py-1.5 text-[10px] font-bold text-content transition-colors hover:bg-surface md:px-3 md:text-xs"
 				onclick={handleExportAsSnippet}
 			>
 				Export
 			</button>
 			{#if viewMode === 'logic'}
 				<button
-					class="rounded-md bg-orange-500 px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 disabled:opacity-50"
+					class="rounded-md bg-orange-500 px-3 py-1.5 text-[10px] font-bold text-white shadow-lg shadow-orange-500/20 transition-all hover:bg-orange-600 disabled:opacity-50 md:px-4 md:text-xs"
 					onclick={runCode}
 					disabled={isRunning}
 				>
-					{isRunning ? 'Running...' : 'Run Code'}
+					{isRunning ? '...' : 'Run'}
 				</button>
 			{/if}
 		</div>
 	</div>
 
-	<!-- Main Multi-File Tab Bar (Only for visual separate mode) -->
-	{#if viewMode === 'visual' && webTabsView === 'separate'}
-		<div
-			class="flex h-10 shrink-0 gap-1 border-b border-stroke bg-surface-dim/10 px-4"
-			transition:slide
-		>
-			{#each ['html', 'css', 'js'] as tab (tab)}
-				<button
-					class="relative mt-1 rounded-t-lg px-6 text-[10px] font-bold tracking-widest uppercase transition-all
-						{activeWebTab === tab
-						? 'border-x border-t border-stroke bg-surface text-brand-orange'
-						: 'text-content-dim hover:text-content'}"
-					onclick={() => (activeWebTab = tab as typeof activeWebTab)}
-				>
-					{tab}
-					{#if activeWebTab === tab}
-						<div class="absolute right-0 bottom-0 left-0 h-1 bg-surface"></div>
-					{/if}
-				</button>
-			{/each}
-		</div>
-	{/if}
-
 	<!-- Main content Split -->
 	<div class="flex flex-1 overflow-hidden border-t border-stroke">
-		<SplitPane
-			type="horizontal"
-			initialSize={$sandboxPanelWidth}
-			minSize={25}
-			maxSize={70}
-			sizeUnit="%"
-			fixedSide="right"
-			onResize={(size) => ($sandboxPanelWidth = size)}
-		>
-			{#snippet left()}
-				<div class="relative flex h-full flex-col border-r border-stroke bg-surface">
-					{#if viewMode === 'visual' && webTabsView === 'separate'}
-						{#if activeWebTab === 'html'}
-							<div class="h-full" in:fade>
-								<SnippetEditor
-									bind:code={webFiles.html}
-									language="html"
-									minHeight="100%"
-									class="h-full rounded-none border-none"
-								/>
+		{#if isMobile}
+			<div class="h-full w-full overflow-hidden">
+				{#if mobilePanel === 'editor'}
+					<div class="relative flex h-full flex-col border-r border-stroke bg-surface" in:fade>
+						{#if viewMode === 'visual' && webTabsView === 'separate'}
+							<div
+								class="flex h-8 shrink-0 gap-1 overflow-x-auto border-b border-stroke bg-surface-dim/10 px-2"
+							>
+								{#each ['html', 'css', 'js'] as tab (tab)}
+									<button
+										class="px-4 text-[9px] font-bold uppercase {activeWebTab === tab
+											? 'border-b-2 border-brand-orange text-brand-orange'
+											: 'text-content-dim'}"
+										onclick={() => (activeWebTab = tab as typeof activeWebTab)}
+									>
+										{tab}
+									</button>
+								{/each}
 							</div>
-						{:else if activeWebTab === 'css'}
-							<div class="h-full" in:fade>
-								<SnippetEditor
-									bind:code={webFiles.css}
-									language="css"
-									minHeight="100%"
-									class="h-full rounded-none border-none"
-								/>
+							<div class="flex-1 overflow-hidden">
+								{#if activeWebTab === 'html'}
+									<SnippetEditor
+										bind:code={webFiles.html}
+										language="html"
+										class="h-full min-h-full rounded-none border-none"
+									/>
+								{:else if activeWebTab === 'css'}
+									<SnippetEditor
+										bind:code={webFiles.css}
+										language="css"
+										class="h-full min-h-full rounded-none border-none"
+									/>
+								{:else if activeWebTab === 'js'}
+									<SnippetEditor
+										bind:code={webFiles.js}
+										language="javascript"
+										class="h-full min-h-full rounded-none border-none"
+									/>
+								{/if}
 							</div>
-						{:else if activeWebTab === 'js'}
-							<div class="h-full" in:fade>
-								<SnippetEditor
-									bind:code={webFiles.js}
-									language="javascript"
-									minHeight="100%"
-									class="h-full rounded-none border-none"
+						{:else}
+							<SnippetEditor
+								bind:code
+								{language}
+								class="h-full min-h-full rounded-none border-none"
+							/>
+						{/if}
+					</div>
+				{:else}
+					<div class="flex h-full flex-col overflow-hidden bg-surface-dim/20" in:fade>
+						{#if viewMode === 'logic'}
+							<div
+								class="scrollbar-thin flex-1 space-y-2 overflow-y-auto p-4 font-mono text-[11px]"
+							>
+								{#each outputLines as line (line.id)}
+									<div class="flex gap-2 border-b border-stroke/30 pb-1 last:border-0" in:slide>
+										<span class="w-8 shrink-0 text-right text-[9px] text-content-dim/30"
+											>{line.timestamp}</span
+										>
+										<span
+											class="flex-1 break-all whitespace-pre-wrap {line.type === 'err'
+												? 'font-bold text-red-500'
+												: 'text-content'}">{line.content}</span
+										>
+									</div>
+								{:else}
+									<div
+										class="flex h-full flex-col items-center justify-center text-center opacity-30"
+									>
+										<p class="text-[10px]">Console is ready.</p>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div class="flex-1 bg-surface-dim/10 p-2">
+								<LivePreview
+									code={combinedCode}
+									language={webTabsView === 'combined' ? language : 'html'}
 								/>
 							</div>
 						{/if}
-					{:else}
-						<SnippetEditor
-							bind:code
-							{language}
-							minHeight="100%"
-							class="h-full rounded-none border-none"
-						/>
-					{/if}
-				</div>
-			{/snippet}
-
-			{#snippet right()}
-				<div class="flex h-full flex-col overflow-hidden bg-surface-dim/20">
-					{#if viewMode === 'logic'}
-						<!-- Console UI -->
-						<div
-							class="flex h-10 shrink-0 items-center justify-between border-b border-stroke bg-surface px-4"
-						>
-							<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase"
-								>Console Output</span
-							>
-							<button
-								class="text-[10px] font-bold text-content-dim hover:text-content"
-								onclick={() => (result.stdout = [])}>Clear</button
-							>
-						</div>
-						<div class="scrollbar-thin flex-1 space-y-2 overflow-y-auto p-4 font-mono text-xs">
-							{#each outputLines as line (line.id)}
-								<div class="flex gap-3 border-b border-stroke/30 pb-1 last:border-0" in:slide>
-									<span class="w-10 shrink-0 text-right text-content-dim/30">{line.timestamp}</span>
-									<span
-										class="flex-1 break-all whitespace-pre-wrap {line.type === 'err'
-											? 'font-bold text-red-500'
-											: 'text-content'}">{line.content}</span
+					</div>
+				{/if}
+			</div>
+		{:else}
+			<SplitPane
+				type="horizontal"
+				initialSize={$sandboxPanelWidth}
+				minSize={25}
+				maxSize={70}
+				sizeUnit="%"
+				fixedSide="right"
+				onResize={(size) => ($sandboxPanelWidth = size)}
+			>
+				{#snippet left()}
+					<div class="relative flex h-full flex-col border-r border-stroke bg-surface">
+						{#if viewMode === 'visual' && webTabsView === 'separate'}
+							<div class="flex h-10 shrink-0 gap-1 border-b border-stroke bg-surface-dim/10 px-4">
+								{#each ['html', 'css', 'js'] as tab (tab)}
+									<button
+										class="relative mt-1 rounded-t-lg px-6 text-[10px] font-bold tracking-widest uppercase transition-all
+											{activeWebTab === tab
+											? 'border-x border-t border-stroke bg-surface text-brand-orange'
+											: 'text-content-dim'}"
+										onclick={() => (activeWebTab = tab as typeof activeWebTab)}
 									>
-								</div>
-							{:else}
-								<div
-									class="flex h-full flex-col items-center justify-center text-center opacity-30"
-								>
-									<p class="text-[10px]">Console is ready. Run your code to see results.</p>
-								</div>
-							{/each}
-						</div>
-					{:else}
-						<!-- Visual Preview UI -->
-						<div
-							class="flex h-10 shrink-0 items-center justify-between border-b border-stroke bg-surface px-4"
-						>
-							<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase"
-								>Live Preview</span
+										{tab}
+									</button>
+								{/each}
+							</div>
+							<div class="flex-1 overflow-hidden">
+								{#if activeWebTab === 'html'}
+									<div class="h-full" in:fade>
+										<SnippetEditor
+											bind:code={webFiles.html}
+											language="html"
+											class="h-full min-h-full rounded-none border-none"
+										/>
+									</div>
+								{:else if activeWebTab === 'css'}
+									<div class="h-full" in:fade>
+										<SnippetEditor
+											bind:code={webFiles.css}
+											language="css"
+											class="h-full min-h-full rounded-none border-none"
+										/>
+									</div>
+								{:else if activeWebTab === 'js'}
+									<div class="h-full" in:fade>
+										<SnippetEditor
+											bind:code={webFiles.js}
+											language="javascript"
+											class="h-full min-h-full rounded-none border-none"
+										/>
+									</div>
+								{/if}
+							</div>
+						{:else}
+							<SnippetEditor
+								bind:code
+								{language}
+								class="h-full min-h-full rounded-none border-none"
+							/>
+						{/if}
+					</div>
+				{/snippet}
+
+				{#snippet right()}
+					<div class="flex h-full flex-col overflow-hidden bg-surface-dim/20">
+						{#if viewMode === 'logic'}
+							<div
+								class="flex h-10 shrink-0 items-center justify-between border-b border-stroke bg-surface px-4"
 							>
-							<div class="flex items-center gap-2">
+								<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase"
+									>Console Output</span
+								>
+								<button
+									class="text-[10px] font-bold text-content-dim hover:text-content"
+									onclick={() => (result.stdout = [])}>Clear</button
+								>
+							</div>
+							<div class="scrollbar-thin flex-1 space-y-2 overflow-y-auto p-4 font-mono text-xs">
+								{#each outputLines as line (line.id)}
+									<div class="flex gap-3 border-b border-stroke/30 pb-1 last:border-0" in:slide>
+										<span class="w-10 shrink-0 text-right text-content-dim/30"
+											>{line.timestamp}</span
+										>
+										<span
+											class="flex-1 break-all whitespace-pre-wrap {line.type === 'err'
+												? 'font-bold text-red-500'
+												: 'text-content'}">{line.content}</span
+										>
+									</div>
+								{:else}
+									<div
+										class="flex h-full flex-col items-center justify-center text-center opacity-30"
+									>
+										<p class="text-[10px]">Console is ready.</p>
+									</div>
+								{/each}
+							</div>
+						{:else}
+							<div
+								class="flex h-10 shrink-0 items-center justify-between border-b border-stroke bg-surface px-4"
+							>
+								<span class="text-[10px] font-bold tracking-widest text-content-dim uppercase"
+									>Live Preview</span
+								>
 								<span
 									class="rounded border border-brand-green/20 bg-brand-green/10 px-1.5 py-0.5 text-[9px] font-bold text-brand-green uppercase"
 									>Live</span
 								>
 							</div>
-						</div>
-						<div class="flex-1 bg-surface-dim/10 p-4">
-							<LivePreview
-								code={combinedCode}
-								language={webTabsView === 'combined' ? language : 'html'}
-							/>
-						</div>
-					{/if}
-
-					{#if viewMode === 'logic' && result.memory_usage_bytes}
-						<div class="border-t border-stroke bg-surface-dim/30 p-2 px-4 shadow-inner">
-							<span class="text-[10px] tracking-tighter text-content-dim uppercase"
-								>Memory: {formatBytes(result.memory_usage_bytes)}</span
-							>
-						</div>
-					{/if}
-				</div>
-			{/snippet}
-		</SplitPane>
+							<div class="flex-1 bg-surface-dim/10 p-4">
+								<LivePreview
+									code={combinedCode}
+									language={webTabsView === 'combined' ? language : 'html'}
+								/>
+							</div>
+						{/if}
+					</div>
+				{/snippet}
+			</SplitPane>
+		{/if}
 	</div>
 </div>
+
+<style>
+	:global(.split-pane-divider) {
+		z-index: 20;
+	}
+</style>

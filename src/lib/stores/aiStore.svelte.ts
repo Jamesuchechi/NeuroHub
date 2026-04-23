@@ -2,6 +2,7 @@ import { aiService, type AIModel } from '$lib/services/ai';
 import { contextBuilder } from '$lib/utils/contextBuilder';
 import { supabase } from '$lib/services/supabase';
 import { toast } from '$lib/stores/toastStore';
+import { SvelteDate } from 'svelte/reactivity';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'neuro-ai-state';
@@ -35,8 +36,10 @@ export interface AIConversation {
 export type { AIModel };
 
 // ── Store Class ────────────────────────────────────────────────────────────────
-class AIStore {
+export class AIStore {
 	#isGenerating = $state(false);
+	#isThinking = $state(false);
+	#thinkingStep = $state<string | null>(null);
 	#error = $state<string | null>(null);
 	#currentGeneration = $state('');
 	#messages = $state<AIMessage[]>([]);
@@ -96,6 +99,12 @@ class AIStore {
 	get isGenerating() {
 		return this.#isGenerating;
 	}
+	get isThinking() {
+		return this.#isThinking;
+	}
+	get thinkingStep() {
+		return this.#thinkingStep;
+	}
 	get error() {
 		return this.#error;
 	}
@@ -143,6 +152,7 @@ class AIStore {
 		this.#abortController?.abort();
 		this.#abortController = null;
 		this.#isGenerating = false;
+		this.#isThinking = false;
 		this.#currentGeneration = '';
 	}
 
@@ -230,6 +240,7 @@ class AIStore {
 		contextString?: string
 	): Promise<string> {
 		this.#isGenerating = true;
+		this.#isThinking = true;
 		this.#error = null;
 		this.#currentGeneration = '';
 
@@ -253,10 +264,18 @@ class AIStore {
 					controller.signal
 				)) {
 					if (controller.signal.aborted) break;
+					if (this.#isThinking) this.#isThinking = false;
+					if (controller.signal.aborted) break;
+					if (this.#isThinking) {
+						this.#isThinking = false;
+						this.#thinkingStep = null;
+					}
 					result += chunk;
 					this.#currentGeneration = result;
 				}
 				this.#isGenerating = false;
+				this.#isThinking = false;
+				this.#thinkingStep = null;
 				this.#abortController = null;
 				return result;
 			} catch (err) {
@@ -267,6 +286,7 @@ class AIStore {
 		}
 
 		this.#isGenerating = false;
+		this.#isThinking = false;
 		this.#abortController = null;
 		if (!controller.signal.aborted) {
 			this.#error = 'All AI models failed to respond. Please check your connection or quota.';
@@ -283,6 +303,8 @@ class AIStore {
 		const conv = this.#conversations.find((c) => c.id === this.#activeConversationId);
 
 		this.#isGenerating = true;
+		this.#isThinking = true;
+		this.#thinkingStep = 'Searching workspace...';
 		this.#error = null;
 		this.#currentGeneration = '';
 
@@ -299,6 +321,7 @@ class AIStore {
 					contextBuilder.findSemanticContextWithRefs(userQuery, workspace_id),
 					contextBuilder.buildWorkspaceContext(workspace_id)
 				]);
+				this.#thinkingStep = 'Analyzing context...';
 				references = semanticResult.references;
 				const wsCtxStr = contextBuilder.formatContextToString(workspaceCtxRaw);
 				const parts = [semanticResult.contextString, wsCtxStr, mentionContext].filter(Boolean);
@@ -306,6 +329,8 @@ class AIStore {
 			} else if (mentionContext) {
 				contextString = mentionContext;
 			}
+
+			this.#thinkingStep = 'Thinking...';
 
 			// 3. Build history — use cached summary for long threads
 			let historyPrompt: string;
@@ -358,6 +383,7 @@ Use the provided workspace context to give precise, relevant answers.`;
 			this.#error = 'Failed to generate response.';
 		} finally {
 			this.#isGenerating = false;
+			this.#isThinking = false;
 			this.#currentGeneration = '';
 		}
 	}
@@ -453,7 +479,7 @@ Use the provided workspace context to give precise, relevant answers.`;
 				message_content: msg.content.slice(0, 1000),
 				rating,
 				workspace_id: workspaceId || null,
-				rated_at: new Date().toISOString()
+				rated_at: new SvelteDate().toISOString()
 			});
 		} catch {
 			// Table may not exist yet — silently ignore
