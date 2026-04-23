@@ -719,6 +719,7 @@ export type Database = {
 					birthday: string | null;
 					title: string | null;
 					skills: string[];
+					influence_score: number | null;
 					mfa_recovery_codes: string[] | null;
 					created_at: string;
 				};
@@ -1230,6 +1231,35 @@ export type Database = {
 					p_token: string;
 				};
 				Returns: Json;
+			};
+			get_recommended_developers: {
+				Args: {
+					p_user_id: string;
+					p_limit?: number;
+				};
+				Returns: {
+					id: string;
+					username: string;
+					avatar_url: string;
+					title: string;
+					skills: string[];
+					influence_score: number;
+					overlap_count: number;
+				}[];
+			};
+			get_trending_snippets: {
+				Args: {
+					p_workspace_id: string | null;
+					p_limit?: number;
+				};
+				Returns: {
+					id: string;
+					title: string;
+					language: string;
+					star_count: number;
+					fork_count: number;
+					author_username: string;
+				}[];
 			};
 		};
 		Enums: {

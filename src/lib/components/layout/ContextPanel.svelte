@@ -5,6 +5,8 @@
 	import SimilarNotes from '../ai/SimilarNotes.svelte';
 	import ContextPreview from '../ai/ContextPreview.svelte';
 	import SidebarNoteView from './SidebarNoteView.svelte';
+	import RecommendedDevelopers from '../social/RecommendedDevelopers.svelte';
+	import TrendingSnippets from '../social/TrendingSnippets.svelte';
 	import { page } from '$app/state';
 
 	const { currentWorkspace } = $derived($workspaceStore);
@@ -65,6 +67,10 @@
 					{#if isNoteView}
 						<SimilarNotes />
 					{/if}
+
+					<RecommendedDevelopers />
+
+					<TrendingSnippets />
 				</section>
 
 				<!-- Metadata Placeholder -->

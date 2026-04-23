@@ -63,20 +63,20 @@
 <Modal show={createChannelModalOpen} title="Create Channel" onclose={close}>
 	<form onsubmit={handleSubmit} class="space-y-6">
 		<div class="space-y-2">
-			<p class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Channel Name</p>
+			<p class="text-[10px] font-bold tracking-widest text-content-dim uppercase">Channel Name</p>
 			<Input
 				bind:value={name}
 				placeholder="e.g. engineering-updates"
 				required
 				disabled={isSubmitting}
 			/>
-			<p class="text-[10px] text-zinc-500">
+			<p class="text-[10px] text-content-dim">
 				Channels are where your team communicates. Use lowercase and hyphens.
 			</p>
 		</div>
 
 		<div class="space-y-2">
-			<p class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">
+			<p class="text-[10px] font-bold tracking-widest text-content-dim uppercase">
 				Description (Optional)
 			</p>
 			<Textarea
@@ -87,11 +87,11 @@
 		</div>
 
 		<div class="space-y-2">
-			<p class="text-[10px] font-bold tracking-widest text-zinc-500 uppercase">Channel Type</p>
+			<p class="text-[10px] font-bold tracking-widest text-content-dim uppercase">Channel Type</p>
 			<select
 				bind:value={type}
 				disabled={isSubmitting}
-				class="w-full rounded-xl border border-stroke bg-zinc-900 px-4 py-3 text-sm text-content transition-all outline-none focus:border-brand-orange/50 focus:ring-1 focus:ring-brand-orange/30"
+				class="w-full rounded-xl border border-stroke bg-surface-dim px-4 py-3 text-sm text-content transition-all outline-none focus:border-brand-orange focus:ring-1 focus:ring-brand-orange/30"
 			>
 				<option value="text">Public — Anyone in the workspace</option>
 				<option value="private">Private — Selected members only</option>

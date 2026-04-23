@@ -139,5 +139,24 @@ export const storyService = {
 
 		if (error) throw error as Error;
 		return data;
+	},
+
+	/**
+	 * Generates AI-driven alt text or captions for story media.
+	 */
+	async generateMediaMetadata(imageUrl: string, type: 'alt-text' | 'caption' = 'alt-text') {
+		const response = await fetch('/api/ai/describe-image', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ imageUrl, type })
+		});
+
+		if (!response.ok) {
+			const err = await response.json().catch(() => ({}));
+			throw new Error(err.error || 'AI Media Analysis failed');
+		}
+
+		const { text } = await response.json();
+		return text;
 	}
 };

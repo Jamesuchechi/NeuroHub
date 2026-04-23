@@ -513,9 +513,9 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 **Target: Week 9**
 
-- [ ] Setup Supabase dashboard alerts (high DB CPU, edge function errors)
-- [ ] Create internal `health` endpoint for uptime monitoring
-- [ ] Log AI token usage per workspace for cost tracking
+- [x] Setup Supabase dashboard alerts (high DB CPU, edge function errors)
+- [x] Create internal `health` endpoint for uptime monitoring
+- [x] Log AI token usage per workspace for cost tracking
 
 ---
 
@@ -525,15 +525,15 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Discovery & Networking
 
-- [ ] "Recommended Developers" sidebar based on tech-stack overlap
-- [ ] Trending snippets feed (Global vs Regional)
-- [ ] Dev-Influence score (based on snippet forks and helpful AI summaries)
+- [x] "Recommended Developers" sidebar based on tech-stack overlap
+- [x] Trending snippets feed (Global vs Regional)
+- [x] Dev-Influence score (based on snippet forks and helpful AI summaries)
 
 ### AI Media Analysis
 
-- [ ] Auto-generate accessibility ALT text for story images using AI
-- [ ] Story auto-captions for developer videos
-- [ ] AI-curated "Daily Roundup" story for team progress
+- [x] Auto-generate accessibility ALT text for story images using AI
+- [x] Story auto-captions for developer videos (via AI Metadata Analysis)
+- [x] AI-curated "Daily Roundup" story for team progress
 
 ---
 
@@ -543,25 +543,25 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Environments
 
-- [ ] Setup three environments: `local`, `staging`, `production`
-- [ ] Configure environment-specific Supabase projects
-- [ ] Separate `.env` files per environment, never commit secrets
+- [x] Setup three environments: `local`, `staging`, `production`
+- [x] Configure environment-specific Supabase projects
+- [x] Separate `.env` files per environment, never commit secrets
 
 ### CI/CD
 
-- [ ] GitHub Actions: on PR → lint + typecheck + Vitest
-- [ ] GitHub Actions: on merge to `main` → deploy to Vercel (preview)
-- [ ] GitHub Actions: on tag `v*.*.*` → deploy to production
-- [ ] Run Playwright E2E against staging before promoting to prod
-- [ ] Auto-run `supabase db push` migrations in CI
+- [x] GitHub Actions: on PR → lint + typecheck + Vitest
+- [x] GitHub Actions: on merge to `main` → deploy to Vercel (preview)
+- [x] GitHub Actions: on tag `v*.*.*` → deploy to production
+- [x] Run Playwright E2E against staging before promoting to prod
+- [x] Auto-run `supabase db push` migrations in CI
 
 ### Infrastructure
 
-- [ ] Deploy SvelteKit to Vercel (or Netlify)
-- [ ] Configure Supabase prod project with daily backups
-- [ ] Setup custom domain + SSL
-- [ ] Configure Vercel environment variables
-- [ ] Supabase Edge Functions deployed via CLI in CI
+- [x] Deploy SvelteKit to Vercel (or Netlify)
+- [x] Configure Supabase prod project with daily backups
+- [x] Setup custom domain + SSL
+- [x] Configure Vercel environment variables
+- [x] Supabase Edge Functions deployed via CLI in CI
 
 ---
 
@@ -645,4 +645,4 @@ src/
 
 ---
 
-_Last updated: Phase 10 Core Integration & Ecosystem Synergy Finished_
+_Last updated: Phase 15 Deployment & DevOps Finished_

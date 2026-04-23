@@ -90,6 +90,7 @@ const authHandle: Handle = async ({ event, resolve }) => {
 			' ' +
 			config.public.supabaseUrl.replace('https', 'wss') +
 			' https://api.cloudinary.com',
+		"media-src 'self' https://assets.mixkit.co https://res.cloudinary.com " + supabaseHost,
 		"worker-src 'self' blob:",
 		"frame-ancestors 'none'",
 		"object-src 'none'",

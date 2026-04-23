@@ -3,6 +3,7 @@
 	import { workspaceStore } from '$lib/stores/workspaceStore';
 	import { storyService, type StoryInsert } from '$lib/services/storyService';
 	import { cloudinaryService } from '$lib/services/cloudinary';
+	import { slide } from 'svelte/transition';
 	import Modal from '../ui/Modal.svelte';
 	import Button from '../ui/Button.svelte';
 
@@ -19,7 +20,9 @@
 	let activeGradient = $state('linear-gradient(135deg, #667eea 0%, #764ba2 100%)');
 	let activeFont = $state('Inter');
 	let isUploading = $state(false);
+	let isGeneratingAlt = $state(false);
 	let error = $state<string | null>(null);
+	let generatedAltText = $state<string | null>(null);
 
 	const gradients = [
 		'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -46,6 +49,34 @@
 		error = null;
 	}
 
+	async function generateAiCaption() {
+		if (!selectedFile) return;
+		isGeneratingAlt = true;
+		error = null;
+
+		try {
+			// 1. Upload to Cloudinary first to get a URL
+			const uploadResult = await cloudinaryService.uploadFile(selectedFile, {
+				folder: 'stories_temp'
+			});
+			const imageUrl = uploadResult.secure_url;
+
+			// 2. Generate alt text and caption
+			const [alt, aiCaption] = await Promise.all([
+				storyService.generateMediaMetadata(imageUrl, 'alt-text'),
+				storyService.generateMediaMetadata(imageUrl, 'caption')
+			]);
+
+			generatedAltText = alt;
+			caption = aiCaption;
+		} catch (err: unknown) {
+			console.error('[AI:Caption] Error:', err);
+			error = 'AI failed to analyze image.';
+		} finally {
+			isGeneratingAlt = false;
+		}
+	}
+
 	async function handleSubmit() {
 		if (!$authStore.user) return;
 		if (mode === 'media' && !selectedFile) return;
@@ -69,11 +100,21 @@
 				mediaType = 'text';
 			}
 
+			// If we haven't generated alt text yet and it's an image, try to do it now
+			if (mediaType === 'image' && mediaUrl && !generatedAltText) {
+				try {
+					generatedAltText = await storyService.generateMediaMetadata(mediaUrl, 'alt-text');
+				} catch (e) {
+					console.warn('Auto-alt generation failed during upload', e);
+				}
+			}
+
 			await storyService.createStory({
 				user_id: $authStore.user.id,
 				media_url: mediaUrl,
 				media_type: mediaType,
 				content: mode === 'text' ? textContent : caption || null,
+				alt_text: generatedAltText,
 				workspace_id: scope === 'workspace' ? $workspaceStore.currentWorkspace?.id : null,
 				background_gradient: mode === 'text' ? activeGradient : null,
 				font_family: mode === 'text' ? activeFont : null
@@ -96,7 +137,9 @@
 		previewUrl = null;
 		textContent = '';
 		caption = '';
+		generatedAltText = null;
 		isUploading = false;
+		isGeneratingAlt = false;
 		error = null;
 	}
 </script>
@@ -154,12 +197,62 @@
 							✕
 						</button>
 					</div>
-					<textarea
-						bind:value={caption}
-						placeholder="Add a caption..."
-						class="w-full resize-none rounded-2xl border border-stroke bg-surface-dim p-4 text-sm text-content transition-all outline-none focus:border-brand-orange"
-						rows="2"
-					></textarea>
+					<div class="relative">
+						<textarea
+							bind:value={caption}
+							placeholder="Add a caption..."
+							class="w-full resize-none rounded-2xl border border-stroke bg-surface-dim p-4 pr-12 text-sm text-content transition-all outline-none focus:border-brand-orange"
+							rows="2"
+						></textarea>
+						<button
+							class="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-lg bg-brand-orange/10 text-brand-orange transition-all hover:bg-brand-orange hover:text-white disabled:animate-pulse disabled:opacity-50"
+							onclick={generateAiCaption}
+							disabled={isGeneratingAlt}
+							title="Auto-generate caption & alt-text"
+						>
+							{#if isGeneratingAlt}
+								<svg class="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+										fill="none"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
+								</svg>
+							{:else}
+								<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M13 10V3L4 14h7v7l9-11h-7z"
+									/>
+								</svg>
+							{/if}
+						</button>
+					</div>
+
+					{#if generatedAltText}
+						<div
+							class="rounded-xl border border-brand-orange/20 bg-brand-orange/5 p-3"
+							transition:slide
+						>
+							<p class="mb-1 text-[10px] font-bold tracking-widest text-brand-orange uppercase">
+								AI Alt-Text
+							</p>
+							<p class="text-[11px] leading-relaxed text-content">
+								{generatedAltText}
+							</p>
+						</div>
+					{/if}
 				{:else}
 					<label
 						class="mx-auto flex aspect-9/16 max-h-[400px] w-full cursor-pointer flex-col items-center justify-center gap-4 rounded-3xl border-2 border-dashed border-stroke bg-surface-dim transition-all hover:border-brand-orange hover:bg-surface-dim/80"

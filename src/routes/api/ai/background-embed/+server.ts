@@ -58,8 +58,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			throw new Error(err.error?.message || 'Embedding failed');
 		}
 
-		const { data } = await response.json();
-		const embedding = data[0].embedding;
+		const result = await response.json();
+		const embedding = result.data[0].embedding;
 
 		// 3. Update the original row
 		const { error: updateError } = await supabaseAdmin
@@ -68,6 +68,20 @@ export const POST: RequestHandler = async ({ request }) => {
 			.eq('id', record.id);
 
 		if (updateError) throw updateError;
+
+		try {
+			await supabaseAdmin.from('ai_requests').insert({
+				user_id: record.user_id || record.author_id || null,
+				workspace_id: record.workspace_id || null,
+				model: result.model || 'text-embedding-3-small',
+				prompt_tokens: result.usage?.prompt_tokens || 0,
+				completion_tokens: result.usage?.completion_tokens || 0,
+				total_tokens: result.usage?.total_tokens || 0,
+				feature: 'background-embed'
+			});
+		} catch (logErr) {
+			console.error('[AI Usage Log] Failed:', logErr);
+		}
 
 		console.log(`[AI:Embed] Successfully updated ${table}:${record.id}`);
 		return json({ success: true });
