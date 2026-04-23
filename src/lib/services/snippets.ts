@@ -63,6 +63,8 @@ export const snippetService = {
 	async create(
 		data: SnippetsTable['Insert']
 	): Promise<PostgrestSingleResponse<SnippetsTable['Row']>> {
+		const { SnippetSchema } = await import('$lib/utils/validation');
+		SnippetSchema.parse(data);
 		return supabase.from('snippets').insert(data).select('id').single();
 	},
 
@@ -70,6 +72,8 @@ export const snippetService = {
 		id: string,
 		data: SnippetsTable['Update']
 	): Promise<PostgrestSingleResponse<SnippetsTable['Row']>> {
+		const { SnippetSchema } = await import('$lib/utils/validation');
+		SnippetSchema.partial().parse(data);
 		return supabase.from('snippets').update(data).eq('id', id).select('id').single();
 	},
 

@@ -45,6 +45,12 @@ export const cloudinaryService = {
 		file: File | string,
 		options: { folder?: string; tags?: string[] } = {}
 	): Promise<CloudinaryUploadResponse> {
+		// --- File Validation ---
+		if (file instanceof File) {
+			const { validateFile } = await import('$lib/utils/validation');
+			validateFile(file);
+		}
+
 		const timestamp = Math.round(new Date().getTime() / 1000);
 
 		const paramsToSign = {

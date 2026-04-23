@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { profileStore } from '$lib/stores/profileStore';
+	import { resolve } from '$app/paths';
 	import { cloudinaryService } from '$lib/services/cloudinary';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Textarea from '$lib/components/ui/Textarea.svelte';
@@ -287,4 +288,59 @@
 			</div>
 		</div>
 	</form>
+
+	<!-- Privacy & Data -->
+	<section class="mt-12 space-y-8 pb-20">
+		<div
+			class="flex items-center gap-2 text-[10px] font-bold tracking-widest text-red-500 uppercase"
+		>
+			<div class="h-1 w-1 rounded-full bg-red-500"></div>
+			Privacy & Data
+		</div>
+
+		<div class="grid gap-6 lg:grid-cols-2">
+			<div class="rounded-3xl border border-stroke bg-surface-dim/20 p-6">
+				<h3 class="mb-1 text-sm font-bold text-white">Export Your Data</h3>
+				<p class="mb-4 text-xs text-content-dim">
+					Download a JSON archive of your profile, notes, snippets, and chat history.
+				</p>
+				<a
+					href={resolve('/api/account/export' as unknown as '/')}
+					download
+					class="inline-flex w-auto cursor-pointer items-center justify-center rounded-lg border border-stroke bg-white/5 px-3 py-2 text-xs font-bold text-content transition-all hover:bg-white/10"
+				>
+					Download JSON
+				</a>
+			</div>
+
+			<div class="rounded-3xl border border-red-500/20 bg-red-500/5 p-6">
+				<h3 class="mb-1 text-sm font-bold text-red-500">Danger Zone</h3>
+				<p class="mb-4 text-xs text-content-dim">
+					Permanently delete your account and all associated data. This action is irreversible.
+				</p>
+				<form
+					action="?/deleteAccount"
+					method="POST"
+					onsubmit={(e) => {
+						if (
+							!confirm(
+								'Are you absolutely sure? All your notes, snippets, and messages will be permanently deleted.'
+							)
+						) {
+							e.preventDefault();
+						}
+					}}
+				>
+					<Button
+						variant="secondary"
+						size="sm"
+						type="submit"
+						class="w-auto border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white"
+					>
+						Delete My Account
+					</Button>
+				</form>
+			</div>
+		</div>
+	</section>
 </div>

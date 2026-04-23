@@ -268,6 +268,10 @@
 
 	async function send() {
 		if (!content.trim() || isSubmitting) return;
+		if (content.length > 2000) {
+			toast.show('Message is too long (max 2000 characters)', 'error');
+			return;
+		}
 
 		isSubmitting = true;
 		const messageContent = content;
@@ -364,6 +368,18 @@
 				class="scrollbar-hide max-h-[400px] min-h-[40px] w-full resize-none bg-transparent py-2.5 text-sm leading-relaxed text-content transition-all outline-none placeholder:text-content-dim/30"
 				style="height: auto;"
 			></textarea>
+
+			{#if content.length > 1500}
+				<div
+					transition:fly={{ y: 10, duration: 200 }}
+					class="flex justify-end text-[9px] font-bold tracking-widest uppercase {content.length >
+					2000
+						? 'text-red-500'
+						: 'text-content-dim/40'}"
+				>
+					{content.length} / 2000
+				</div>
+			{/if}
 		</div>
 
 		<div class="mt-1 flex shrink-0 items-center gap-1.5">

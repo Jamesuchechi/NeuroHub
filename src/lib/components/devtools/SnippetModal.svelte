@@ -93,12 +93,27 @@
 		tags = tags.filter((t) => t !== tag);
 	}
 
-	function handleSave() {
-		if (!title.trim()) {
-			toast.show('Please enter a title', 'error');
-			return;
+	async function handleSave() {
+		try {
+			const { SnippetSchema } = await import('$lib/utils/validation');
+			SnippetSchema.parse({
+				title,
+				description,
+				code,
+				language,
+				tags: $state.snapshot(tags),
+				workspace_id: '00000000-0000-0000-0000-000000000000' // Placeholder for validation
+			});
+
+			onsave?.({ title, description, code, language, visibility, tags: $state.snapshot(tags) });
+		} catch (err) {
+			const { ZodError } = await import('zod');
+			if (err instanceof ZodError) {
+				toast.show(err.issues[0]?.message || 'Invalid snippet data', 'error');
+			} else {
+				toast.show('An unexpected error occurred', 'error');
+			}
 		}
-		onsave?.({ title, description, code, language, visibility, tags: $state.snapshot(tags) });
 	}
 
 	function handleRunInSandbox() {

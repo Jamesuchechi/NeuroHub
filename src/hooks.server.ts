@@ -66,7 +66,7 @@ const authHandle: Handle = async ({ event, resolve }) => {
 	// Proactively resolve session to ensure cookies are set before response generation
 	await event.locals.safeGetSession();
 
-	return resolve(event, {
+	const response = await resolve(event, {
 		filterSerializedResponseHeaders(name) {
 			/**
 			 * Supabase needs to leverage the core-js content-range header.
@@ -74,6 +74,38 @@ const authHandle: Handle = async ({ event, resolve }) => {
 			return name === 'content-range';
 		}
 	});
+
+	// --- Content Security Policy ---
+	const supabaseHost = new URL(config.public.supabaseUrl).host;
+	const cloudinaryHost = `res.cloudinary.com`;
+
+	const csp = [
+		"default-src 'self'",
+		"script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
+		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+		"img-src 'self' data: blob: " + supabaseHost + ' ' + cloudinaryHost,
+		"font-src 'self' https://fonts.gstatic.com",
+		"connect-src 'self' " +
+			config.public.supabaseUrl +
+			' ' +
+			config.public.supabaseUrl.replace('https', 'wss'),
+		"worker-src 'self' blob:",
+		"frame-ancestors 'none'",
+		"object-src 'none'",
+		"base-uri 'self'"
+	].join('; ');
+
+	response.headers.set('Content-Security-Policy', csp);
+	// Add other security headers
+	response.headers.set('X-Frame-Options', 'DENY');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	response.headers.set(
+		'Permissions-Policy',
+		'camera=(), microphone=(), geolocation=(), interest-cohort=()'
+	);
+
+	return response;
 };
 
 export const handle: Handle = sequence(authHandle);

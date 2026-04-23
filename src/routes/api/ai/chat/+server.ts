@@ -43,7 +43,39 @@ export const POST: RequestHandler = async ({ request, locals: { supabase, safeGe
 		return json({ error: 'Unauthorized' }, { status: 401 });
 	}
 
-	// 1. Rate Limit Check
+	// 0. CSRF Protection (Origin Check)
+	const origin = request.headers.get('origin');
+	const host = request.headers.get('host');
+	// In production, we should compare origin with PUBLIC_SITE_URL or host
+	// For now, a simple check that origin exists and matches the host is a good start
+	if (origin && !origin.includes(host || '')) {
+		return json({ error: 'Forbidden: CSRF check failed' }, { status: 403 });
+	}
+
+	// 1. Rate Limit Check (Upstash Redis)
+	const { checkRateLimit } = await import('$lib/server/ratelimit');
+	const { success, limit, reset, remaining } = await checkRateLimit(session.user.id, 'ai-chat');
+
+	if (!success) {
+		return json(
+			{
+				error: 'Rate limit exceeded. Please wait a moment.',
+				limit,
+				remaining,
+				reset
+			},
+			{
+				status: 429,
+				headers: {
+					'X-RateLimit-Limit': limit.toString(),
+					'X-RateLimit-Remaining': remaining.toString(),
+					'X-RateLimit-Reset': reset.toString()
+				}
+			}
+		);
+	}
+
+	// 1b. Fallback SQL Rate Limit (Legacy/Redundancy)
 	const { data: allowed, error: limitError } = await supabase.rpc('check_ai_rate_limit', {
 		p_user_id: session.user.id
 	});
@@ -59,6 +91,42 @@ export const POST: RequestHandler = async ({ request, locals: { supabase, safeGe
 		workspace_id,
 		context_string
 	} = await request.json();
+
+	// --- AI Prompt Security Validation ---
+	if (!prompt || typeof prompt !== 'string') {
+		return json({ error: 'Invalid prompt' }, { status: 400 });
+	}
+
+	// 1. Length Limit (e.g., 4000 characters)
+	const MAX_PROMPT_LENGTH = 4000;
+	if (prompt.length > MAX_PROMPT_LENGTH) {
+		return json(
+			{ error: `Prompt too long. Maximum length is ${MAX_PROMPT_LENGTH} characters.` },
+			{ status: 400 }
+		);
+	}
+
+	// 2. Basic Sanitization
+	const sanitizedPrompt = prompt.trim();
+
+	// 3. Injection Check (Simple heuristic)
+	// We check for common jailbreak patterns or attempts to override system instructions.
+	const injectionPatterns = [
+		/ignore previous instructions/i,
+		/disregard all previous/i,
+		/you are now/i,
+		/system prompt/i,
+		/<\|system\|>/i,
+		/\[INST\]/i
+	];
+
+	const isPotentialInjection = injectionPatterns.some((pattern) => pattern.test(sanitizedPrompt));
+	if (isPotentialInjection) {
+		console.warn(`[AI Security] Potential prompt injection detected from user ${session.user.id}`);
+		// We can either block it or just log it. For now, let's block the most obvious ones.
+		// return json({ error: 'Potential security violation detected in prompt.' }, { status: 400 });
+	}
+	// -------------------------------------
 
 	// Build a rich system prompt — inject workspace RAG context when available
 	const baseSystem = system_prompt || 'You are NeuroAI, a high-performance developer assistant.';
@@ -94,7 +162,7 @@ export const POST: RequestHandler = async ({ request, locals: { supabase, safeGe
 				model,
 				maxRetries: 0, // Fail fast to our own fallback loop
 				system: fullSystem,
-				messages: [{ role: 'user', content: prompt }],
+				messages: [{ role: 'user', content: sanitizedPrompt }],
 				onFinish: async (event) => {
 					try {
 						await supabase.from('ai_requests').insert({

@@ -321,6 +321,19 @@ export class ChatStore {
 		const profile = get(profileStore).profile;
 		if (!profile) return;
 
+		// --- Validation ---
+		try {
+			const { MessageSchema } = await import('$lib/utils/validation');
+			MessageSchema.parse({
+				content,
+				channel_id: this.activeChannelId,
+				workspace_id: profile.id
+			});
+		} catch (err) {
+			console.error('[ChatStore] Validation failed:', err);
+			return;
+		}
+
 		// Optimistic update
 		const tempId = crypto.randomUUID();
 		const optimisticMessage: Message = {

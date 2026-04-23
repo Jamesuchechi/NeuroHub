@@ -487,25 +487,25 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ### Auth & API Security
 
-- [ ] Validate all AI prompts server-side (sanitize, length limit, injection check)
-- [ ] Supabase Edge Function rate limiting per user (Upstash Redis)
-- [ ] Review all RLS policies — deny-by-default, principle of least privilege
-- [ ] CSRF protection on all form actions
-- [ ] Content Security Policy headers in `hooks.server.ts`
-- [ ] Audit Supabase Storage policies (prevent direct URL access to private files)
+- [x] Validate all AI prompts server-side (sanitize, length limit, injection check)
+- [x] Supabase Edge Function rate limiting per user (Upstash Redis)
+- [x] Review all RLS policies — deny-by-default, principle of least privilege
+- [x] CSRF protection on all form actions
+- [x] Content Security Policy headers in `hooks.server.ts`
+- [x] Audit Supabase Storage policies (prevent direct URL access to private files)
 
 ### Input Validation
 
-- [ ] Validate all user inputs with `zod` on server-side (`+page.server.ts` actions)
-- [ ] Sanitize note HTML content (prevent XSS via `DOMPurify`)
-- [ ] Limit message length, note size, snippet size (server + client)
-- [ ] File upload validation (type whitelist, size limit 10MB)
+- [x] Validate all user inputs with `zod` on server-side (`+page.server.ts` actions)
+- [x] Sanitize note HTML content (prevent XSS via `DOMPurify`)
+- [x] Limit message length, note size, snippet size (server + client)
+- [x] File upload validation (type whitelist, size limit 10MB)
 
 ### Privacy
 
-- [ ] GDPR: user data export endpoint (`/account/export`)
-- [ ] Account deletion flow (cascade delete all user data)
-- [ ] Private channels: enforce strict RLS (non-members cannot see channel exists)
+- [x] GDPR: user data export endpoint (`/account/export`)
+- [x] Account deletion flow (cascade delete all user data)
+- [x] Private channels: enforce strict RLS (non-members cannot see channel exists)
 
 ---
 
@@ -519,7 +519,25 @@ Prism.js          Supabase Edge Fns      Streaming responses
 
 ---
 
-## Phase 14 — Deployment & DevOps
+## Phase 14 — Social Intelligence (Expert Features)
+
+**Target: Week 11 and Beyond**
+
+### Discovery & Networking
+
+- [ ] "Recommended Developers" sidebar based on tech-stack overlap
+- [ ] Trending snippets feed (Global vs Regional)
+- [ ] Dev-Influence score (based on snippet forks and helpful AI summaries)
+
+### AI Media Analysis
+
+- [ ] Auto-generate accessibility ALT text for story images using AI
+- [ ] Story auto-captions for developer videos
+- [ ] AI-curated "Daily Roundup" story for team progress
+
+---
+
+## Phase 15 — Deployment & DevOps
 
 **Target: Week 9–10**
 
@@ -544,24 +562,6 @@ Prism.js          Supabase Edge Fns      Streaming responses
 - [ ] Setup custom domain + SSL
 - [ ] Configure Vercel environment variables
 - [ ] Supabase Edge Functions deployed via CLI in CI
-
----
-
-## Phase 15 — Social Intelligence (Expert Features)
-
-**Target: Week 11 and Beyond**
-
-### Discovery & Networking
-
-- [ ] "Recommended Developers" sidebar based on tech-stack overlap
-- [ ] Trending snippets feed (Global vs Regional)
-- [ ] Dev-Influence score (based on snippet forks and helpful AI summaries)
-
-### AI Media Analysis
-
-- [ ] Auto-generate accessibility ALT text for story images using AI
-- [ ] Story auto-captions for developer videos
-- [ ] AI-curated "Daily Roundup" story for team progress
 
 ---
 

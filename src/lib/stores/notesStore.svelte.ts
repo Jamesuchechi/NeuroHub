@@ -251,14 +251,18 @@ class NotesStore {
 		}
 	}
 
-	async createNote(workspaceId: string, authorId: string, title = 'Untitled Note') {
+	async createNote(workspaceId: string, author_id: string, title = 'Untitled Note') {
 		this.#isLoading = true;
 		try {
+			// --- Validation ---
+			const { NoteSchema } = await import('$lib/utils/validation');
+			NoteSchema.parse({ title, workspace_id: workspaceId, content: {}, tags: [] });
+
 			const { data, error } = await db
 				.from('notes')
 				.insert({
 					workspace_id: workspaceId,
-					author_id: authorId,
+					author_id,
 					title,
 					content: { type: 'doc', content: [] } as TiptapNode,
 					status: 'draft'
@@ -280,6 +284,16 @@ class NotesStore {
 	}
 
 	async updateNote(noteId: string, updates: NoteUpdate) {
+		// --- Validation ---
+		try {
+			const { NoteSchema } = await import('$lib/utils/validation');
+			NoteSchema.partial().parse(updates);
+		} catch (err) {
+			console.error('[NotesStore] Validation failed:', err);
+			toast.show('Invalid note data', 'error');
+			return null;
+		}
+
 		// 1. Optimistic Update
 		const previousNotes = [...this.#notes];
 		const previousCurrentNote = this.#currentNote ? { ...this.#currentNote } : null;

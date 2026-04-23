@@ -360,16 +360,38 @@ export const chatService = {
 		const ids = [myId, otherId].sort();
 		const channelName = `dm-${ids[0]}-${ids[1]}`;
 
-		const { data: existing } = await supabase
-			.from('channels')
-			.select('*')
-			.eq('workspace_id', workspaceId)
-			.eq('name', channelName)
-			.maybeSingle();
+		// --- Primary lookup: find channels where BOTH users are members ---
+		// This is more reliable than querying by name under RLS
+		const { data: myMemberships } = await supabase
+			.from('channel_members')
+			.select('channel_id, channels!inner(id, workspace_id, name, type)')
+			.eq('user_id', myId);
 
-		if (existing) return existing as Channel;
+		if (myMemberships) {
+			for (const membership of myMemberships) {
+				const ch = membership.channels as unknown as {
+					id: string;
+					workspace_id: string;
+					name: string;
+					type: string;
+				};
+				if (ch.workspace_id === workspaceId && ch.type === 'private' && ch.name === channelName) {
+					// Confirm the other user is also a member
+					const { data: otherMembership } = await supabase
+						.from('channel_members')
+						.select('channel_id')
+						.eq('channel_id', ch.id)
+						.eq('user_id', otherId)
+						.maybeSingle();
 
-		// Create new if not exists
+					if (otherMembership) {
+						return ch as unknown as Channel;
+					}
+				}
+			}
+		}
+
+		// --- Fallback: no existing channel found, create one ---
 		const channel = await this.createChannel(
 			workspaceId,
 			myId,

@@ -83,6 +83,8 @@
 		"@tiptap/starter-kit": "3.22.4",
 		"@tiptap/suggestion": "3.22.4",
 		"@types/dompurify": "^3.2.0",
+		"@upstash/ratelimit": "^2.0.8",
+		"@upstash/redis": "^1.37.0",
 		"ai": "^6.0.168",
 		"cloudinary": "^2.9.0",
 		"codemirror": "^6.0.2",
