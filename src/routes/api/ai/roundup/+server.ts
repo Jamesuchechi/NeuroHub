@@ -49,13 +49,14 @@ export const POST: RequestHandler = async ({ request, locals: { safeGetSession, 
 	interface ActivitySummaryItem {
 		type: string;
 		payload: { title?: string; name?: string };
-		profiles: { username: string } | null;
+		profiles: { username: string } | { username: string }[] | null;
 	}
 
 	// Format activities for AI
 	const activityText = (activities as unknown as ActivitySummaryItem[])
 		.map((a) => {
-			const user = a.profiles?.username || 'Someone';
+			const profile = Array.isArray(a.profiles) ? a.profiles[0] : a.profiles;
+			const user = profile?.username || 'Someone';
 			const type = a.type.replace(/_/g, ' ');
 			const title = a.payload?.title || a.payload?.name || 'an item';
 			return `${user} ${type}: "${title}"`;

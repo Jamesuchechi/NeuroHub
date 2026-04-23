@@ -5,7 +5,7 @@ export interface RecommendedDeveloper {
 	username: string;
 	avatar_url: string;
 	title: string;
-	skills: string[];
+	developer_skills: string[];
 	influence_score: number;
 	overlap_count: number;
 }

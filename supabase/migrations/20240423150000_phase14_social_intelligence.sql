@@ -1,13 +1,15 @@
 -- Migration: Phase 14 Social Intelligence - Recommended Developers
 -- Description: Adds RPC function to find developers with overlapping skills.
 
+DROP FUNCTION IF EXISTS get_recommended_developers(UUID, INT);
+
 CREATE OR REPLACE FUNCTION get_recommended_developers(p_user_id UUID, p_limit INT DEFAULT 5)
 RETURNS TABLE (
     id UUID,
     username TEXT,
     avatar_url TEXT,
     title TEXT,
-    skills TEXT[],
+    developer_skills TEXT[],
     influence_score INT,
     overlap_count INT
 ) AS $$
@@ -15,7 +17,7 @@ DECLARE
     v_user_skills TEXT[];
 BEGIN
     -- Get current user's skills
-    SELECT skills INTO v_user_skills FROM profiles WHERE id = p_user_id;
+    SELECT p.skills INTO v_user_skills FROM public.profiles p WHERE p.id = p_user_id;
 
     -- If user has no skills, return empty table
     IF v_user_skills IS NULL OR CARDINALITY(v_user_skills) = 0 THEN
@@ -28,10 +30,10 @@ BEGIN
         p.username,
         p.avatar_url,
         p.title,
-        p.skills,
+        p.skills as developer_skills,
         p.influence_score,
         CARDINALITY(ARRAY(SELECT unnest(p.skills) INTERSECT SELECT unnest(v_user_skills)))::INT as overlap_count
-    FROM profiles p
+    FROM public.profiles p
     WHERE p.id != p_user_id
       AND p.skills && v_user_skills -- Overlap check (at least one skill in common)
     ORDER BY overlap_count DESC, p.username ASC
@@ -40,6 +42,8 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trending Snippets Function
+DROP FUNCTION IF EXISTS get_trending_snippets(UUID, INT);
+
 CREATE OR REPLACE FUNCTION get_trending_snippets(p_workspace_id UUID DEFAULT NULL, p_limit INT DEFAULT 5)
 RETURNS TABLE (
     id UUID,
